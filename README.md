@@ -61,6 +61,17 @@ export OKX_INST_ID="" # 可选
 go run ./examples/ws_private_orders
 ```
 
+订阅 WS 私有成交频道（仅验证 subscribe ack；需要 API Key，支持模拟盘；VIP6+ 才可用）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_INST_ID="BTC-USDT-SWAP" # 可选
+go run ./examples/ws_private_fills
+```
+
 获取单个产品行情（默认 BTC-USDT）：
 
 ```bash

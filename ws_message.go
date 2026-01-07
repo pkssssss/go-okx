@@ -58,6 +58,28 @@ func WSParseData[T any](message []byte) (*WSData[T], bool, error) {
 	return &dm, true, nil
 }
 
+// WSParseChannelData 解析指定 channel 的 data 推送消息。
+func WSParseChannelData[T any](message []byte, channel string) (*WSData[T], bool, error) {
+	dm, ok, err := WSParseData[T](message)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	if dm.Arg.Channel != channel {
+		return nil, false, nil
+	}
+	return dm, true, nil
+}
+
+// WSParseOrders 解析 orders 频道推送消息。
+func WSParseOrders(message []byte) (*WSData[TradeOrder], bool, error) {
+	return WSParseChannelData[TradeOrder](message, WSChannelOrders)
+}
+
+// WSParseFills 解析 fills 频道推送消息。
+func WSParseFills(message []byte) (*WSData[WSFill], bool, error) {
+	return WSParseChannelData[WSFill](message, WSChannelFills)
+}
+
 // WSFill 表示 WS / 成交频道推送的数据项。
 // 该频道仅适用于交易等级 VIP6 及以上用户；其他用户可使用 orders 频道获取成交信息。
 type WSFill struct {
