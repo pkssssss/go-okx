@@ -49,6 +49,18 @@ go run ./examples/account_positions
 go run ./examples/ws_public_tickers
 ```
 
+订阅 WS 私有订单频道（仅验证 subscribe ack，不触发下单；需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_INST_TYPE="ANY" # 可选：SPOT/MARGIN/SWAP/FUTURES/OPTION/ANY
+export OKX_INST_ID="" # 可选
+go run ./examples/ws_private_orders
+```
+
 获取单个产品行情（默认 BTC-USDT）：
 
 ```bash

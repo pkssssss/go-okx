@@ -37,6 +37,7 @@ type WSArg struct {
 	InstType   string `json:"instType,omitempty"`
 	InstFamily string `json:"instFamily,omitempty"`
 	Uly        string `json:"uly,omitempty"`
+	UID        string `json:"uid,omitempty"`
 }
 
 func (a WSArg) key() string {
