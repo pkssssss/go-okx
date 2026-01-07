@@ -2,7 +2,6 @@ package okx
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -28,6 +27,9 @@ type WSMessageHandler func(message []byte)
 
 // WSErrorHandler 处理 WS 运行时错误（连接断开、登录失败等）。
 type WSErrorHandler func(err error)
+
+// WSEventHandler 处理 WS event 消息（subscribe/login/error/notice 等）。
+type WSEventHandler func(event WSEvent)
 
 // WSArg 表示 OKX WS 订阅参数。
 // v0.1 仅覆盖通用字段，后续按频道需要扩展。
@@ -61,12 +63,6 @@ type wsLoginRequest struct {
 	Args []wsLoginArg `json:"args"`
 }
 
-type wsEventEnvelope struct {
-	Event string `json:"event"`
-	Code  string `json:"code"`
-	Msg   string `json:"msg"`
-}
-
 // WSOption 用于配置 WSClient。
 type WSOption func(*WSClient)
 
@@ -91,6 +87,13 @@ func WithWSDialer(d *websocket.Dialer) WSOption {
 	}
 }
 
+// WithWSEventHandler 设置 event 消息回调（subscribe/unsubscribe/login/error/notice 等）。
+func WithWSEventHandler(handler WSEventHandler) WSOption {
+	return func(c *WSClient) {
+		c.eventHandler = handler
+	}
+}
+
 // WSClient 是 OKX WebSocket 客户端（支持 public/private/business）。
 // v0.1：实现 ping/pong、private 登录、订阅发送、断线重连与重订阅的基础骨架。
 type WSClient struct {
@@ -100,8 +103,9 @@ type WSClient struct {
 	dialer    *websocket.Dialer
 	needLogin bool
 
-	handler    WSMessageHandler
-	errHandler WSErrorHandler
+	handler      WSMessageHandler
+	errHandler   WSErrorHandler
+	eventHandler WSEventHandler
 
 	started atomic.Bool
 	cancel  context.CancelFunc
@@ -326,10 +330,12 @@ func (w *WSClient) login(ctx context.Context, conn *websocket.Conn) error {
 			w.handler(msg)
 		}
 
-		var ev wsEventEnvelope
-		if err := json.Unmarshal(msg, &ev); err != nil || ev.Event == "" {
+		ev, ok, err := WSParseEvent(msg)
+		if err != nil || !ok {
 			continue
 		}
+		w.onEvent(*ev)
+
 		switch ev.Event {
 		case "login":
 			if ev.Code == "0" {
@@ -356,12 +362,20 @@ func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn) error {
 			w.handler(msg)
 		}
 
-		var ev wsEventEnvelope
-		if err := json.Unmarshal(msg, &ev); err == nil {
-			if ev.Event == "notice" && ev.Code == "64008" {
-				return errors.New("okx: ws notice 64008 reconnect")
-			}
+		ev, ok, err := WSParseEvent(msg)
+		if err != nil || !ok {
+			continue
 		}
+		w.onEvent(*ev)
+		if ev.Event == "notice" && ev.Code == "64008" {
+			return errors.New("okx: ws notice 64008 reconnect")
+		}
+	}
+}
+
+func (w *WSClient) onEvent(ev WSEvent) {
+	if w.eventHandler != nil && ev.Event != "" {
+		w.eventHandler(ev)
 	}
 }
 
