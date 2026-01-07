@@ -128,3 +128,62 @@ func TestWSParseChannelHelpers(t *testing.T) {
 		}
 	})
 }
+
+func TestWSParseAccountPositionsAndBalanceAndPosition(t *testing.T) {
+	t.Run("account_data_with_paging", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"account","uid":"44*********584"},"eventType":"snapshot","curPage":1,"lastPage":true,"data":[{"uTime":"1597026383085","totalEq":"1","adjEq":"1","availEq":"1","details":[{"ccy":"BTC","eq":"1","cashBal":"1","availEq":"1"}]}]}`)
+		dm, ok, err := WSParseAccount(msg)
+		if err != nil {
+			t.Fatalf("WSParseAccount() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.EventType != "snapshot" || dm.CurPage != 1 || dm.LastPage != true {
+			t.Fatalf("meta = %#v, want snapshot page=1 last=true", dm)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].TotalEq != "1" || dm.Data[0].AvailEq != "1" {
+			t.Fatalf("data = %#v, want totalEq=1 availEq=1", dm.Data)
+		}
+		if len(dm.Data[0].Details) != 1 || dm.Data[0].Details[0].Ccy != "BTC" || dm.Data[0].Details[0].AvailEq != "1" {
+			t.Fatalf("details = %#v, want BTC availEq=1", dm.Data[0].Details)
+		}
+	})
+
+	t.Run("positions_data", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"positions","instType":"SWAP","uid":"44*********584"},"eventType":"snapshot","curPage":1,"lastPage":true,"data":[{"instType":"SWAP","instId":"BTC-USDT-SWAP","posId":"1","tradeId":"2","posSide":"long","pos":"10","mgnMode":"cross","ccy":"BTC","uTime":"1597026383085"}]}`)
+		dm, ok, err := WSParsePositions(msg)
+		if err != nil {
+			t.Fatalf("WSParsePositions() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelPositions {
+			t.Fatalf("Arg.Channel = %q, want %q", dm.Arg.Channel, WSChannelPositions)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "BTC-USDT-SWAP" || dm.Data[0].TradeId != "2" || dm.Data[0].UTime != 1597026383085 {
+			t.Fatalf("data = %#v, want instId BTC-USDT-SWAP tradeId=2 uTime=1597026383085", dm.Data)
+		}
+	})
+
+	t.Run("balance_and_position_data", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"balance_and_position","uid":"77982378738415879"},"data":[{"pTime":"1597026383085","eventType":"snapshot","balData":[{"ccy":"BTC","cashBal":"1","uTime":"1597026383085"}],"posData":[{"posId":"1111111111","tradeId":"2","instId":"BTC-USD-191018","instType":"FUTURES","mgnMode":"cross","posSide":"long","pos":"10","ccy":"BTC","posCcy":"","avgPx":"3320","uTime":"1597026383085"}]}]}`)
+		dm, ok, err := WSParseBalanceAndPosition(msg)
+		if err != nil {
+			t.Fatalf("WSParseBalanceAndPosition() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if len(dm.Data) != 1 || dm.Data[0].PTime != 1597026383085 || dm.Data[0].EventType != "snapshot" {
+			t.Fatalf("data = %#v, want pTime=1597026383085 eventType=snapshot", dm.Data)
+		}
+		if len(dm.Data[0].BalData) != 1 || dm.Data[0].BalData[0].Ccy != "BTC" || dm.Data[0].BalData[0].CashBal != "1" {
+			t.Fatalf("balData = %#v, want BTC cashBal=1", dm.Data[0].BalData)
+		}
+		if len(dm.Data[0].PosData) != 1 || dm.Data[0].PosData[0].InstType != "FUTURES" || dm.Data[0].PosData[0].PosId != "1111111111" {
+			t.Fatalf("posData = %#v, want FUTURES posId=1111111111", dm.Data[0].PosData)
+		}
+	})
+}

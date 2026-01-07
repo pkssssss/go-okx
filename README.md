@@ -72,6 +72,42 @@ export OKX_INST_ID="BTC-USDT-SWAP" # 可选
 go run ./examples/ws_private_fills
 ```
 
+订阅 WS 私有账户频道（收到首条 account 推送后退出；需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_CCY="BTC" # 可选
+export OKX_WS_EXTRA_PARAMS="{\"updateInterval\":\"0\"}" # 可选
+go run ./examples/ws_private_account
+```
+
+订阅 WS 私有持仓频道（收到首条 positions 推送后退出；需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_INST_TYPE="ANY" # 可选：MARGIN/SWAP/FUTURES/OPTION/ANY
+export OKX_INST_FAMILY="" # 可选
+export OKX_INST_ID="" # 可选
+export OKX_WS_EXTRA_PARAMS="{\"updateInterval\":\"0\"}" # 可选
+go run ./examples/ws_private_positions
+```
+
+订阅 WS 账户余额和持仓频道（收到首条 balance_and_position 推送后退出；需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+go run ./examples/ws_private_balance_and_position
+```
+
 监听 WS 私有订单推送（收到第一条订单更新后退出；需要 API Key，支持模拟盘）：
 
 ```bash

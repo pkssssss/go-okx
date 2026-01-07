@@ -12,6 +12,7 @@ type AccountPosition struct {
 	InstType string `json:"instType"`
 	InstId   string `json:"instId"`
 	PosId    string `json:"posId"`
+	TradeId  string `json:"tradeId"`
 	PosSide  string `json:"posSide"`
 
 	Pos      string `json:"pos"`
@@ -26,6 +27,9 @@ type AccountPosition struct {
 	Lever   string `json:"lever"`
 	MgnMode string `json:"mgnMode"`
 	Ccy     string `json:"ccy"`
+	PosCcy  string `json:"posCcy"`
+
+	UTime int64 `json:"uTime,string"`
 }
 
 // AccountPositionsService 查看持仓信息。

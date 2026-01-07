@@ -13,6 +13,7 @@ type AccountBalance struct {
 	UTime   int64                  `json:"uTime,string"`
 	TotalEq string                 `json:"totalEq"`
 	AdjEq   string                 `json:"adjEq"`
+	AvailEq string                 `json:"availEq"`
 	Details []AccountBalanceDetail `json:"details"`
 }
 
@@ -23,6 +24,7 @@ type AccountBalanceDetail struct {
 	EqUsd     string `json:"eqUsd"`
 	CashBal   string `json:"cashBal"`
 	AvailBal  string `json:"availBal"`
+	AvailEq   string `json:"availEq"`
 	FrozenBal string `json:"frozenBal"`
 	Liab      string `json:"liab"`
 }

@@ -5,8 +5,11 @@ import (
 )
 
 const (
-	WSChannelOrders = "orders"
-	WSChannelFills  = "fills"
+	WSChannelOrders             = "orders"
+	WSChannelFills              = "fills"
+	WSChannelAccount            = "account"
+	WSChannelPositions          = "positions"
+	WSChannelBalanceAndPosition = "balance_and_position"
 )
 
 // WSEvent 表示 OKX WebSocket 的 event 消息（subscribe/login/error/notice 等）。
@@ -38,8 +41,11 @@ func WSParseEvent(message []byte) (*WSEvent, bool, error) {
 
 // WSData 表示 OKX WebSocket data 推送。
 type WSData[T any] struct {
-	Arg  WSArg `json:"arg"`
-	Data []T   `json:"data"`
+	Arg       WSArg  `json:"arg"`
+	EventType string `json:"eventType,omitempty"`
+	CurPage   int    `json:"curPage,omitempty"`
+	LastPage  bool   `json:"lastPage,omitempty"`
+	Data      []T    `json:"data"`
 }
 
 // WSParseData 解析 data 推送消息。
@@ -78,6 +84,36 @@ func WSParseOrders(message []byte) (*WSData[TradeOrder], bool, error) {
 // WSParseFills 解析 fills 频道推送消息。
 func WSParseFills(message []byte) (*WSData[WSFill], bool, error) {
 	return WSParseChannelData[WSFill](message, WSChannelFills)
+}
+
+// WSParseAccount 解析 account 频道推送消息。
+func WSParseAccount(message []byte) (*WSData[AccountBalance], bool, error) {
+	return WSParseChannelData[AccountBalance](message, WSChannelAccount)
+}
+
+// WSParsePositions 解析 positions 频道推送消息。
+func WSParsePositions(message []byte) (*WSData[AccountPosition], bool, error) {
+	return WSParseChannelData[AccountPosition](message, WSChannelPositions)
+}
+
+// WSParseBalanceAndPosition 解析 balance_and_position 频道推送消息。
+func WSParseBalanceAndPosition(message []byte) (*WSData[WSBalanceAndPosition], bool, error) {
+	return WSParseChannelData[WSBalanceAndPosition](message, WSChannelBalanceAndPosition)
+}
+
+// WSBalanceAndPosition 表示 balance_and_position 频道推送的数据项（精简版）。
+type WSBalanceAndPosition struct {
+	PTime     int64  `json:"pTime,string"`
+	EventType string `json:"eventType"`
+
+	BalData []WSBalanceAndPositionBalance `json:"balData"`
+	PosData []AccountPosition             `json:"posData"`
+}
+
+type WSBalanceAndPositionBalance struct {
+	Ccy     string `json:"ccy"`
+	CashBal string `json:"cashBal"`
+	UTime   int64  `json:"uTime,string"`
 }
 
 // WSFill 表示 WS / 成交频道推送的数据项。
