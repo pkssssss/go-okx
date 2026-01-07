@@ -110,6 +110,93 @@ func TestPlaceOrderService_Do(t *testing.T) {
 	})
 }
 
+func TestBatchPlaceOrdersService_Do(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	t.Run("signed_request_and_body", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodPost; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/batch-orders"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+
+			bodyBytes, _ := io.ReadAll(r.Body)
+			if got, want := string(bodyBytes), `[{"instId":"BTC-USDT","tdMode":"cash","clOrdId":"b15","side":"buy","ordType":"limit","px":"2.15","sz":"2"},{"instId":"BTC-USDT","tdMode":"cash","clOrdId":"b16","side":"buy","ordType":"limit","px":"2.15","sz":"2"}]`; got != want {
+				t.Fatalf("body = %q, want %q", got, want)
+			}
+
+			if got, want := r.Header.Get("OK-ACCESS-TIMESTAMP"), "2020-03-28T12:21:41.274Z"; got != want {
+				t.Fatalf("OK-ACCESS-TIMESTAMP = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "San19o20Me1SBBYmsu72mIfBzHimUtsEKtknsPDWZNg="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"b15","ordId":"1","tag":"","ts":"1695190491421","sCode":"0","sMsg":""},{"clOrdId":"b16","ordId":"2","tag":"","ts":"1695190491422","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewBatchPlaceOrdersService().Orders([]BatchPlaceOrder{
+			{InstId: "BTC-USDT", TdMode: "cash", ClOrdId: "b15", Side: "buy", OrdType: "limit", Px: "2.15", Sz: "2"},
+			{InstId: "BTC-USDT", TdMode: "cash", ClOrdId: "b16", Side: "buy", OrdType: "limit", Px: "2.15", Sz: "2"},
+		}).Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if len(acks) != 2 || acks[0].OrdId != "1" || acks[1].OrdId != "2" {
+			t.Fatalf("acks = %#v, want 2 items ordId 1/2", acks)
+		}
+	})
+
+	t.Run("partial_failure_returns_TradeBatchError", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"b15","ordId":"","tag":"","ts":"0","sCode":"51000","sMsg":"bad"},{"clOrdId":"b16","ordId":"2","tag":"","ts":"0","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewBatchPlaceOrdersService().Orders([]BatchPlaceOrder{
+			{InstId: "BTC-USDT", TdMode: "cash", ClOrdId: "b15", Side: "buy", OrdType: "limit", Px: "2.15", Sz: "2"},
+			{InstId: "BTC-USDT", TdMode: "cash", ClOrdId: "b16", Side: "buy", OrdType: "limit", Px: "2.15", Sz: "2"},
+		}).Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var batchErr *TradeBatchError
+		if !errors.As(err, &batchErr) {
+			t.Fatalf("expected *TradeBatchError, got %T: %v", err, err)
+		}
+		if len(acks) != 2 {
+			t.Fatalf("acks = %#v, want 2 items", acks)
+		}
+	})
+}
+
 func TestCancelOrderService_Do(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 
@@ -158,6 +245,54 @@ func TestCancelOrderService_Do(t *testing.T) {
 	}
 	if got.OrdId != "123" {
 		t.Fatalf("OrdId = %q, want %q", got.OrdId, "123")
+	}
+}
+
+func TestBatchCancelOrdersService_Do(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/api/v5/trade/cancel-batch-orders"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+
+		bodyBytes, _ := io.ReadAll(r.Body)
+		if got, want := string(bodyBytes), `[{"instId":"BTC-USDT","ordId":"590908157585625111"},{"instId":"BTC-USDT","ordId":"590908544950571222"}]`; got != want {
+			t.Fatalf("body = %q, want %q", got, want)
+		}
+
+		if got, want := r.Header.Get("OK-ACCESS-SIGN"), "o4Z4f9pFTnbDKIcYqE3f9gxVjb0JCLzLGheFqFbNmyY="; got != want {
+			t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"1","tag":"","ts":"1695190491421","sCode":"0","sMsg":""},{"clOrdId":"","ordId":"2","tag":"","ts":"1695190491422","sCode":"0","sMsg":""}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	acks, err := c.NewBatchCancelOrdersService().Orders([]BatchCancelOrder{
+		{InstId: "BTC-USDT", OrdId: "590908157585625111", ClOrdId: "ignored"},
+		{InstId: "BTC-USDT", OrdId: "590908544950571222"},
+	}).Do(context.Background())
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+	if len(acks) != 2 || acks[0].OrdId != "1" {
+		t.Fatalf("acks = %#v, want 2 items", acks)
 	}
 }
 
@@ -219,6 +354,53 @@ func TestAmendOrderService_Do(t *testing.T) {
 			t.Fatalf("OrdId = %q, want %q", got.OrdId, "590909145319051111")
 		}
 	})
+}
+
+func TestBatchAmendOrdersService_Do(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/api/v5/trade/amend-batch-orders"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+
+		bodyBytes, _ := io.ReadAll(r.Body)
+		if got, want := string(bodyBytes), `[{"instId":"BTC-USDT","ordId":"590909308792049444","newSz":"2"},{"instId":"BTC-USDT","ordId":"590909308792049555","newSz":"2"}]`; got != want {
+			t.Fatalf("body = %q, want %q", got, want)
+		}
+		if got, want := r.Header.Get("OK-ACCESS-SIGN"), "D5QJnE66gv/NFrGIxjif9KAnskmiBN72DwYOBXHsw9M="; got != want {
+			t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"590909308792049444","reqId":"","ts":"1695190491421","sCode":"0","sMsg":""},{"clOrdId":"","ordId":"590909308792049555","reqId":"","ts":"1695190491422","sCode":"0","sMsg":""}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	acks, err := c.NewBatchAmendOrdersService().Orders([]BatchAmendOrder{
+		{InstId: "BTC-USDT", OrdId: "590909308792049444", ClOrdId: "ignored", NewSz: "2"},
+		{InstId: "BTC-USDT", OrdId: "590909308792049555", NewSz: "2"},
+	}).Do(context.Background())
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+	if len(acks) != 2 || acks[0].OrdId != "590909308792049444" {
+		t.Fatalf("acks = %#v, want 2 items", acks)
+	}
 }
 
 func TestOrdersPendingService_Do(t *testing.T) {
@@ -337,6 +519,113 @@ func TestOrdersHistoryService_Do(t *testing.T) {
 		}
 		if got[0].OrdId != "2" {
 			t.Fatalf("OrdId = %q, want %q", got[0].OrdId, "2")
+		}
+	})
+}
+
+func TestGetOrderService_Do(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	t.Run("missing_instId", func(t *testing.T) {
+		c := NewClient()
+		_, err := c.NewGetOrderService().OrdId("1").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errGetOrderMissingInstId {
+			t.Fatalf("error = %v, want %v", err, errGetOrderMissingInstId)
+		}
+	})
+
+	t.Run("missing_id", func(t *testing.T) {
+		c := NewClient()
+		_, err := c.NewGetOrderService().InstId("BTC-USDT").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errGetOrderMissingId {
+			t.Fatalf("error = %v, want %v", err, errGetOrderMissingId)
+		}
+	})
+
+	t.Run("ordId_takes_precedence_over_clOrdId", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodGet; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/order"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "instId=BTC-USDT&ordId=590909145319051111"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+
+			if got, want := r.Header.Get("OK-ACCESS-TIMESTAMP"), "2020-03-28T12:21:41.274Z"; got != want {
+				t.Fatalf("OK-ACCESS-TIMESTAMP = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "qsOWDbfs3eRqc0t1ITnPgIPcgV8fzz9lNwR2pAU1ccY="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"590909145319051111","clOrdId":"c1","tag":"","side":"buy","ordType":"limit","state":"live","px":"1","sz":"1","avgPx":"0","fillPx":"0","fillSz":"0","accFillSz":"0","uTime":"1597026383085","cTime":"1597026383085"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		got, err := c.NewGetOrderService().
+			InstId("BTC-USDT").
+			OrdId("590909145319051111").
+			ClOrdId("ignored").
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if got.OrdId != "590909145319051111" {
+			t.Fatalf("OrdId = %q, want %q", got.OrdId, "590909145319051111")
+		}
+	})
+
+	t.Run("clOrdId_only", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.URL.RawQuery, "clOrdId=c1&instId=BTC-USDT"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"1","clOrdId":"c1","tag":"","side":"buy","ordType":"limit","state":"live","px":"1","sz":"1","avgPx":"0","fillPx":"0","fillSz":"0","accFillSz":"0","uTime":"1597026383085","cTime":"1597026383085"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		got, err := c.NewGetOrderService().
+			InstId("BTC-USDT").
+			ClOrdId("c1").
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if got.ClOrdId != "c1" {
+			t.Fatalf("ClOrdId = %q, want %q", got.ClOrdId, "c1")
 		}
 	})
 }

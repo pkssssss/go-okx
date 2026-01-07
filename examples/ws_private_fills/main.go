@@ -34,40 +34,27 @@ func main() {
 	}
 
 	ws := c.NewWSPrivate()
-	_ = ws.Subscribe(okx.WSArg{
-		Channel: okx.WSChannelFills,
-		InstId:  instId,
-	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := ws.Start(ctx, func(message []byte) {
-		ev, ok, err := okx.WSParseEvent(message)
-		if err != nil || !ok {
-			return
-		}
-		switch ev.Event {
-		case "subscribe":
-			if ev.Arg != nil && ev.Arg.Channel == okx.WSChannelFills {
-				log.Printf("subscribed: channel=%s instId=%s connId=%s", ev.Arg.Channel, ev.Arg.InstId, ev.ConnID)
-				cancel()
-			}
-		case "error":
-			log.Printf("subscribe error: code=%s msg=%s", ev.Code, ev.Msg)
-			cancel()
-		}
-	}, func(err error) {
+	if err := ws.Start(ctx, nil, func(err error) {
 		log.Printf("ws error: %v", err)
 	}); err != nil {
 		log.Fatal(err)
 	}
 
-	select {
-	case <-ws.Done():
-	case <-time.After(10 * time.Second):
-		log.Printf("timeout waiting subscribe ack (fills channel requires VIP6+)")
-		ws.Close()
-		<-ws.Done()
+	subCtx, subCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer subCancel()
+
+	if err := ws.SubscribeAndWait(subCtx, okx.WSArg{
+		Channel: okx.WSChannelFills,
+		InstId:  instId,
+	}); err != nil {
+		log.Fatal(err)
 	}
+
+	log.Printf("subscribed: channel=%s instId=%s", okx.WSChannelFills, instId)
+	ws.Close()
+	<-ws.Done()
 }

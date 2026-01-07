@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"time"
 
 	"github.com/pkssssss/go-okx"
 )
@@ -18,11 +17,16 @@ func main() {
 	}
 
 	demo := os.Getenv("OKX_DEMO") == "1"
-	instType := os.Getenv("OKX_INST_TYPE")
-	if instType == "" {
-		instType = "ANY"
-	}
 	instId := os.Getenv("OKX_INST_ID")
+	if instId == "" {
+		log.Fatal("missing env: OKX_INST_ID")
+	}
+
+	ordId := os.Getenv("OKX_ORD_ID")
+	clOrdId := os.Getenv("OKX_CL_ORD_ID")
+	if ordId == "" && clOrdId == "" {
+		log.Fatal("missing env: OKX_ORD_ID or OKX_CL_ORD_ID")
+	}
 
 	c := okx.NewClient(
 		okx.WithCredentials(okx.Credentials{
@@ -37,29 +41,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ws := c.NewWSPrivate()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if err := ws.Start(ctx, nil, func(err error) {
-		log.Printf("ws error: %v", err)
-	}); err != nil {
+	o, err := c.NewGetOrderService().
+		InstId(instId).
+		OrdId(ordId).
+		ClOrdId(clOrdId).
+		Do(context.Background())
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	subCtx, subCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer subCancel()
-
-	if err := ws.SubscribeAndWait(subCtx, okx.WSArg{
-		Channel:  okx.WSChannelOrders,
-		InstType: instType,
-		InstId:   instId,
-	}); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("subscribed: channel=%s instType=%s instId=%s", okx.WSChannelOrders, instType, instId)
-	ws.Close()
-	<-ws.Done()
+	log.Printf("order: instType=%s instId=%s ordId=%s clOrdId=%s side=%s ordType=%s px=%s sz=%s state=%s accFillSz=%s avgPx=%s uTime=%d",
+		o.InstType, o.InstId, o.OrdId, o.ClOrdId, o.Side, o.OrdType, o.Px, o.Sz, o.State, o.AccFillSz, o.AvgPx, o.UTime,
+	)
 }

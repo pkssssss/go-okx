@@ -246,6 +246,19 @@ export OKX_LIMIT="100" # 可选
 go run ./examples/trade_fills
 ```
 
+查询订单信息（需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_INST_ID="BTC-USDT" # 必填
+export OKX_ORD_ID="123" # OKX_ORD_ID/OKX_CL_ORD_ID 二选一
+export OKX_CL_ORD_ID="" # OKX_ORD_ID/OKX_CL_ORD_ID 二选一
+go run ./examples/trade_get_order
+```
+
 ## 设计文档
 
 - `docs/design.md`

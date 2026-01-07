@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -49,33 +48,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	subCh := make(chan struct{}, 1)
 	orderCh := make(chan okx.TradeOrder, 1)
 	errCh := make(chan error, 1)
 
-	ws := c.NewWSPrivate(okx.WithWSEventHandler(func(ev okx.WSEvent) {
-		switch ev.Event {
-		case "subscribe":
-			if ev.Arg != nil && ev.Arg.Channel == okx.WSChannelOrders {
-				select {
-				case subCh <- struct{}{}:
-				default:
-				}
-			}
-		case "error":
-			select {
-			case errCh <- fmt.Errorf("okx: ws event error code=%s msg=%s", ev.Code, ev.Msg):
-			default:
-			}
-		}
-	}))
-
-	_ = ws.Subscribe(okx.WSArg{
-		Channel:    okx.WSChannelOrders,
-		InstType:   instType,
-		InstId:     instId,
-		InstFamily: instFamily,
-	})
+	ws := c.NewWSPrivate()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -99,15 +75,18 @@ func main() {
 	}
 	defer ws.Close()
 
-	select {
-	case <-subCh:
-		log.Printf("subscribed: channel=orders instType=%s instId=%s instFamily=%s", instType, instId, instFamily)
-	case err := <-errCh:
+	subCtx, subCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer subCancel()
+
+	if err := ws.SubscribeAndWait(subCtx, okx.WSArg{
+		Channel:    okx.WSChannelOrders,
+		InstType:   instType,
+		InstId:     instId,
+		InstFamily: instFamily,
+	}); err != nil {
 		log.Fatal(err)
-	case <-time.After(10 * time.Second):
-		log.Printf("timeout waiting subscribe ack")
-		return
 	}
+	log.Printf("subscribed: channel=orders instType=%s instId=%s instFamily=%s", instType, instId, instFamily)
 
 	select {
 	case o := <-orderCh:

@@ -17,6 +17,9 @@ type PlaceOrderService struct {
 	side    string
 	ordType string
 	px      string
+	pxUsd   string
+	pxVol   string
+	pxType  string
 	sz      string
 }
 
@@ -60,6 +63,21 @@ func (s *PlaceOrderService) Px(px string) *PlaceOrderService {
 	return s
 }
 
+func (s *PlaceOrderService) PxUsd(pxUsd string) *PlaceOrderService {
+	s.pxUsd = pxUsd
+	return s
+}
+
+func (s *PlaceOrderService) PxVol(pxVol string) *PlaceOrderService {
+	s.pxVol = pxVol
+	return s
+}
+
+func (s *PlaceOrderService) PxType(pxType string) *PlaceOrderService {
+	s.pxType = pxType
+	return s
+}
+
 func (s *PlaceOrderService) Sz(sz string) *PlaceOrderService {
 	s.sz = sz
 	return s
@@ -71,7 +89,7 @@ var (
 	errPlaceOrderMissingSide    = errors.New("okx: place order requires side")
 	errPlaceOrderMissingOrdType = errors.New("okx: place order requires ordType")
 	errPlaceOrderMissingSz      = errors.New("okx: place order requires sz")
-	errPlaceOrderMissingPx      = errors.New("okx: place order requires px for limit order")
+	errPlaceOrderMissingPx      = errors.New("okx: place order requires px/pxUsd/pxVol for limit order")
 	errEmptyPlaceOrderResponse  = errors.New("okx: empty place order response")
 )
 
@@ -83,6 +101,9 @@ type placeOrderRequest struct {
 	Side    string `json:"side"`
 	OrdType string `json:"ordType"`
 	Px      string `json:"px,omitempty"`
+	PxUsd   string `json:"pxUsd,omitempty"`
+	PxVol   string `json:"pxVol,omitempty"`
+	PxType  string `json:"pxType,omitempty"`
 	Sz      string `json:"sz"`
 }
 
@@ -103,7 +124,7 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 	if s.sz == "" {
 		return nil, errPlaceOrderMissingSz
 	}
-	if s.ordType == "limit" && s.px == "" {
+	if s.ordType == "limit" && s.px == "" && s.pxUsd == "" && s.pxVol == "" {
 		return nil, errPlaceOrderMissingPx
 	}
 
@@ -115,6 +136,9 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 		Side:    s.side,
 		OrdType: s.ordType,
 		Px:      s.px,
+		PxUsd:   s.pxUsd,
+		PxVol:   s.pxVol,
+		PxType:  s.pxType,
 		Sz:      s.sz,
 	}
 

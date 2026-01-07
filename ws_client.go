@@ -293,6 +293,70 @@ func (w *WSClient) SubscribeAndWait(ctx context.Context, args ...WSArg) error {
 	}
 }
 
+// Unsubscribe 取消订阅并更新本地期望订阅集合（断线重连时不会重订阅）。
+func (w *WSClient) Unsubscribe(args ...WSArg) error {
+	w.mu.Lock()
+	send := make([]WSArg, 0, len(args))
+	for _, a := range args {
+		if a.Channel == "" {
+			w.mu.Unlock()
+			return errors.New("okx: ws unsubscribe requires channel")
+		}
+		delete(w.desired, a.key())
+		send = append(send, a)
+	}
+	conn := w.conn
+	w.mu.Unlock()
+
+	if conn == nil {
+		return nil
+	}
+	return w.writeJSON(conn, wsOpRequest{ID: w.nextOpID(), Op: "unsubscribe", Args: send})
+}
+
+// UnsubscribeAndWait 发送取消订阅请求并等待 unsubscribe/error event 返回（推荐用于判定取消订阅是否成功）。
+func (w *WSClient) UnsubscribeAndWait(ctx context.Context, args ...WSArg) error {
+	if !w.started.Load() {
+		return errors.New("okx: ws client not started")
+	}
+
+	send := make([]WSArg, 0, len(args))
+	for _, a := range args {
+		if a.Channel == "" {
+			return errors.New("okx: ws unsubscribe requires channel")
+		}
+		send = append(send, a)
+	}
+
+	conn, err := w.waitConn(ctx)
+	if err != nil {
+		return err
+	}
+
+	id := w.nextOpID()
+	waiter := w.registerWaiter(id, "unsubscribe", send)
+	if err := w.writeJSON(conn, wsOpRequest{ID: id, Op: "unsubscribe", Args: send}); err != nil {
+		w.removeWaiter(id)
+		return err
+	}
+
+	select {
+	case err := <-waiter.done:
+		if err != nil {
+			return err
+		}
+		w.mu.Lock()
+		for _, a := range send {
+			delete(w.desired, a.key())
+		}
+		w.mu.Unlock()
+		return nil
+	case <-ctx.Done():
+		w.removeWaiter(id)
+		return ctx.Err()
+	}
+}
+
 func (w *WSClient) run(ctx context.Context) {
 	defer close(w.done)
 
@@ -309,7 +373,6 @@ func (w *WSClient) run(ctx context.Context) {
 			continue
 		}
 
-		w.setConn(conn)
 		conn.SetReadLimit(1024 * 1024)
 
 		conn.SetPingHandler(func(appData string) error {
@@ -319,11 +382,13 @@ func (w *WSClient) run(ctx context.Context) {
 		if w.needLogin {
 			if err := w.login(ctx, conn); err != nil {
 				w.onError(err)
-				w.closeConn()
+				_ = conn.Close()
 				w.sleepBackoff(ctx)
 				continue
 			}
 		}
+
+		w.setConn(conn)
 
 		if args := w.snapshotDesired(); len(args) > 0 {
 			_ = w.writeJSON(conn, wsOpRequest{ID: w.nextOpID(), Op: "subscribe", Args: args})
