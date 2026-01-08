@@ -24,7 +24,6 @@
 
 ## P3（扩展 & 工程化）🟡
 
-- Asset：`asset/bills`、充提记录、子账户相关
+- Asset：✅ `asset/bills`（资金流水）；TODO：充提记录、子账户相关
 - Account：`account/config`、杠杆/风险参数相关
 - 工程化：更细的错误分类（auth/limit/time-skew 等）、可控重试策略（仅幂等 GET）、完善 `README.md` 与 docs
-
