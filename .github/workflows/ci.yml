@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: v5/go.mod
+          cache: true
+          cache-dependency-path: |
+            v5/go.sum
+            examples/go.sum
+
+      - name: Check gofmt
+        run: |
+          test -z "$(gofmt -l $(find . -type f -name '*.go'))"
+
+      - name: Vet (v5)
+        working-directory: v5
+        run: go vet ./...
+
+      - name: Test (v5)
+        working-directory: v5
+        run: go test ./...
+
+      - name: Race (v5)
+        working-directory: v5
+        run: go test -race ./...
+
+      - name: Test (examples)
+        working-directory: examples
+        run: go test ./...
