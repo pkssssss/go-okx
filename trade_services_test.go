@@ -830,56 +830,109 @@ func TestGetOrderService_Do(t *testing.T) {
 func TestTradeFillsService_Do(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.Method, http.MethodGet; got != want {
-			t.Fatalf("method = %q, want %q", got, want)
-		}
-		if got, want := r.URL.Path, "/api/v5/trade/fills"; got != want {
-			t.Fatalf("path = %q, want %q", got, want)
-		}
-		if got, want := r.URL.RawQuery, "instId=BTC-USDT&instType=SPOT&limit=2&ordId=123"; got != want {
-			t.Fatalf("query = %q, want %q", got, want)
-		}
+	t.Run("basic", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodGet; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/fills"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "instId=BTC-USDT&instType=SPOT&limit=2&ordId=123"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
 
-		if got, want := r.Header.Get("OK-ACCESS-TIMESTAMP"), "2020-03-28T12:21:41.274Z"; got != want {
-			t.Fatalf("OK-ACCESS-TIMESTAMP = %q, want %q", got, want)
+			if got, want := r.Header.Get("OK-ACCESS-TIMESTAMP"), "2020-03-28T12:21:41.274Z"; got != want {
+				t.Fatalf("OK-ACCESS-TIMESTAMP = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "75LqTfNVapL9ciV+fgyLfx7moOr0/i1/Cl9oZp5HH8Q="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","tradeId":"1","ordId":"123","clOrdId":"","billId":"b1","subType":"1","tag":"t1","fillPx":"1","fillSz":"1","fillIdxPx":"1.1","fillPnl":"0","fillPxVol":"","fillPxUsd":"","fillMarkVol":"","fillFwdPx":"","fillMarkPx":"","side":"buy","posSide":"net","execType":"T","feeCcy":"BTC","fee":"-0.1","ts":"1597026383085","fillTime":"1597026383085"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		got, err := c.NewTradeFillsService().
+			InstType("SPOT").
+			InstId("BTC-USDT").
+			OrdId("123").
+			Limit(2).
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
 		}
-		if got, want := r.Header.Get("OK-ACCESS-SIGN"), "75LqTfNVapL9ciV+fgyLfx7moOr0/i1/Cl9oZp5HH8Q="; got != want {
-			t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+		if len(got) != 1 {
+			t.Fatalf("len = %d, want %d", len(got), 1)
 		}
+		if got[0].TradeId != "1" {
+			t.Fatalf("TradeId = %q, want %q", got[0].TradeId, "1")
+		}
+		if got[0].ExecType != "T" {
+			t.Fatalf("ExecType = %q, want %q", got[0].ExecType, "T")
+		}
+		if got[0].TS != 1597026383085 {
+			t.Fatalf("TS = %d, want %d", got[0].TS, 1597026383085)
+		}
+		if got[0].FillTime != 1597026383085 {
+			t.Fatalf("FillTime = %d, want %d", got[0].FillTime, 1597026383085)
+		}
+	})
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"123","clOrdId":"","tradeId":"1","side":"buy","posSide":"net","fillPx":"1","fillSz":"1","fee":"-0.1","feeCcy":"BTC","fillTime":"1597026383085"}]}`))
-	}))
-	t.Cleanup(srv.Close)
+	t.Run("with_subType_begin_end", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodGet; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/fills"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "begin=1597020000000&end=1597026383085&instId=BTC-USDT&instType=SPOT&limit=2&ordId=123&subType=1"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "WunVeXRdF3CgIFvT8VEmYA/V/qg2qunMuOn08PuDglM="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
 
-	c := NewClient(
-		WithBaseURL(srv.URL),
-		WithHTTPClient(srv.Client()),
-		WithCredentials(Credentials{
-			APIKey:     "mykey",
-			SecretKey:  "mysecret",
-			Passphrase: "mypass",
-		}),
-		WithNowFunc(func() time.Time { return fixedNow }),
-	)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
 
-	got, err := c.NewTradeFillsService().
-		InstType("SPOT").
-		InstId("BTC-USDT").
-		OrdId("123").
-		Limit(2).
-		Do(context.Background())
-	if err != nil {
-		t.Fatalf("Do() error = %v", err)
-	}
-	if len(got) != 1 {
-		t.Fatalf("len = %d, want %d", len(got), 1)
-	}
-	if got[0].TradeId != "1" {
-		t.Fatalf("TradeId = %q, want %q", got[0].TradeId, "1")
-	}
-	if got[0].FillTime != 1597026383085 {
-		t.Fatalf("FillTime = %d, want %d", got[0].FillTime, 1597026383085)
-	}
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewTradeFillsService().
+			InstType("SPOT").
+			InstId("BTC-USDT").
+			OrdId("123").
+			SubType("1").
+			Begin("1597020000000").
+			End("1597026383085").
+			Limit(2).
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+	})
 }

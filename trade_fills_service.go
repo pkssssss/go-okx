@@ -15,8 +15,11 @@ type TradeFillsService struct {
 	instFamily string
 	instId     string
 	ordId      string
+	subType    string
 	after      string
 	before     string
+	begin      string
+	end        string
 	limit      *int
 }
 
@@ -45,6 +48,12 @@ func (s *TradeFillsService) OrdId(ordId string) *TradeFillsService {
 	return s
 }
 
+// SubType 设置成交类型过滤（如 1: 买入, 2: 卖出...）。
+func (s *TradeFillsService) SubType(subType string) *TradeFillsService {
+	s.subType = subType
+	return s
+}
+
 func (s *TradeFillsService) After(after string) *TradeFillsService {
 	s.after = after
 	return s
@@ -52,6 +61,18 @@ func (s *TradeFillsService) After(after string) *TradeFillsService {
 
 func (s *TradeFillsService) Before(before string) *TradeFillsService {
 	s.before = before
+	return s
+}
+
+// Begin 设置开始时间（Unix 毫秒时间戳字符串）。
+func (s *TradeFillsService) Begin(begin string) *TradeFillsService {
+	s.begin = begin
+	return s
+}
+
+// End 设置结束时间（Unix 毫秒时间戳字符串）。
+func (s *TradeFillsService) End(end string) *TradeFillsService {
+	s.end = end
 	return s
 }
 
@@ -75,11 +96,20 @@ func (s *TradeFillsService) Do(ctx context.Context) ([]TradeFill, error) {
 	if s.ordId != "" {
 		q.Set("ordId", s.ordId)
 	}
+	if s.subType != "" {
+		q.Set("subType", s.subType)
+	}
 	if s.after != "" {
 		q.Set("after", s.after)
 	}
 	if s.before != "" {
 		q.Set("before", s.before)
+	}
+	if s.begin != "" {
+		q.Set("begin", s.begin)
+	}
+	if s.end != "" {
+		q.Set("end", s.end)
 	}
 	if s.limit != nil {
 		q.Set("limit", strconv.Itoa(*s.limit))

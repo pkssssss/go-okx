@@ -60,21 +60,37 @@ type TradeOrder struct {
 }
 
 // TradeFill 表示成交明细（精简版）。
+// 价格/数量字段保持为 string（无损），时间戳字段解析为 int64。
 type TradeFill struct {
 	InstType string `json:"instType"`
 	InstId   string `json:"instId"`
 
+	TradeId string `json:"tradeId"`
 	OrdId   string `json:"ordId"`
 	ClOrdId string `json:"clOrdId"`
-	TradeId string `json:"tradeId"`
 
-	Side    string `json:"side"`
-	PosSide string `json:"posSide"`
+	BillId  string `json:"billId"`
+	SubType string `json:"subType"`
+	Tag     string `json:"tag"`
 
-	FillPx string `json:"fillPx"`
-	FillSz string `json:"fillSz"`
-	Fee    string `json:"fee"`
+	FillPx    string `json:"fillPx"`
+	FillSz    string `json:"fillSz"`
+	FillIdxPx string `json:"fillIdxPx"`
+	FillPnl   string `json:"fillPnl"`
+
+	FillPxVol   string `json:"fillPxVol"`
+	FillPxUsd   string `json:"fillPxUsd"`
+	FillMarkVol string `json:"fillMarkVol"`
+	FillFwdPx   string `json:"fillFwdPx"`
+	FillMarkPx  string `json:"fillMarkPx"`
+
+	Side     string `json:"side"`
+	PosSide  string `json:"posSide"`
+	ExecType string `json:"execType"`
+
 	FeeCcy string `json:"feeCcy"`
+	Fee    string `json:"fee"`
 
+	TS       int64 `json:"ts,string"`
 	FillTime int64 `json:"fillTime,string"`
 }
