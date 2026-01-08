@@ -114,6 +114,10 @@ type responseEnvelope struct {
 }
 
 func (c *Client) do(ctx context.Context, method, endpoint string, query url.Values, body any, signed bool, out any) error {
+	return c.doWithHeaders(ctx, method, endpoint, query, body, signed, nil, out)
+}
+
+func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, query url.Values, body any, signed bool, extraHeader http.Header, out any) error {
 	requestPath := rest.BuildRequestPath(endpoint, query)
 
 	var bodyBytes []byte
@@ -148,6 +152,18 @@ func (c *Client) do(ctx context.Context, method, endpoint string, query url.Valu
 		header.Set("OK-ACCESS-PASSPHRASE", c.creds.Passphrase)
 		header.Set("OK-ACCESS-TIMESTAMP", timestamp)
 		header.Set("OK-ACCESS-SIGN", sig)
+	}
+
+	if len(extraHeader) > 0 {
+		for k, vs := range extraHeader {
+			if len(vs) == 0 {
+				continue
+			}
+			header.Del(k)
+			for _, v := range vs {
+				header.Add(k, v)
+			}
+		}
 	}
 
 	status, resp, respHeader, err := c.rest.Do(ctx, method, requestPath, bodyBytes, header)

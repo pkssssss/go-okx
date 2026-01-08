@@ -72,6 +72,103 @@ func TestPlaceOrderService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("signed_request_and_body_with_options_and_expTime", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodPost; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/order"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("expTime"), "1597026383085"; got != want {
+				t.Fatalf("expTime = %q, want %q", got, want)
+			}
+
+			bodyBytes, _ := io.ReadAll(r.Body)
+			if got, want := string(bodyBytes), `{"instId":"BTC-USDT","tdMode":"isolated","ccy":"USDT","clOrdId":"b15","tag":"t1","side":"buy","posSide":"long","ordType":"post_only","px":"1","sz":"1","reduceOnly":true,"tgtCcy":"quote_ccy","banAmend":true,"pxAmendType":"1","tradeQuoteCcy":"USDT","stpMode":"cancel_maker"}`; got != want {
+				t.Fatalf("body = %q, want %q", got, want)
+			}
+
+			if got, want := r.Header.Get("OK-ACCESS-TIMESTAMP"), "2020-03-28T12:21:41.274Z"; got != want {
+				t.Fatalf("OK-ACCESS-TIMESTAMP = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "ppsaF9o0uI3K4Jpfo7CSfPA4fHoxUPpI27UcBBj5llw="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"b15","ordId":"123","tag":"","ts":"1695190491421","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		got, err := c.NewPlaceOrderService().
+			InstId("BTC-USDT").
+			TdMode("isolated").
+			Ccy("USDT").
+			ClOrdId("b15").
+			Tag("t1").
+			Side("buy").
+			PosSide("long").
+			OrdType("post_only").
+			Px("1").
+			Sz("1").
+			ReduceOnly(true).
+			TgtCcy("quote_ccy").
+			BanAmend(true).
+			PxAmendType("1").
+			TradeQuoteCcy("USDT").
+			StpMode("cancel_maker").
+			ExpTime("1597026383085").
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if got.OrdId != "123" {
+			t.Fatalf("OrdId = %q, want %q", got.OrdId, "123")
+		}
+	})
+
+	t.Run("validate_missing_price_for_post_only", func(t *testing.T) {
+		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
+		_, err := c.NewPlaceOrderService().
+			InstId("BTC-USDT").
+			TdMode("isolated").
+			Side("buy").
+			OrdType("post_only").
+			Sz("1").
+			Do(context.Background())
+		if !errors.Is(err, errPlaceOrderMissingPx) {
+			t.Fatalf("expected errPlaceOrderMissingPx, got %T: %v", err, err)
+		}
+	})
+
+	t.Run("validate_too_many_price_fields", func(t *testing.T) {
+		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
+		_, err := c.NewPlaceOrderService().
+			InstId("BTC-USDT").
+			TdMode("isolated").
+			Side("buy").
+			OrdType("limit").
+			Px("1").
+			PxUsd("100").
+			Sz("1").
+			Do(context.Background())
+		if !errors.Is(err, errPlaceOrderTooManyPx) {
+			t.Fatalf("expected errPlaceOrderTooManyPx, got %T: %v", err, err)
+		}
+	})
+
 	t.Run("item_error_sCode", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -352,6 +449,76 @@ func TestAmendOrderService_Do(t *testing.T) {
 		}
 		if got.OrdId != "590909145319051111" {
 			t.Fatalf("OrdId = %q, want %q", got.OrdId, "590909145319051111")
+		}
+	})
+
+	t.Run("signed_request_and_body_with_options_and_expTime", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodPost; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/amend-order"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("expTime"), "1597026383085"; got != want {
+				t.Fatalf("expTime = %q, want %q", got, want)
+			}
+
+			bodyBytes, _ := io.ReadAll(r.Body)
+			if got, want := string(bodyBytes), `{"instId":"BTC-USDT","cxlOnFail":true,"ordId":"590909145319051111","reqId":"r1","newPxUsd":"1000","pxAmendType":"1"}`; got != want {
+				t.Fatalf("body = %q, want %q", got, want)
+			}
+
+			if got, want := r.Header.Get("OK-ACCESS-TIMESTAMP"), "2020-03-28T12:21:41.274Z"; got != want {
+				t.Fatalf("OK-ACCESS-TIMESTAMP = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "qOS+hKQ248zdhZNLoJcvBWtpGQueQ7PM8jmDWGL2Ymk="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"590909145319051111","reqId":"r1","ts":"1695190491421","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		got, err := c.NewAmendOrderService().
+			InstId("BTC-USDT").
+			OrdId("590909145319051111").
+			ReqId("r1").
+			CxlOnFail(true).
+			NewPxUsd("1000").
+			PxAmendType("1").
+			ExpTime("1597026383085").
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if got.OrdId != "590909145319051111" {
+			t.Fatalf("OrdId = %q, want %q", got.OrdId, "590909145319051111")
+		}
+	})
+
+	t.Run("validate_too_many_price_fields", func(t *testing.T) {
+		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
+		_, err := c.NewAmendOrderService().
+			InstId("BTC-USDT").
+			OrdId("590909145319051111").
+			NewPx("1").
+			NewPxUsd("1000").
+			Do(context.Background())
+		if !errors.Is(err, errAmendOrderTooManyPx) {
+			t.Fatalf("expected errAmendOrderTooManyPx, got %T: %v", err, err)
 		}
 	})
 }

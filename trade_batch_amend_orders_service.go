@@ -9,19 +9,23 @@ import (
 
 // BatchAmendOrder 表示批量改单的单笔请求（精简版）。
 type BatchAmendOrder struct {
-	InstId    string `json:"instId"`
-	CxlOnFail *bool  `json:"cxlOnFail,omitempty"`
-	OrdId     string `json:"ordId,omitempty"`
-	ClOrdId   string `json:"clOrdId,omitempty"`
-	ReqId     string `json:"reqId,omitempty"`
-	NewSz     string `json:"newSz,omitempty"`
-	NewPx     string `json:"newPx,omitempty"`
+	InstId      string `json:"instId"`
+	CxlOnFail   *bool  `json:"cxlOnFail,omitempty"`
+	OrdId       string `json:"ordId,omitempty"`
+	ClOrdId     string `json:"clOrdId,omitempty"`
+	ReqId       string `json:"reqId,omitempty"`
+	NewSz       string `json:"newSz,omitempty"`
+	NewPx       string `json:"newPx,omitempty"`
+	NewPxUsd    string `json:"newPxUsd,omitempty"`
+	NewPxVol    string `json:"newPxVol,omitempty"`
+	PxAmendType string `json:"pxAmendType,omitempty"`
 }
 
 // BatchAmendOrdersService 批量改单。
 type BatchAmendOrdersService struct {
-	c      *Client
-	orders []BatchAmendOrder
+	c             *Client
+	orders        []BatchAmendOrder
+	expTimeHeader string
 }
 
 // NewBatchAmendOrdersService 创建 BatchAmendOrdersService。
@@ -32,6 +36,12 @@ func (c *Client) NewBatchAmendOrdersService() *BatchAmendOrdersService {
 // Orders 设置批量改单列表（最多 20 个）。
 func (s *BatchAmendOrdersService) Orders(orders []BatchAmendOrder) *BatchAmendOrdersService {
 	s.orders = orders
+	return s
+}
+
+// ExpTime 设置 REST 请求头 expTime（请求有效截止时间，Unix 毫秒时间戳字符串）。
+func (s *BatchAmendOrdersService) ExpTime(expTimeMillis string) *BatchAmendOrdersService {
+	s.expTimeHeader = expTimeMillis
 	return s
 }
 
@@ -57,8 +67,12 @@ func (s *BatchAmendOrdersService) Do(ctx context.Context) ([]TradeOrderAck, erro
 		if o.OrdId == "" && o.ClOrdId == "" {
 			return nil, fmt.Errorf("okx: batch amend orders[%d] missing ordId or clOrdId", i)
 		}
-		if o.NewSz == "" && o.NewPx == "" {
-			return nil, fmt.Errorf("okx: batch amend orders[%d] missing newSz or newPx", i)
+
+		if countNonEmptyStrings(o.NewPx, o.NewPxUsd, o.NewPxVol) > 1 {
+			return nil, fmt.Errorf("okx: batch amend orders[%d] requires at most one of newPx/newPxUsd/newPxVol", i)
+		}
+		if o.NewSz == "" && o.NewPx == "" && o.NewPxUsd == "" && o.NewPxVol == "" {
+			return nil, fmt.Errorf("okx: batch amend orders[%d] missing newSz or newPx/newPxUsd/newPxVol", i)
 		}
 		if o.OrdId != "" {
 			o.ClOrdId = ""
@@ -67,7 +81,12 @@ func (s *BatchAmendOrdersService) Do(ctx context.Context) ([]TradeOrderAck, erro
 	}
 
 	var data []TradeOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/amend-batch-orders", nil, req, true, &data); err != nil {
+	var header http.Header
+	if s.expTimeHeader != "" {
+		header = make(http.Header)
+		header.Set("expTime", s.expTimeHeader)
+	}
+	if err := s.c.doWithHeaders(ctx, http.MethodPost, "/api/v5/trade/amend-batch-orders", nil, req, true, header, &data); err != nil {
 		return nil, err
 	}
 	if err := tradeCheckBatchAcks(http.MethodPost, "/api/v5/trade/amend-batch-orders", data); err != nil {
