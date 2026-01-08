@@ -39,21 +39,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := ws.Start(ctx, func(message []byte) {
-		dm, ok, err := okx.WSParseAccount(message)
-		if err != nil || !ok {
-			return
-		}
-
-		totalEq := ""
-		availEq := ""
-		if len(dm.Data) > 0 {
-			totalEq = dm.Data[0].TotalEq
-			availEq = dm.Data[0].AvailEq
-		}
-		log.Printf("account push: eventType=%s curPage=%d lastPage=%v totalEq=%s availEq=%s items=%d", dm.EventType, dm.CurPage, dm.LastPage, totalEq, availEq, len(dm.Data))
+	ws.OnAccount(func(balance okx.AccountBalance) {
+		log.Printf("account push: totalEq=%s availEq=%s details=%d uTime=%d", balance.TotalEq, balance.AvailEq, len(balance.Details), balance.UTime)
 		cancel()
-	}, func(err error) {
+	})
+
+	if err := ws.Start(ctx, nil, func(err error) {
 		log.Printf("ws error: %v", err)
 	}); err != nil {
 		log.Fatal(err)

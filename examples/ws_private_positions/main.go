@@ -44,18 +44,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := ws.Start(ctx, func(message []byte) {
-		dm, ok, err := okx.WSParsePositions(message)
-		if err != nil || !ok {
-			return
-		}
-		log.Printf("positions push: eventType=%s curPage=%d lastPage=%v items=%d", dm.EventType, dm.CurPage, dm.LastPage, len(dm.Data))
-		if len(dm.Data) > 0 {
-			p := dm.Data[0]
-			log.Printf("first position: instType=%s instId=%s posSide=%s pos=%s avgPx=%s uTime=%d", p.InstType, p.InstId, p.PosSide, p.Pos, p.AvgPx, p.UTime)
-		}
+	ws.OnPositions(func(position okx.AccountPosition) {
+		log.Printf("position push: instType=%s instId=%s posSide=%s pos=%s avgPx=%s uTime=%d", position.InstType, position.InstId, position.PosSide, position.Pos, position.AvgPx, position.UTime)
 		cancel()
-	}, func(err error) {
+	})
+
+	if err := ws.Start(ctx, nil, func(err error) {
 		log.Printf("ws error: %v", err)
 	}); err != nil {
 		log.Fatal(err)

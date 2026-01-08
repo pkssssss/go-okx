@@ -112,10 +112,13 @@ type WSClient struct {
 	errHandler   WSErrorHandler
 	eventHandler WSEventHandler
 
-	typedMu        sync.RWMutex
-	ordersHandler  func(order TradeOrder)
-	fillsHandler   func(fill WSFill)
-	opReplyHandler func(reply WSOpReply, raw []byte)
+	typedMu                   sync.RWMutex
+	ordersHandler             func(order TradeOrder)
+	fillsHandler              func(fill WSFill)
+	accountHandler            func(balance AccountBalance)
+	positionsHandler          func(position AccountPosition)
+	balanceAndPositionHandler func(data WSBalanceAndPosition)
+	opReplyHandler            func(reply WSOpReply, raw []byte)
 
 	started atomic.Bool
 	cancel  context.CancelFunc
@@ -606,9 +609,12 @@ func (w *WSClient) onDataMessage(message []byte) {
 	w.typedMu.RLock()
 	ordersH := w.ordersHandler
 	fillsH := w.fillsHandler
+	accountH := w.accountHandler
+	positionsH := w.positionsHandler
+	balPosH := w.balanceAndPositionHandler
 	w.typedMu.RUnlock()
 
-	if ordersH == nil && fillsH == nil {
+	if ordersH == nil && fillsH == nil && accountH == nil && positionsH == nil && balPosH == nil {
 		return
 	}
 
@@ -644,6 +650,39 @@ func (w *WSClient) onDataMessage(message []byte) {
 		}
 		for _, f := range dm.Data {
 			fillsH(f)
+		}
+	case WSChannelAccount:
+		if accountH == nil {
+			return
+		}
+		dm, ok, err := WSParseAccount(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		for _, b := range dm.Data {
+			accountH(b)
+		}
+	case WSChannelPositions:
+		if positionsH == nil {
+			return
+		}
+		dm, ok, err := WSParsePositions(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		for _, p := range dm.Data {
+			positionsH(p)
+		}
+	case WSChannelBalanceAndPosition:
+		if balPosH == nil {
+			return
+		}
+		dm, ok, err := WSParseBalanceAndPosition(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		for _, d := range dm.Data {
+			balPosH(d)
 		}
 	default:
 		return

@@ -37,21 +37,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := ws.Start(ctx, func(message []byte) {
-		dm, ok, err := okx.WSParseBalanceAndPosition(message)
-		if err != nil || !ok {
-			return
-		}
-		if len(dm.Data) == 0 {
-			log.Printf("balance_and_position push: empty data")
-			cancel()
-			return
-		}
-
-		d := dm.Data[0]
-		log.Printf("balance_and_position push: pTime=%d eventType=%s bal=%d pos=%d", d.PTime, d.EventType, len(d.BalData), len(d.PosData))
+	ws.OnBalanceAndPosition(func(data okx.WSBalanceAndPosition) {
+		log.Printf("balance_and_position push: pTime=%d eventType=%s bal=%d pos=%d", data.PTime, data.EventType, len(data.BalData), len(data.PosData))
 		cancel()
-	}, func(err error) {
+	})
+
+	if err := ws.Start(ctx, nil, func(err error) {
 		log.Printf("ws error: %v", err)
 	}); err != nil {
 		log.Fatal(err)

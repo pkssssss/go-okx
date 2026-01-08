@@ -166,3 +166,159 @@ func TestWSClient_OnOpReply_RoutesReply(t *testing.T) {
 		t.Fatalf("timeout waiting op reply")
 	}
 }
+
+func TestWSClient_OnAccount_RoutesData(t *testing.T) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("upgrade error: %v", err)
+		}
+		defer c.Close()
+
+		_ = c.WriteMessage(websocket.TextMessage, []byte(`{"arg":{"channel":"account"},"data":[{"uTime":"1700000000000","totalEq":"1","adjEq":"1","availEq":"1","details":[]}]}`))
+
+		for {
+			if _, _, err := c.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	wsURL := "ws" + srv.URL[len("http"):]
+
+	c := NewClient()
+	ws := c.NewWSPublic(WithWSURL(wsURL))
+
+	gotCh := make(chan AccountBalance, 1)
+	ws.OnAccount(func(balance AccountBalance) {
+		select {
+		case gotCh <- balance:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	if err := ws.Start(ctx, nil, nil); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	t.Cleanup(ws.Close)
+
+	select {
+	case b := <-gotCh:
+		if b.TotalEq != "1" || b.AvailEq != "1" || b.UTime != 1700000000000 {
+			t.Fatalf("balance = %#v", b)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting account")
+	}
+}
+
+func TestWSClient_OnPositions_RoutesData(t *testing.T) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("upgrade error: %v", err)
+		}
+		defer c.Close()
+
+		_ = c.WriteMessage(websocket.TextMessage, []byte(`{"arg":{"channel":"positions"},"data":[{"instType":"SWAP","instId":"BTC-USDT-SWAP","posSide":"long","pos":"1","availPos":"1","avgPx":"100","markPx":"100","lever":"1","mgnMode":"cross","ccy":"USDT","uTime":"1700000000000"}]}`))
+
+		for {
+			if _, _, err := c.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	wsURL := "ws" + srv.URL[len("http"):]
+
+	c := NewClient()
+	ws := c.NewWSPublic(WithWSURL(wsURL))
+
+	gotCh := make(chan AccountPosition, 1)
+	ws.OnPositions(func(position AccountPosition) {
+		select {
+		case gotCh <- position:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	if err := ws.Start(ctx, nil, nil); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	t.Cleanup(ws.Close)
+
+	select {
+	case p := <-gotCh:
+		if p.InstId != "BTC-USDT-SWAP" || p.Pos != "1" || p.UTime != 1700000000000 {
+			t.Fatalf("position = %#v", p)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting position")
+	}
+}
+
+func TestWSClient_OnBalanceAndPosition_RoutesData(t *testing.T) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("upgrade error: %v", err)
+		}
+		defer c.Close()
+
+		_ = c.WriteMessage(websocket.TextMessage, []byte(`{"arg":{"channel":"balance_and_position"},"data":[{"pTime":"1700000000000","eventType":"snapshot","balData":[{"ccy":"USDT","cashBal":"1","uTime":"1700000000000"}],"posData":[{"instType":"SWAP","instId":"BTC-USDT-SWAP","posSide":"long","pos":"1","availPos":"1","avgPx":"100","markPx":"100","lever":"1","mgnMode":"cross","ccy":"USDT","uTime":"1700000000000"}]}]}`))
+
+		for {
+			if _, _, err := c.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	wsURL := "ws" + srv.URL[len("http"):]
+
+	c := NewClient()
+	ws := c.NewWSPublic(WithWSURL(wsURL))
+
+	gotCh := make(chan WSBalanceAndPosition, 1)
+	ws.OnBalanceAndPosition(func(data WSBalanceAndPosition) {
+		select {
+		case gotCh <- data:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	if err := ws.Start(ctx, nil, nil); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	t.Cleanup(ws.Close)
+
+	select {
+	case d := <-gotCh:
+		if d.PTime != 1700000000000 || d.EventType != "snapshot" || len(d.BalData) != 1 || len(d.PosData) != 1 {
+			t.Fatalf("data = %#v", d)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting balance_and_position")
+	}
+}

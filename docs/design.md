@@ -223,6 +223,9 @@ v0.1 路由策略：
 
 - `ws.OnOrders(func(TradeOrder){...})`：逐条处理 orders 推送
 - `ws.OnFills(func(WSFill){...})`：逐条处理 fills 推送
+- `ws.OnAccount(func(AccountBalance){...})`：逐条处理 account 推送
+- `ws.OnPositions(func(AccountPosition){...})`：逐条处理 positions 推送
+- `ws.OnBalanceAndPosition(func(WSBalanceAndPosition){...})`：逐条处理 balance_and_position 推送
 - `ws.OnOpReply(func(WSOpReply, []byte){...})`：观测业务 op 回包（含 raw 便于日志/审计）
 
 ### 8.5 业务 op 请求/响应（交易链路闭环）
