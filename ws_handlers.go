@@ -1,7 +1,7 @@
 package okx
 
 // WithWSOrdersHandler 设置 orders 推送的逐条回调。
-// 注意：回调在 WS read goroutine 中执行，请自行避免阻塞。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSOrdersHandler(handler func(order TradeOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnOrders(handler)
@@ -9,7 +9,7 @@ func WithWSOrdersHandler(handler func(order TradeOrder)) WSOption {
 }
 
 // WithWSFillsHandler 设置 fills 推送的逐条回调。
-// 注意：回调在 WS read goroutine 中执行，请自行避免阻塞。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSFillsHandler(handler func(fill WSFill)) WSOption {
 	return func(c *WSClient) {
 		c.OnFills(handler)
@@ -17,7 +17,7 @@ func WithWSFillsHandler(handler func(fill WSFill)) WSOption {
 }
 
 // WithWSAccountHandler 设置 account 推送的逐条回调。
-// 注意：回调在 WS read goroutine 中执行，请自行避免阻塞。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSAccountHandler(handler func(balance AccountBalance)) WSOption {
 	return func(c *WSClient) {
 		c.OnAccount(handler)
@@ -25,7 +25,7 @@ func WithWSAccountHandler(handler func(balance AccountBalance)) WSOption {
 }
 
 // WithWSPositionsHandler 设置 positions 推送的逐条回调。
-// 注意：回调在 WS read goroutine 中执行，请自行避免阻塞。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSPositionsHandler(handler func(position AccountPosition)) WSOption {
 	return func(c *WSClient) {
 		c.OnPositions(handler)
@@ -33,7 +33,7 @@ func WithWSPositionsHandler(handler func(position AccountPosition)) WSOption {
 }
 
 // WithWSBalanceAndPositionHandler 设置 balance_and_position 推送的逐条回调。
-// 注意：回调在 WS read goroutine 中执行，请自行避免阻塞。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSBalanceAndPositionHandler(handler func(data WSBalanceAndPosition)) WSOption {
 	return func(c *WSClient) {
 		c.OnBalanceAndPosition(handler)
@@ -41,7 +41,7 @@ func WithWSBalanceAndPositionHandler(handler func(data WSBalanceAndPosition)) WS
 }
 
 // WithWSOpReplyHandler 设置 WS 业务 op 回包回调（order/cancel-order/amend-order 等）。
-// 注意：回调在 WS read goroutine 中执行，请自行避免阻塞。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSOpReplyHandler(handler func(reply WSOpReply, raw []byte)) WSOption {
 	return func(c *WSClient) {
 		c.OnOpReply(handler)

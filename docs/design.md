@@ -228,6 +228,11 @@ v0.1 路由策略：
 - `ws.OnBalanceAndPosition(func(WSBalanceAndPosition){...})`：逐条处理 balance_and_position 推送
 - `ws.OnOpReply(func(WSOpReply, []byte){...})`：观测业务 op 回包（含 raw 便于日志/审计）
 
+高可用建议：
+
+- 若 handler 逻辑较重，建议启用 `WithWSTypedHandlerAsync(buffer)` 将 typed handler 移到独立 worker goroutine 执行（避免阻塞 read goroutine）。
+- 队列满时会丢弃该条 typed 回调，并通过 `errHandler` 报错；调用方可调大 buffer 或优化 handler。
+
 ### 8.5 业务 op 请求/响应（交易链路闭环）
 
 OKX WS 除了 `event` 与 `arg+data` 推送外，还有一类“业务操作回包”：

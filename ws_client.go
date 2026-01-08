@@ -78,6 +78,24 @@ func WithWSURL(url string) WSOption {
 	}
 }
 
+// WithWSTypedHandlerAsync 启用 typed handler 的异步分发（orders/fills/account/positions/balance_and_position/op reply）。
+//
+// 默认情况下，typed handler 会在 WS read goroutine 中执行；若 handler 逻辑较重可能阻塞读取导致断线/重连。
+// 启用该选项后，SDK 会将 typed handler 的执行移动到独立 worker goroutine，并通过有界队列解耦。
+//
+// 注意：
+// - 队列满时会丢弃该条 typed 回调，并通过 errHandler 回调报告错误（调用方需自行调大 buffer 或优化 handler）。
+// - raw handler（Start 的 handler 参数）仍在 read goroutine 中执行，如需解耦请避免在 raw handler 中做重逻辑。
+func WithWSTypedHandlerAsync(buffer int) WSOption {
+	return func(c *WSClient) {
+		if buffer <= 0 {
+			buffer = 1024
+		}
+		c.typedAsync = true
+		c.typedBuffer = buffer
+	}
+}
+
 // WithWSHeader 追加/覆盖握手 header。
 func WithWSHeader(header http.Header) WSOption {
 	return func(c *WSClient) {
@@ -119,6 +137,10 @@ type WSClient struct {
 	positionsHandler          func(position AccountPosition)
 	balanceAndPositionHandler func(data WSBalanceAndPosition)
 	opReplyHandler            func(reply WSOpReply, raw []byte)
+
+	typedAsync  bool
+	typedBuffer int
+	typedQueue  chan wsTypedTask
 
 	started atomic.Bool
 	cancel  context.CancelFunc
@@ -216,6 +238,15 @@ func (w *WSClient) Start(ctx context.Context, handler WSMessageHandler, errHandl
 
 	runCtx, cancel := context.WithCancel(ctx)
 	w.cancel = cancel
+
+	if w.typedAsync && w.typedQueue == nil {
+		buf := w.typedBuffer
+		if buf <= 0 {
+			buf = 1024
+		}
+		w.typedQueue = make(chan wsTypedTask, buf)
+		go w.typedDispatchLoop(runCtx)
+	}
 
 	go w.run(runCtx)
 	return nil
@@ -601,7 +632,15 @@ func (w *WSClient) onOpReply(reply WSOpReply, raw []byte) {
 	h := w.opReplyHandler
 	w.typedMu.RUnlock()
 	if h != nil {
-		h(reply, raw)
+		rawCopy := raw
+		if w.typedAsync {
+			rawCopy = append([]byte(nil), raw...)
+		}
+		w.dispatchTyped(wsTypedTask{
+			kind:  wsTypedKindOpReply,
+			op:    reply,
+			opRaw: rawCopy,
+		})
 	}
 }
 
@@ -637,9 +676,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		if err != nil || !ok || len(dm.Data) == 0 {
 			return
 		}
-		for _, o := range dm.Data {
-			ordersH(o)
-		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrders, orders: dm.Data})
 	case WSChannelFills:
 		if fillsH == nil {
 			return
@@ -648,9 +685,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		if err != nil || !ok || len(dm.Data) == 0 {
 			return
 		}
-		for _, f := range dm.Data {
-			fillsH(f)
-		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindFills, fills: dm.Data})
 	case WSChannelAccount:
 		if accountH == nil {
 			return
@@ -659,9 +694,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		if err != nil || !ok || len(dm.Data) == 0 {
 			return
 		}
-		for _, b := range dm.Data {
-			accountH(b)
-		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAccount, balances: dm.Data})
 	case WSChannelPositions:
 		if positionsH == nil {
 			return
@@ -670,9 +703,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		if err != nil || !ok || len(dm.Data) == 0 {
 			return
 		}
-		for _, p := range dm.Data {
-			positionsH(p)
-		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindPositions, positions: dm.Data})
 	case WSChannelBalanceAndPosition:
 		if balPosH == nil {
 			return
@@ -681,9 +712,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		if err != nil || !ok || len(dm.Data) == 0 {
 			return
 		}
-		for _, d := range dm.Data {
-			balPosH(d)
-		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindBalanceAndPosition, balPos: dm.Data})
 	default:
 		return
 	}
