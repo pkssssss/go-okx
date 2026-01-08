@@ -17,20 +17,19 @@ func main() {
 	}
 
 	c := okx.NewClient()
-
 	ws := c.NewWSPublic()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tkCh := make(chan okx.MarketTicker, 1)
+	tradesCh := make(chan []okx.MarketTrade, 1)
 	if err := ws.Start(ctx, func(message []byte) {
-		dm, ok, err := okx.WSParseTickers(message)
+		dm, ok, err := okx.WSParseTrades(message)
 		if err != nil || !ok || len(dm.Data) == 0 {
 			return
 		}
 		select {
-		case tkCh <- dm.Data[0]:
+		case tradesCh <- dm.Data:
 		default:
 		}
 	}, func(err error) {
@@ -41,13 +40,14 @@ func main() {
 
 	subCtx, cancelSub := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelSub()
-	if err := ws.SubscribeAndWait(subCtx, okx.WSArg{Channel: okx.WSChannelTickers, InstId: instId}); err != nil {
+	if err := ws.SubscribeAndWait(subCtx, okx.WSArg{Channel: okx.WSChannelTrades, InstId: instId}); err != nil {
 		log.Fatal(err)
 	}
 
 	select {
-	case tk := <-tkCh:
-		fmt.Printf("instId=%s last=%s bid=%s/%s ask=%s/%s ts=%d\n", tk.InstId, tk.Last, tk.BidPx, tk.BidSz, tk.AskPx, tk.AskSz, tk.TS)
+	case trades := <-tradesCh:
+		t := trades[0]
+		fmt.Printf("instId=%s tradeId=%s px=%s sz=%s side=%s ts=%d count=%s source=%s seqId=%d n=%d\n", t.InstId, t.TradeId, t.Px, t.Sz, t.Side, t.TS, t.Count, t.Source, t.SeqId, len(trades))
 		cancel()
 	case <-time.After(10 * time.Second):
 		log.Fatal("timeout waiting message")

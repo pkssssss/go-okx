@@ -46,7 +46,22 @@ go run ./examples/account_positions
 订阅 WS 公共行情（首次收到消息后退出）：
 
 ```bash
+export OKX_INST_ID="BTC-USDT" # 可选
 go run ./examples/ws_public_tickers
+```
+
+订阅 WS 公共成交（首次收到消息后退出）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+go run ./examples/ws_public_trades
+```
+
+订阅 WS 公共深度 books5（首次收到消息后退出）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+go run ./examples/ws_public_books5
 ```
 
 订阅 WS 私有订单频道（验证 subscribe/unsubscribe ack，不触发下单；需要 API Key，支持模拟盘）：

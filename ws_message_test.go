@@ -187,3 +187,73 @@ func TestWSParseAccountPositionsAndBalanceAndPosition(t *testing.T) {
 		}
 	})
 }
+
+func TestWSParsePublicTickersTradesAndOrderBook(t *testing.T) {
+	t.Run("tickers", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"tickers","instId":"BTC-USDT"},"data":[{"instType":"SPOT","instId":"BTC-USDT","last":"9999.99","bidPx":"8888.88","bidSz":"5","askPx":"9999.99","askSz":"11","ts":"1597026383085"}]}`)
+		dm, ok, err := WSParseTickers(msg)
+		if err != nil {
+			t.Fatalf("WSParseTickers() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelTickers || dm.Arg.InstId != "BTC-USDT" {
+			t.Fatalf("arg = %#v, want tickers BTC-USDT", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "BTC-USDT" || dm.Data[0].Last != "9999.99" || dm.Data[0].TS != 1597026383085 {
+			t.Fatalf("data = %#v, want instId BTC-USDT last=9999.99 ts=1597026383085", dm.Data)
+		}
+	})
+
+	t.Run("trades", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"trades","instId":"BTC-USDT"},"data":[{"instId":"BTC-USDT","tradeId":"1","px":"100","sz":"1","side":"buy","ts":"1597026383085","count":"3","source":"0","seqId":1234}]}`)
+		dm, ok, err := WSParseTrades(msg)
+		if err != nil {
+			t.Fatalf("WSParseTrades() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelTrades || dm.Arg.InstId != "BTC-USDT" {
+			t.Fatalf("arg = %#v, want trades BTC-USDT", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].TradeId != "1" || dm.Data[0].Count != "3" || dm.Data[0].Source != "0" || dm.Data[0].SeqId != 1234 {
+			t.Fatalf("data = %#v, want tradeId=1 count=3 source=0 seqId=1234", dm.Data)
+		}
+	})
+
+	t.Run("order_book_books5", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"books5","instId":"BTC-USDT"},"action":"snapshot","data":[{"asks":[["8476.98","415","0","13"]],"bids":[["8476.97","10","0","1"]],"instId":"BTC-USDT","ts":"1597026383085","checksum":-855196043,"prevSeqId":-1,"seqId":10}]}`)
+		dm, ok, err := WSParseOrderBook(msg)
+		if err != nil {
+			t.Fatalf("WSParseOrderBook() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelBooks5 || dm.Action != "snapshot" {
+			t.Fatalf("meta = %#v, want channel=books5 action=snapshot", dm)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].Checksum != -855196043 || dm.Data[0].PrevSeqId != -1 || dm.Data[0].SeqId != 10 || dm.Data[0].TS != 1597026383085 {
+			t.Fatalf("data = %#v, want checksum=-855196043 prevSeqId=-1 seqId=10 ts=1597026383085", dm.Data)
+		}
+		if len(dm.Data[0].Asks) != 1 || dm.Data[0].Asks[0].Px != "8476.98" || dm.Data[0].Asks[0].Sz != "415" {
+			t.Fatalf("asks = %#v, want px=8476.98 sz=415", dm.Data[0].Asks)
+		}
+		if len(dm.Data[0].Bids) != 1 || dm.Data[0].Bids[0].Px != "8476.97" || dm.Data[0].Bids[0].Sz != "10" {
+			t.Fatalf("bids = %#v, want px=8476.97 sz=10", dm.Data[0].Bids)
+		}
+	})
+
+	t.Run("order_book_channel_mismatch", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"tickers","instId":"BTC-USDT"},"action":"snapshot","data":[{"asks":[["1","2","0","1"]],"bids":[["1","2","0","1"]],"instId":"BTC-USDT","ts":"1597026383085","checksum":1,"prevSeqId":-1,"seqId":10}]}`)
+		_, ok, err := WSParseOrderBook(msg)
+		if err != nil {
+			t.Fatalf("WSParseOrderBook() error = %v", err)
+		}
+		if ok {
+			t.Fatalf("expected ok=false")
+		}
+	})
+}

@@ -18,6 +18,10 @@ type MarketTrade struct {
 	Side string `json:"side"`
 
 	TS int64 `json:"ts,string"`
+
+	Count  string `json:"count,omitempty"`
+	Source string `json:"source,omitempty"`
+	SeqId  int64  `json:"seqId,omitempty"`
 }
 
 // MarketTradesService 获取最近成交。

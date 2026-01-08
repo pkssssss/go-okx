@@ -10,6 +10,16 @@ const (
 	WSChannelAccount            = "account"
 	WSChannelPositions          = "positions"
 	WSChannelBalanceAndPosition = "balance_and_position"
+
+	WSChannelTickers = "tickers"
+	WSChannelTrades  = "trades"
+
+	WSChannelBooks        = "books"
+	WSChannelBooksELP     = "books-elp"
+	WSChannelBooks5       = "books5"
+	WSChannelBboTbt       = "bbo-tbt"
+	WSChannelBooksL2Tbt   = "books-l2-tbt"
+	WSChannelBooks50L2Tbt = "books50-l2-tbt"
 )
 
 // WSEvent 表示 OKX WebSocket 的 event 消息（subscribe/login/error/notice 等）。
@@ -43,6 +53,7 @@ func WSParseEvent(message []byte) (*WSEvent, bool, error) {
 type WSData[T any] struct {
 	Arg       WSArg  `json:"arg"`
 	EventType string `json:"eventType,omitempty"`
+	Action    string `json:"action,omitempty"`
 	CurPage   int    `json:"curPage,omitempty"`
 	LastPage  bool   `json:"lastPage,omitempty"`
 	Data      []T    `json:"data"`
@@ -99,6 +110,51 @@ func WSParsePositions(message []byte) (*WSData[AccountPosition], bool, error) {
 // WSParseBalanceAndPosition 解析 balance_and_position 频道推送消息。
 func WSParseBalanceAndPosition(message []byte) (*WSData[WSBalanceAndPosition], bool, error) {
 	return WSParseChannelData[WSBalanceAndPosition](message, WSChannelBalanceAndPosition)
+}
+
+// WSParseTickers 解析 tickers 频道推送消息。
+func WSParseTickers(message []byte) (*WSData[MarketTicker], bool, error) {
+	return WSParseChannelData[MarketTicker](message, WSChannelTickers)
+}
+
+// WSParseTrades 解析 trades 频道推送消息。
+func WSParseTrades(message []byte) (*WSData[MarketTrade], bool, error) {
+	return WSParseChannelData[MarketTrade](message, WSChannelTrades)
+}
+
+// WSOrderBook 表示 WS 深度频道推送的数据项。
+type WSOrderBook struct {
+	Asks []OrderBookLevel `json:"asks"`
+	Bids []OrderBookLevel `json:"bids"`
+
+	InstId string `json:"instId"`
+
+	TS int64 `json:"ts,string"`
+
+	Checksum  int64 `json:"checksum,omitempty"`
+	PrevSeqId int64 `json:"prevSeqId,omitempty"`
+	SeqId     int64 `json:"seqId,omitempty"`
+}
+
+func isOrderBookChannel(channel string) bool {
+	switch channel {
+	case WSChannelBooks, WSChannelBooksELP, WSChannelBooks5, WSChannelBboTbt, WSChannelBooksL2Tbt, WSChannelBooks50L2Tbt:
+		return true
+	default:
+		return false
+	}
+}
+
+// WSParseOrderBook 解析深度频道推送消息（books/books5/bbo-tbt/books-l2-tbt/books50-l2-tbt/books-elp）。
+func WSParseOrderBook(message []byte) (*WSData[WSOrderBook], bool, error) {
+	dm, ok, err := WSParseData[WSOrderBook](message)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	if !isOrderBookChannel(dm.Arg.Channel) {
+		return nil, false, nil
+	}
+	return dm, true, nil
 }
 
 // WSBalanceAndPosition 表示 balance_and_position 频道推送的数据项（精简版）。
