@@ -22,16 +22,38 @@ type TradeOrder struct {
 	Tag     string `json:"tag"`
 
 	Side    string `json:"side"`
+	PosSide string `json:"posSide"`
+	TdMode  string `json:"tdMode"`
 	OrdType string `json:"ordType"`
 	State   string `json:"state"`
 
-	Px string `json:"px"`
-	Sz string `json:"sz"`
+	Ccy           string `json:"ccy"`
+	TgtCcy        string `json:"tgtCcy"`
+	TradeQuoteCcy string `json:"tradeQuoteCcy"`
+	ReduceOnly    string `json:"reduceOnly"`
+
+	Px     string `json:"px"`
+	PxUsd  string `json:"pxUsd"`
+	PxVol  string `json:"pxVol"`
+	PxType string `json:"pxType"`
+	Sz     string `json:"sz"`
 
 	AvgPx     string `json:"avgPx"`
 	FillPx    string `json:"fillPx"`
 	FillSz    string `json:"fillSz"`
 	AccFillSz string `json:"accFillSz"`
+	TradeId   string `json:"tradeId"`
+	FillTime  string `json:"fillTime"`
+
+	Pnl       string `json:"pnl"`
+	Fee       string `json:"fee"`
+	FeeCcy    string `json:"feeCcy"`
+	Rebate    string `json:"rebate"`
+	RebateCcy string `json:"rebateCcy"`
+
+	StpMode            string `json:"stpMode"`
+	CancelSource       string `json:"cancelSource"`
+	CancelSourceReason string `json:"cancelSourceReason"`
 
 	UTime int64 `json:"uTime,string"`
 	CTime int64 `json:"cTime,string"`

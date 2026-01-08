@@ -592,7 +592,7 @@ func TestOrdersPendingService_Do(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"1","clOrdId":"","tag":"","side":"buy","ordType":"post_only","state":"live","px":"1","sz":"1","avgPx":"0","fillPx":"0","fillSz":"0","accFillSz":"0","uTime":"1597026383085","cTime":"1597026383085"}]}`))
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"1","clOrdId":"","tag":"","side":"buy","posSide":"net","tdMode":"cash","ordType":"post_only","state":"live","ccy":"USDT","tgtCcy":"quote_ccy","tradeQuoteCcy":"USDT","reduceOnly":"false","px":"1","pxUsd":"","pxVol":"","pxType":"","sz":"1","avgPx":"0","fillPx":"0","fillSz":"0","accFillSz":"0","tradeId":"","fillTime":"","pnl":"0","fee":"0","feeCcy":"","rebate":"0","rebateCcy":"","stpMode":"cancel_maker","cancelSource":"","cancelSourceReason":"","uTime":"1597026383085","cTime":"1597026383085"}]}`))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -621,6 +621,21 @@ func TestOrdersPendingService_Do(t *testing.T) {
 	}
 	if got[0].OrdId != "1" {
 		t.Fatalf("OrdId = %q, want %q", got[0].OrdId, "1")
+	}
+	if got, want := got[0].TdMode, "cash"; got != want {
+		t.Fatalf("TdMode = %q, want %q", got, want)
+	}
+	if got, want := got[0].PosSide, "net"; got != want {
+		t.Fatalf("PosSide = %q, want %q", got, want)
+	}
+	if got, want := got[0].TradeQuoteCcy, "USDT"; got != want {
+		t.Fatalf("TradeQuoteCcy = %q, want %q", got, want)
+	}
+	if got, want := got[0].ReduceOnly, "false"; got != want {
+		t.Fatalf("ReduceOnly = %q, want %q", got, want)
+	}
+	if got, want := got[0].FillTime, ""; got != want {
+		t.Fatalf("FillTime = %q, want %q", got, want)
 	}
 }
 
@@ -657,7 +672,7 @@ func TestOrdersHistoryService_Do(t *testing.T) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"2","clOrdId":"","tag":"","side":"buy","ordType":"limit","state":"filled","px":"1","sz":"1","avgPx":"1","fillPx":"1","fillSz":"1","accFillSz":"1","uTime":"1597026383085","cTime":"1597026383085"}]}`))
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"2","clOrdId":"","tag":"","side":"buy","posSide":"net","tdMode":"cash","ordType":"limit","state":"filled","ccy":"USDT","tgtCcy":"base_ccy","tradeQuoteCcy":"USDT","reduceOnly":"false","px":"1","pxUsd":"","pxVol":"","pxType":"","sz":"1","avgPx":"1","fillPx":"1","fillSz":"1","accFillSz":"1","tradeId":"1","fillTime":"1597026383085","pnl":"0","fee":"-0.1","feeCcy":"USDT","rebate":"0","rebateCcy":"","stpMode":"cancel_maker","cancelSource":"","cancelSourceReason":"","uTime":"1597026383085","cTime":"1597026383085"}]}`))
 		}))
 		t.Cleanup(srv.Close)
 
@@ -686,6 +701,9 @@ func TestOrdersHistoryService_Do(t *testing.T) {
 		}
 		if got[0].OrdId != "2" {
 			t.Fatalf("OrdId = %q, want %q", got[0].OrdId, "2")
+		}
+		if got, want := got[0].FillTime, "1597026383085"; got != want {
+			t.Fatalf("FillTime = %q, want %q", got, want)
 		}
 	})
 }
@@ -735,7 +753,7 @@ func TestGetOrderService_Do(t *testing.T) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"590909145319051111","clOrdId":"c1","tag":"","side":"buy","ordType":"limit","state":"live","px":"1","sz":"1","avgPx":"0","fillPx":"0","fillSz":"0","accFillSz":"0","uTime":"1597026383085","cTime":"1597026383085"}]}`))
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"590909145319051111","clOrdId":"c1","tag":"","side":"buy","posSide":"net","tdMode":"cash","ordType":"limit","state":"live","ccy":"USDT","tgtCcy":"quote_ccy","tradeQuoteCcy":"USDT","reduceOnly":"true","px":"1","pxUsd":"","pxVol":"","pxType":"","sz":"1","avgPx":"0","fillPx":"0","fillSz":"0","accFillSz":"0","tradeId":"","fillTime":"1597026383085","pnl":"0","fee":"0","feeCcy":"","rebate":"0","rebateCcy":"","stpMode":"cancel_maker","cancelSource":"","cancelSourceReason":"","uTime":"1597026383085","cTime":"1597026383085"}]}`))
 		}))
 		t.Cleanup(srv.Close)
 
@@ -760,6 +778,18 @@ func TestGetOrderService_Do(t *testing.T) {
 		}
 		if got.OrdId != "590909145319051111" {
 			t.Fatalf("OrdId = %q, want %q", got.OrdId, "590909145319051111")
+		}
+		if got, want := got.TdMode, "cash"; got != want {
+			t.Fatalf("TdMode = %q, want %q", got, want)
+		}
+		if got, want := got.PosSide, "net"; got != want {
+			t.Fatalf("PosSide = %q, want %q", got, want)
+		}
+		if got, want := got.ReduceOnly, "true"; got != want {
+			t.Fatalf("ReduceOnly = %q, want %q", got, want)
+		}
+		if got, want := got.FillTime, "1597026383085"; got != want {
+			t.Fatalf("FillTime = %q, want %q", got, want)
 		}
 	})
 
