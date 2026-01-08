@@ -213,6 +213,20 @@ export OKX_TIMEOUT="10s" # 可选
 go run ./examples/ws_private_trade_amend
 ```
 
+通过 WS 批量交易 op（会真实下单/撤单/改单；需要 API Key；建议先用模拟盘；必须显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 强烈建议：1=模拟盘
+export OKX_CONFIRM=YES # 必填：防止误触真实交易
+export OKX_WS_BATCH_OP="order" # 必填：order/cancel-order/amend-order
+export OKX_WS_BATCH_ARGS='[{"instId":"BTC-USDT","tdMode":"cash","side":"buy","ordType":"market","sz":"0.001","clOrdId":"c1"}]' # 必填：JSON 数组
+export OKX_TIMEOUT="10s" # 可选
+go run ./examples/ws_private_trade_batch_ops
+```
+
 获取单个产品行情（默认 BTC-USDT）：
 
 ```bash
