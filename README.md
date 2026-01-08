@@ -49,7 +49,7 @@ go run ./examples/account_positions
 go run ./examples/ws_public_tickers
 ```
 
-订阅 WS 私有订单频道（仅验证 subscribe ack，不触发下单；需要 API Key，支持模拟盘）：
+订阅 WS 私有订单频道（验证 subscribe/unsubscribe ack，不触发下单；需要 API Key，支持模拟盘）：
 
 ```bash
 export OKX_API_KEY="..."
@@ -257,6 +257,42 @@ export OKX_INST_ID="BTC-USDT" # 必填
 export OKX_ORD_ID="123" # OKX_ORD_ID/OKX_CL_ORD_ID 二选一
 export OKX_CL_ORD_ID="" # OKX_ORD_ID/OKX_CL_ORD_ID 二选一
 go run ./examples/trade_get_order
+```
+
+批量下单（会实际下单；需要 API Key，支持模拟盘；需显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_BATCH_ORDERS='[{"instId":"BTC-USDT","tdMode":"cash","clOrdId":"b15","side":"buy","ordType":"limit","px":"2.15","sz":"2"}]'
+export OKX_CONFIRM="YES"
+go run ./examples/trade_batch_orders
+```
+
+批量撤单（会实际撤单；需要 API Key，支持模拟盘；需显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_BATCH_CANCEL_ORDERS='[{"instId":"BTC-USDT","ordId":"590908157585625111"}]'
+export OKX_CONFIRM="YES"
+go run ./examples/trade_cancel_batch_orders
+```
+
+批量改单（会实际改单；需要 API Key，支持模拟盘；需显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_BATCH_AMEND_ORDERS='[{"instId":"BTC-USDT","ordId":"590909145319051111","newSz":"2"}]'
+export OKX_CONFIRM="YES"
+go run ./examples/trade_amend_batch_orders
 ```
 
 ## 设计文档

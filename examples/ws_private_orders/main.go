@@ -60,6 +60,19 @@ func main() {
 	}
 
 	log.Printf("subscribed: channel=%s instType=%s instId=%s", okx.WSChannelOrders, instType, instId)
+
+	unsubCtx, unsubCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer unsubCancel()
+
+	if err := ws.UnsubscribeAndWait(unsubCtx, okx.WSArg{
+		Channel:  okx.WSChannelOrders,
+		InstType: instType,
+		InstId:   instId,
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("unsubscribed: channel=%s instType=%s instId=%s", okx.WSChannelOrders, instType, instId)
 	ws.Close()
 	<-ws.Done()
 }
