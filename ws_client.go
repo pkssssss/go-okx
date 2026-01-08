@@ -126,6 +126,9 @@ type WSClient struct {
 
 	waitMu  sync.Mutex
 	waiters map[string]*wsOpWaiter
+
+	opWaitMu  sync.Mutex
+	opWaiters map[string]*wsOpRespWaiter
 }
 
 // NewWSPublic 创建 public WS 客户端。
@@ -135,12 +138,13 @@ func (c *Client) NewWSPublic(opts ...WSOption) *WSClient {
 		endpoint = wsPublicDemoURL
 	}
 	w := &WSClient{
-		c:        c,
-		endpoint: endpoint,
-		connCh:   make(chan struct{}),
-		desired:  map[string]WSArg{},
-		backoff:  250 * time.Millisecond,
-		waiters:  map[string]*wsOpWaiter{},
+		c:         c,
+		endpoint:  endpoint,
+		connCh:    make(chan struct{}),
+		desired:   map[string]WSArg{},
+		backoff:   250 * time.Millisecond,
+		waiters:   map[string]*wsOpWaiter{},
+		opWaiters: map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -162,6 +166,7 @@ func (c *Client) NewWSPrivate(opts ...WSOption) *WSClient {
 		desired:   map[string]WSArg{},
 		backoff:   250 * time.Millisecond,
 		waiters:   map[string]*wsOpWaiter{},
+		opWaiters: map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -176,12 +181,13 @@ func (c *Client) NewWSBusiness(opts ...WSOption) *WSClient {
 		endpoint = wsBusinessDemoURL
 	}
 	w := &WSClient{
-		c:        c,
-		endpoint: endpoint,
-		connCh:   make(chan struct{}),
-		desired:  map[string]WSArg{},
-		backoff:  250 * time.Millisecond,
-		waiters:  map[string]*wsOpWaiter{},
+		c:         c,
+		endpoint:  endpoint,
+		connCh:    make(chan struct{}),
+		desired:   map[string]WSArg{},
+		backoff:   250 * time.Millisecond,
+		waiters:   map[string]*wsOpWaiter{},
+		opWaiters: map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -250,6 +256,67 @@ type wsOpWaiter struct {
 	op        string
 	remaining map[string]struct{}
 	done      chan error
+}
+
+type wsOpRespResult struct {
+	reply *WSOpReply
+	raw   []byte
+	err   error
+}
+
+type wsOpRespWaiter struct {
+	op   string
+	done chan wsOpRespResult
+}
+
+// doOpAndWaitRaw 发送业务 op 请求并等待对应响应（用于 WS 下单/撤单/改单等）。
+func (w *WSClient) doOpAndWaitRaw(ctx context.Context, op string, args any) (*WSOpReply, []byte, error) {
+	if !w.started.Load() {
+		return nil, nil, errors.New("okx: ws client not started")
+	}
+	if op == "" {
+		return nil, nil, errors.New("okx: ws op requires op")
+	}
+	if args == nil {
+		return nil, nil, errors.New("okx: ws op requires args")
+	}
+
+	conn, err := w.waitConn(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	id := w.nextOpID()
+	waiter := w.registerOpWaiter(id, op)
+
+	req := struct {
+		ID   string `json:"id"`
+		Op   string `json:"op"`
+		Args any    `json:"args"`
+	}{
+		ID:   id,
+		Op:   op,
+		Args: args,
+	}
+
+	if err := w.writeJSON(conn, req); err != nil {
+		w.removeOpWaiter(id)
+		return nil, nil, err
+	}
+
+	select {
+	case res := <-waiter.done:
+		if res.err != nil {
+			return nil, nil, res.err
+		}
+		if res.reply == nil {
+			return nil, nil, errors.New("okx: ws op empty reply")
+		}
+		return res.reply, res.raw, nil
+	case <-ctx.Done():
+		w.removeOpWaiter(id)
+		return nil, nil, ctx.Err()
+	}
 }
 
 // SubscribeAndWait 发送订阅请求并等待 subscribe/error event 返回（推荐用于判定订阅是否成功）。
@@ -496,6 +563,9 @@ func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn) error {
 
 		ev, ok, err := WSParseEvent(msg)
 		if err != nil || !ok {
+			if r, ok2, err2 := WSParseOpReply(msg); err2 == nil && ok2 {
+				w.notifyOpWaiter(*r, msg)
+			}
 			continue
 		}
 		w.onEvent(*ev)
@@ -507,6 +577,7 @@ func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn) error {
 
 func (w *WSClient) onEvent(ev WSEvent) {
 	w.notifyWaiter(ev)
+	w.notifyOpWaiterError(ev)
 	if w.eventHandler != nil && ev.Event != "" {
 		w.eventHandler(ev)
 	}
@@ -569,6 +640,8 @@ func (w *WSClient) closeConn() {
 	if conn != nil {
 		_ = conn.Close()
 	}
+	w.failOpWaiters(errors.New("okx: ws disconnected"))
+	w.failWaiters(errors.New("okx: ws disconnected"))
 }
 
 func (w *WSClient) snapshotDesired() []WSArg {
@@ -665,4 +738,84 @@ func (w *WSClient) notifyWaiter(ev WSEvent) {
 	w.waitMu.Unlock()
 
 	waiter.done <- nil
+}
+
+func (w *WSClient) failWaiters(err error) {
+	w.waitMu.Lock()
+	waiters := w.waiters
+	w.waiters = map[string]*wsOpWaiter{}
+	w.waitMu.Unlock()
+
+	for id, waiter := range waiters {
+		_ = id
+		select {
+		case waiter.done <- err:
+		default:
+		}
+	}
+}
+
+func (w *WSClient) registerOpWaiter(id string, op string) *wsOpRespWaiter {
+	waiter := &wsOpRespWaiter{
+		op:   op,
+		done: make(chan wsOpRespResult, 1),
+	}
+	w.opWaitMu.Lock()
+	w.opWaiters[id] = waiter
+	w.opWaitMu.Unlock()
+	return waiter
+}
+
+func (w *WSClient) removeOpWaiter(id string) {
+	w.opWaitMu.Lock()
+	delete(w.opWaiters, id)
+	w.opWaitMu.Unlock()
+}
+
+func (w *WSClient) notifyOpWaiter(reply WSOpReply, raw []byte) {
+	if reply.ID == "" {
+		return
+	}
+
+	w.opWaitMu.Lock()
+	waiter := w.opWaiters[reply.ID]
+	if waiter == nil {
+		w.opWaitMu.Unlock()
+		return
+	}
+	delete(w.opWaiters, reply.ID)
+	w.opWaitMu.Unlock()
+
+	waiter.done <- wsOpRespResult{reply: &reply, raw: raw}
+}
+
+func (w *WSClient) notifyOpWaiterError(ev WSEvent) {
+	if ev.Event != "error" || ev.ID == "" {
+		return
+	}
+
+	w.opWaitMu.Lock()
+	waiter := w.opWaiters[ev.ID]
+	if waiter == nil {
+		w.opWaitMu.Unlock()
+		return
+	}
+	delete(w.opWaiters, ev.ID)
+	w.opWaitMu.Unlock()
+
+	waiter.done <- wsOpRespResult{err: fmt.Errorf("okx: ws op=%s id=%s code=%s msg=%s", waiter.op, ev.ID, ev.Code, ev.Msg)}
+}
+
+func (w *WSClient) failOpWaiters(err error) {
+	w.opWaitMu.Lock()
+	waiters := w.opWaiters
+	w.opWaiters = map[string]*wsOpRespWaiter{}
+	w.opWaitMu.Unlock()
+
+	for _, waiter := range waiters {
+		select {
+		case waiter.done <- wsOpRespResult{err: err}:
+		default:
+		}
+	}
 }

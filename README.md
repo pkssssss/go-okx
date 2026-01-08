@@ -156,8 +156,26 @@ export OKX_DEMO=1 # 可选：1=模拟盘
 export OKX_INST_TYPE="ANY" # 可选：SPOT/MARGIN/SWAP/FUTURES/OPTION/ANY
 export OKX_INST_FAMILY="" # 可选
 export OKX_INST_ID="" # 可选
-export OKX_TIMEOUT="60s" # 可选：等待订单更新的超时
-go run ./examples/ws_private_orders_stream
+ export OKX_TIMEOUT="60s" # 可选：等待订单更新的超时
+ go run ./examples/ws_private_orders_stream
+```
+
+通过 WS 下单（会真实下单；需要 API Key；建议先用模拟盘；必须显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 强烈建议：1=模拟盘
+export OKX_CONFIRM=YES # 必填：防止误触真实下单
+export OKX_INST_ID="BTC-USDT" # 必填
+export OKX_TD_MODE="cash" # 必填：cash/cross/isolated...
+export OKX_SIDE="buy" # 必填：buy/sell
+export OKX_ORD_TYPE="market" # 必填：market/limit/...
+export OKX_SZ="0.001" # 必填
+export OKX_PX="..." # 可选：limit/post_only/... 需要 px/pxUsd/pxVol 之一
+export OKX_TIMEOUT="10s" # 可选
+go run ./examples/ws_private_trade_order
 ```
 
 获取单个产品行情（默认 BTC-USDT）：

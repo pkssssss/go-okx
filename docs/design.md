@@ -219,6 +219,27 @@ v0.1 路由策略：
 - 先按 `event` 分发控制消息；
 - 数据消息按 `arg.channel + arg.instId/arg.instType/...` 作为 key 路由给对应订阅的 handler。
 
+### 8.5 业务 op 请求/响应（交易链路闭环）
+
+OKX WS 除了 `event` 与 `arg+data` 推送外，还有一类“业务操作回包”：
+
+- 请求：`{"id":"...","op":"order|cancel-order|amend-order", "args":[...]}`  
+- 响应：`{"id":"...","op":"...","code":"0|...","msg":"...","data":[...],"inTime":"...","outTime":"..."}`
+
+v0.1 设计要点：
+
+- `id` 是关联请求与响应的唯一键：SDK 在发送 op 时注册 waiter，以 `id` 匹配回包并唤醒调用方。
+- `event=error` 且带 `id` 时，应直接失败对应 waiter（避免调用方超时等待）。
+- 断线时应立即失败所有未完成 waiter（避免调用方一直挂到 ctx 超时）。
+- 交易 op 的错误需要“可判定”：
+  - 顶层 `code != "0"` 视为失败；
+  - 顶层成功但 `data[0].sCode != "0"` 仍视为失败（交易接口常见）。
+
+对外 API（v0.1）：
+
+- `(*WSClient).PlaceOrder/CancelOrder/AmendOrder(ctx, arg)`：返回 `*TradeOrderAck` 或 `error`
+- 错误类型：`*WSTradeOpError`（携带 `op/id/code/msg/sCode/sMsg/inTime/outTime/raw`，便于上层诊断与告警）
+
 ## 9. 精度与类型策略（正确性优先）
 
 - 金额/数量/费率/价格等小数：SDK 层保持 `string`（无损），不使用 `float64`。
