@@ -193,6 +193,26 @@ export OKX_TIMEOUT="10s" # 可选
 go run ./examples/ws_private_trade_cancel
 ```
 
+通过 WS 改单（会真实改单；需要 API Key；建议先用模拟盘；必须显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 强烈建议：1=模拟盘
+export OKX_CONFIRM=YES # 必填：防止误触真实改单
+export OKX_INST_ID="BTC-USDT" # 必填
+export OKX_ORD_ID="..." # OKX_ORD_ID 与 OKX_CL_ORD_ID 二选一
+export OKX_CL_ORD_ID="" # OKX_ORD_ID 与 OKX_CL_ORD_ID 二选一
+export OKX_NEW_SZ="..." # OKX_NEW_SZ / OKX_NEW_PX / OKX_NEW_PX_USD / OKX_NEW_PX_VOL 至少一个
+export OKX_NEW_PX="" # 可选
+export OKX_NEW_PX_USD="" # 可选
+export OKX_NEW_PX_VOL="" # 可选
+export OKX_REQ_ID="" # 可选
+export OKX_TIMEOUT="10s" # 可选
+go run ./examples/ws_private_trade_amend
+```
+
 获取单个产品行情（默认 BTC-USDT）：
 
 ```bash
