@@ -100,6 +100,45 @@ func (e *WSTradeOpError) Error() string {
 	return fmt.Sprintf("<OKX WSTradeOpError> op=%s id=%s code=%s msg=%s", e.Op, e.ID, e.Code, e.Msg)
 }
 
+// WSTradeOpBatchError 表示 WS 交易 op 的批量部分失败（顶层 code=0，但 data[i].sCode!=0）。
+type WSTradeOpBatchError struct {
+	ID string
+	Op string
+
+	Code string
+	Msg  string
+
+	InTime  string
+	OutTime string
+
+	Acks []TradeOrderAck
+	Raw  []byte
+}
+
+func (e *WSTradeOpBatchError) Error() string {
+	if e == nil {
+		return "<OKX WSTradeOpBatchError>"
+	}
+
+	failed := 0
+	firstCode := ""
+	firstMsg := ""
+	for _, ack := range e.Acks {
+		if ack.SCode != "" && ack.SCode != "0" {
+			failed++
+			if firstCode == "" {
+				firstCode = ack.SCode
+				firstMsg = ack.SMsg
+			}
+		}
+	}
+
+	if failed == 0 {
+		return fmt.Sprintf("<OKX WSTradeOpBatchError> op=%s id=%s code=%s msg=%s", e.Op, e.ID, e.Code, e.Msg)
+	}
+	return fmt.Sprintf("<OKX WSTradeOpBatchError> op=%s id=%s failed=%d sCode=%s sMsg=%s code=%s msg=%s", e.Op, e.ID, failed, firstCode, firstMsg, e.Code, e.Msg)
+}
+
 func (w *WSClient) requirePrivate() error {
 	if w == nil {
 		return errors.New("okx: nil ws client")
@@ -110,29 +149,77 @@ func (w *WSClient) requirePrivate() error {
 	return nil
 }
 
+func validateWSPlaceOrderArg(prefix string, arg WSPlaceOrderArg) error {
+	if arg.InstId == "" && arg.InstIdCode == 0 {
+		return fmt.Errorf("%s requires instId or instIdCode", prefix)
+	}
+	if arg.TdMode == "" {
+		return fmt.Errorf("%s requires tdMode", prefix)
+	}
+	if arg.Side == "" {
+		return fmt.Errorf("%s requires side", prefix)
+	}
+	if arg.OrdType == "" {
+		return fmt.Errorf("%s requires ordType", prefix)
+	}
+	if arg.Sz == "" {
+		return fmt.Errorf("%s requires sz", prefix)
+	}
+	if requiresPriceForOrderType(arg.OrdType) && arg.Px == "" && arg.PxUsd == "" && arg.PxVol == "" {
+		return fmt.Errorf("%s requires px/pxUsd/pxVol for this ordType", prefix)
+	}
+	return nil
+}
+
+func validateWSCancelOrderArg(prefix string, arg WSCancelOrderArg) error {
+	if arg.InstId == "" && arg.InstIdCode == 0 {
+		return fmt.Errorf("%s requires instId or instIdCode", prefix)
+	}
+	if arg.OrdId == "" && arg.ClOrdId == "" {
+		return fmt.Errorf("%s requires ordId or clOrdId", prefix)
+	}
+	return nil
+}
+
+func validateWSAmendOrderArg(prefix string, arg WSAmendOrderArg) error {
+	if arg.InstId == "" && arg.InstIdCode == 0 {
+		return fmt.Errorf("%s requires instId or instIdCode", prefix)
+	}
+	if arg.OrdId == "" && arg.ClOrdId == "" {
+		return fmt.Errorf("%s requires ordId or clOrdId", prefix)
+	}
+	if arg.NewSz == "" && arg.NewPx == "" && arg.NewPxUsd == "" && arg.NewPxVol == "" {
+		return fmt.Errorf("%s requires newSz/newPx/newPxUsd/newPxVol", prefix)
+	}
+	return nil
+}
+
+func wsTradeCheckBatchAcks(reply *WSOpReply, raw []byte, acks []TradeOrderAck) error {
+	for _, ack := range acks {
+		if ack.SCode != "" && ack.SCode != "0" {
+			return &WSTradeOpBatchError{
+				ID:      reply.ID,
+				Op:      reply.Op,
+				Code:    reply.Code,
+				Msg:     reply.Msg,
+				InTime:  reply.InTime,
+				OutTime: reply.OutTime,
+				Acks:    acks,
+				Raw:     raw,
+			}
+		}
+	}
+	return nil
+}
+
 // PlaceOrder 通过 WS 下单（op=order）。
 // 注意：该方法会真实提交订单（建议在模拟盘验证，且调用方务必设置超时 ctx）。
 func (w *WSClient) PlaceOrder(ctx context.Context, arg WSPlaceOrderArg) (*TradeOrderAck, error) {
 	if err := w.requirePrivate(); err != nil {
 		return nil, err
 	}
-	if arg.InstId == "" && arg.InstIdCode == 0 {
-		return nil, errors.New("okx: ws place order requires instId or instIdCode")
-	}
-	if arg.TdMode == "" {
-		return nil, errors.New("okx: ws place order requires tdMode")
-	}
-	if arg.Side == "" {
-		return nil, errors.New("okx: ws place order requires side")
-	}
-	if arg.OrdType == "" {
-		return nil, errors.New("okx: ws place order requires ordType")
-	}
-	if arg.Sz == "" {
-		return nil, errors.New("okx: ws place order requires sz")
-	}
-	if requiresPriceForOrderType(arg.OrdType) && arg.Px == "" && arg.PxUsd == "" && arg.PxVol == "" {
-		return nil, errors.New("okx: ws place order requires px/pxUsd/pxVol for this ordType")
+	if err := validateWSPlaceOrderArg("okx: ws place order", arg); err != nil {
+		return nil, err
 	}
 
 	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpOrder, []WSPlaceOrderArg{arg})
@@ -162,16 +249,48 @@ func (w *WSClient) PlaceOrder(ctx context.Context, arg WSPlaceOrderArg) (*TradeO
 	return &acks[0], nil
 }
 
+// PlaceOrders 通过 WS 批量下单（op=order，args 为数组）。
+// 注意：该方法会真实提交订单（建议在模拟盘验证，且调用方务必设置超时 ctx）。
+func (w *WSClient) PlaceOrders(ctx context.Context, args ...WSPlaceOrderArg) ([]TradeOrderAck, error) {
+	if err := w.requirePrivate(); err != nil {
+		return nil, err
+	}
+	if len(args) == 0 {
+		return nil, errors.New("okx: ws place orders requires at least one arg")
+	}
+	if len(args) > tradeBatchMaxOrders {
+		return nil, errors.New("okx: ws place orders max 20 orders")
+	}
+	for i, arg := range args {
+		if err := validateWSPlaceOrderArg(fmt.Sprintf("okx: ws place orders[%d]", i), arg); err != nil {
+			return nil, err
+		}
+	}
+
+	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpOrder, args)
+	if err != nil {
+		return nil, err
+	}
+	acks, err := unmarshalTradeOrderAcks(reply, raw)
+	if err != nil {
+		return nil, err
+	}
+	if len(acks) == 0 {
+		return nil, errors.New("okx: ws place orders empty response data")
+	}
+	if err := wsTradeCheckBatchAcks(reply, raw, acks); err != nil {
+		return acks, err
+	}
+	return acks, nil
+}
+
 // CancelOrder 通过 WS 撤单（op=cancel-order）。
 func (w *WSClient) CancelOrder(ctx context.Context, arg WSCancelOrderArg) (*TradeOrderAck, error) {
 	if err := w.requirePrivate(); err != nil {
 		return nil, err
 	}
-	if arg.InstId == "" && arg.InstIdCode == 0 {
-		return nil, errors.New("okx: ws cancel order requires instId or instIdCode")
-	}
-	if arg.OrdId == "" && arg.ClOrdId == "" {
-		return nil, errors.New("okx: ws cancel order requires ordId or clOrdId")
+	if err := validateWSCancelOrderArg("okx: ws cancel order", arg); err != nil {
+		return nil, err
 	}
 
 	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpCancelOrder, []WSCancelOrderArg{arg})
@@ -201,19 +320,48 @@ func (w *WSClient) CancelOrder(ctx context.Context, arg WSCancelOrderArg) (*Trad
 	return &acks[0], nil
 }
 
+// CancelOrders 通过 WS 批量撤单（op=cancel-order，args 为数组）。
+// 注意：该方法会真实撤销订单（建议在模拟盘验证，且调用方务必设置超时 ctx）。
+func (w *WSClient) CancelOrders(ctx context.Context, args ...WSCancelOrderArg) ([]TradeOrderAck, error) {
+	if err := w.requirePrivate(); err != nil {
+		return nil, err
+	}
+	if len(args) == 0 {
+		return nil, errors.New("okx: ws cancel orders requires at least one arg")
+	}
+	if len(args) > tradeBatchMaxOrders {
+		return nil, errors.New("okx: ws cancel orders max 20 orders")
+	}
+	for i, arg := range args {
+		if err := validateWSCancelOrderArg(fmt.Sprintf("okx: ws cancel orders[%d]", i), arg); err != nil {
+			return nil, err
+		}
+	}
+
+	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpCancelOrder, args)
+	if err != nil {
+		return nil, err
+	}
+	acks, err := unmarshalTradeOrderAcks(reply, raw)
+	if err != nil {
+		return nil, err
+	}
+	if len(acks) == 0 {
+		return nil, errors.New("okx: ws cancel orders empty response data")
+	}
+	if err := wsTradeCheckBatchAcks(reply, raw, acks); err != nil {
+		return acks, err
+	}
+	return acks, nil
+}
+
 // AmendOrder 通过 WS 改单（op=amend-order）。
 func (w *WSClient) AmendOrder(ctx context.Context, arg WSAmendOrderArg) (*TradeOrderAck, error) {
 	if err := w.requirePrivate(); err != nil {
 		return nil, err
 	}
-	if arg.InstId == "" && arg.InstIdCode == 0 {
-		return nil, errors.New("okx: ws amend order requires instId or instIdCode")
-	}
-	if arg.OrdId == "" && arg.ClOrdId == "" {
-		return nil, errors.New("okx: ws amend order requires ordId or clOrdId")
-	}
-	if arg.NewSz == "" && arg.NewPx == "" && arg.NewPxUsd == "" && arg.NewPxVol == "" {
-		return nil, errors.New("okx: ws amend order requires newSz/newPx/newPxUsd/newPxVol")
+	if err := validateWSAmendOrderArg("okx: ws amend order", arg); err != nil {
+		return nil, err
 	}
 
 	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpAmendOrder, []WSAmendOrderArg{arg})
@@ -241,6 +389,41 @@ func (w *WSClient) AmendOrder(ctx context.Context, arg WSAmendOrderArg) (*TradeO
 		}
 	}
 	return &acks[0], nil
+}
+
+// AmendOrders 通过 WS 批量改单（op=amend-order，args 为数组）。
+// 注意：该方法会真实修改订单（建议在模拟盘验证，且调用方务必设置超时 ctx）。
+func (w *WSClient) AmendOrders(ctx context.Context, args ...WSAmendOrderArg) ([]TradeOrderAck, error) {
+	if err := w.requirePrivate(); err != nil {
+		return nil, err
+	}
+	if len(args) == 0 {
+		return nil, errors.New("okx: ws amend orders requires at least one arg")
+	}
+	if len(args) > tradeBatchMaxOrders {
+		return nil, errors.New("okx: ws amend orders max 20 orders")
+	}
+	for i, arg := range args {
+		if err := validateWSAmendOrderArg(fmt.Sprintf("okx: ws amend orders[%d]", i), arg); err != nil {
+			return nil, err
+		}
+	}
+
+	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpAmendOrder, args)
+	if err != nil {
+		return nil, err
+	}
+	acks, err := unmarshalTradeOrderAcks(reply, raw)
+	if err != nil {
+		return nil, err
+	}
+	if len(acks) == 0 {
+		return nil, errors.New("okx: ws amend orders empty response data")
+	}
+	if err := wsTradeCheckBatchAcks(reply, raw, acks); err != nil {
+		return acks, err
+	}
+	return acks, nil
 }
 
 func unmarshalTradeOrderAcks(reply *WSOpReply, raw []byte) ([]TradeOrderAck, error) {

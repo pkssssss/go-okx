@@ -537,3 +537,169 @@ func TestWSClient_TradeOp_EventError(t *testing.T) {
 		t.Fatalf("error = %v, want contains code=60012", err)
 	}
 }
+
+func TestWSClient_PlaceOrders_WSOpReply(t *testing.T) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	type opReq struct {
+		ID   string          `json:"id"`
+		Op   string          `json:"op"`
+		Args json.RawMessage `json:"args"`
+	}
+
+	t.Run("success_multi", func(t *testing.T) {
+		opReqCh := make(chan opReq, 1)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			c, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				t.Fatalf("upgrade error: %v", err)
+			}
+			defer c.Close()
+
+			if _, _, err := c.ReadMessage(); err != nil {
+				t.Fatalf("server read login: %v", err)
+			}
+			_ = c.WriteMessage(websocket.TextMessage, []byte(`{"event":"login","code":"0","msg":"","connId":"x"}`))
+
+			_, msg, err := c.ReadMessage()
+			if err != nil {
+				t.Fatalf("server read op: %v", err)
+			}
+			var req opReq
+			if err := json.Unmarshal(msg, &req); err != nil {
+				t.Fatalf("unmarshal op: %v", err)
+			}
+			opReqCh <- req
+
+			resp := `{"id":"` + req.ID + `","op":"order","code":"0","msg":"","data":[{"clOrdId":"c1","ordId":"o1","ts":"1700000000000","sCode":"0","sMsg":""},{"clOrdId":"c2","ordId":"o2","ts":"1700000000001","sCode":"0","sMsg":""}],"inTime":"1","outTime":"2"}`
+			_ = c.WriteMessage(websocket.TextMessage, []byte(resp))
+
+			for {
+				if _, _, err := c.ReadMessage(); err != nil {
+					return
+				}
+			}
+		}))
+		t.Cleanup(srv.Close)
+
+		wsURL := "ws" + srv.URL[len("http"):]
+
+		client := NewClient(WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}))
+		ws := client.NewWSPrivate(WithWSURL(wsURL))
+
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+		if err := ws.Start(ctx, nil, nil); err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+		t.Cleanup(ws.Close)
+
+		opCtx, opCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		t.Cleanup(opCancel)
+
+		acks, err := ws.PlaceOrders(opCtx,
+			WSPlaceOrderArg{InstId: "BTC-USDT", TdMode: "cash", Side: "buy", OrdType: "market", Sz: "1", ClOrdId: "c1"},
+			WSPlaceOrderArg{InstId: "BTC-USDT", TdMode: "cash", Side: "sell", OrdType: "market", Sz: "2", ClOrdId: "c2"},
+		)
+		if err != nil {
+			t.Fatalf("PlaceOrders() error = %v", err)
+		}
+		if len(acks) != 2 || acks[0].OrdId != "o1" || acks[1].OrdId != "o2" {
+			t.Fatalf("acks = %#v", acks)
+		}
+
+		select {
+		case req := <-opReqCh:
+			if req.ID == "" || req.Op != "order" {
+				t.Fatalf("op req = %#v", req)
+			}
+			var args []WSPlaceOrderArg
+			if err := json.Unmarshal(req.Args, &args); err != nil {
+				t.Fatalf("unmarshal args: %v", err)
+			}
+			if len(args) != 2 || args[0].ClOrdId != "c1" || args[1].ClOrdId != "c2" {
+				t.Fatalf("args = %#v", args)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timeout waiting op req")
+		}
+	})
+
+	t.Run("partial_failure", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			c, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				t.Fatalf("upgrade error: %v", err)
+			}
+			defer c.Close()
+
+			if _, _, err := c.ReadMessage(); err != nil {
+				t.Fatalf("server read login: %v", err)
+			}
+			_ = c.WriteMessage(websocket.TextMessage, []byte(`{"event":"login","code":"0","msg":"","connId":"x"}`))
+
+			_, msg, err := c.ReadMessage()
+			if err != nil {
+				t.Fatalf("server read op: %v", err)
+			}
+			var req opReq
+			if err := json.Unmarshal(msg, &req); err != nil {
+				t.Fatalf("unmarshal op: %v", err)
+			}
+
+			resp := `{"id":"` + req.ID + `","op":"order","code":"0","msg":"","data":[{"clOrdId":"c1","ordId":"o1","ts":"1700000000000","sCode":"0","sMsg":""},{"clOrdId":"c2","ordId":"","ts":"1700000000001","sCode":"51000","sMsg":"invalid"}],"inTime":"1","outTime":"2"}`
+			_ = c.WriteMessage(websocket.TextMessage, []byte(resp))
+
+			for {
+				if _, _, err := c.ReadMessage(); err != nil {
+					return
+				}
+			}
+		}))
+		t.Cleanup(srv.Close)
+
+		wsURL := "ws" + srv.URL[len("http"):]
+
+		client := NewClient(WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}))
+		ws := client.NewWSPrivate(WithWSURL(wsURL))
+
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+		if err := ws.Start(ctx, nil, nil); err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+		t.Cleanup(ws.Close)
+
+		opCtx, opCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		t.Cleanup(opCancel)
+
+		acks, err := ws.PlaceOrders(opCtx,
+			WSPlaceOrderArg{InstId: "BTC-USDT", TdMode: "cash", Side: "buy", OrdType: "market", Sz: "1", ClOrdId: "c1"},
+			WSPlaceOrderArg{InstId: "BTC-USDT", TdMode: "cash", Side: "sell", OrdType: "market", Sz: "2", ClOrdId: "c2"},
+		)
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var be *WSTradeOpBatchError
+		if !errors.As(err, &be) || be.Op != "order" || be.ID == "" || len(be.Acks) != 2 {
+			t.Fatalf("error = %#v", err)
+		}
+		if len(acks) != 2 || acks[1].SCode != "51000" {
+			t.Fatalf("acks = %#v", acks)
+		}
+		if len(be.Raw) == 0 || !strings.Contains(string(be.Raw), `"sCode":"51000"`) {
+			t.Fatalf("raw = %q", string(be.Raw))
+		}
+	})
+}

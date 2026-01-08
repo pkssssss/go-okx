@@ -238,7 +238,9 @@ v0.1 设计要点：
 对外 API（v0.1）：
 
 - `(*WSClient).PlaceOrder/CancelOrder/AmendOrder(ctx, arg)`：返回 `*TradeOrderAck` 或 `error`
+- `(*WSClient).PlaceOrders/CancelOrders/AmendOrders(ctx, args...)`：返回 `[]TradeOrderAck` 或 `error`
 - 错误类型：`*WSTradeOpError`（携带 `op/id/code/msg/sCode/sMsg/inTime/outTime/raw`，便于上层诊断与告警）
+- 批量部分失败：`*WSTradeOpBatchError`（顶层成功但存在 `sCode!=0`，返回 `acks` 并携带 `raw` 便于诊断）
 
 ## 9. 精度与类型策略（正确性优先）
 
