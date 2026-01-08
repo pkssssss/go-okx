@@ -24,6 +24,8 @@ type FundingRate struct {
 	InterestRate string `json:"interestRate"`
 	Premium      string `json:"premium"`
 
+	SettFundingRate string `json:"settFundingRate"`
+
 	Method      string `json:"method"`
 	SettState   string `json:"settState"`
 	FormulaType string `json:"formulaType"`

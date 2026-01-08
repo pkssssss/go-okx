@@ -2,6 +2,8 @@ package okx
 
 import (
 	"encoding/json"
+	"errors"
+	"strconv"
 	"strings"
 )
 
@@ -15,6 +17,15 @@ const (
 	WSChannelTickers   = "tickers"
 	WSChannelTrades    = "trades"
 	WSChannelTradesAll = "trades-all"
+
+	WSChannelOpenInterest = "open-interest"
+	WSChannelFundingRate  = "funding-rate"
+	WSChannelPriceLimit   = "price-limit"
+	WSChannelMarkPrice    = "mark-price"
+	WSChannelIndexTickers = "index-tickers"
+	WSChannelOptSummary   = "opt-summary"
+
+	WSChannelLiquidationOrders = "liquidation-orders"
 
 	WSChannelBooks        = "books"
 	WSChannelBooksELP     = "books-elp"
@@ -132,6 +143,41 @@ func WSParseTradesAll(message []byte) (*WSData[MarketTrade], bool, error) {
 	return WSParseChannelData[MarketTrade](message, WSChannelTradesAll)
 }
 
+// WSParseOpenInterest 解析 open-interest 频道推送消息。
+func WSParseOpenInterest(message []byte) (*WSData[OpenInterest], bool, error) {
+	return WSParseChannelData[OpenInterest](message, WSChannelOpenInterest)
+}
+
+// WSParseFundingRate 解析 funding-rate 频道推送消息。
+func WSParseFundingRate(message []byte) (*WSData[FundingRate], bool, error) {
+	return WSParseChannelData[FundingRate](message, WSChannelFundingRate)
+}
+
+// WSParsePriceLimit 解析 price-limit 频道推送消息。
+func WSParsePriceLimit(message []byte) (*WSData[PriceLimit], bool, error) {
+	return WSParseChannelData[PriceLimit](message, WSChannelPriceLimit)
+}
+
+// WSParseMarkPrice 解析 mark-price 频道推送消息。
+func WSParseMarkPrice(message []byte) (*WSData[MarkPrice], bool, error) {
+	return WSParseChannelData[MarkPrice](message, WSChannelMarkPrice)
+}
+
+// WSParseIndexTickers 解析 index-tickers 频道推送消息。
+func WSParseIndexTickers(message []byte) (*WSData[IndexTicker], bool, error) {
+	return WSParseChannelData[IndexTicker](message, WSChannelIndexTickers)
+}
+
+// WSParseOptSummary 解析 opt-summary 频道推送消息。
+func WSParseOptSummary(message []byte) (*WSData[OptSummary], bool, error) {
+	return WSParseChannelData[OptSummary](message, WSChannelOptSummary)
+}
+
+// WSParseLiquidationOrders 解析 liquidation-orders 频道推送消息。
+func WSParseLiquidationOrders(message []byte) (*WSData[LiquidationOrder], bool, error) {
+	return WSParseChannelData[LiquidationOrder](message, WSChannelLiquidationOrders)
+}
+
 // WSCandleChannel 返回 OKX K线频道名（如 bar=1m -> candle1m）。
 func WSCandleChannel(bar string) string {
 	if bar == "" {
@@ -154,6 +200,104 @@ func WSParseCandles(message []byte) (*WSData[Candle], bool, error) {
 		return nil, ok, err
 	}
 	if !isCandleChannel(dm.Arg.Channel) {
+		return nil, false, nil
+	}
+	return dm, true, nil
+}
+
+const (
+	wsChannelPrefixMarkPriceCandle = "mark-price-candle"
+	wsChannelPrefixIndexCandle     = "index-candle"
+)
+
+// WSMarkPriceCandleChannel 返回标记价格K线频道名（如 bar=1D -> mark-price-candle1D）。
+func WSMarkPriceCandleChannel(bar string) string {
+	if bar == "" {
+		return ""
+	}
+	if strings.HasPrefix(bar, wsChannelPrefixMarkPriceCandle) {
+		return bar
+	}
+	return wsChannelPrefixMarkPriceCandle + bar
+}
+
+// WSIndexCandleChannel 返回指数K线频道名（如 bar=30m -> index-candle30m）。
+func WSIndexCandleChannel(bar string) string {
+	if bar == "" {
+		return ""
+	}
+	if strings.HasPrefix(bar, wsChannelPrefixIndexCandle) {
+		return bar
+	}
+	return wsChannelPrefixIndexCandle + bar
+}
+
+func isMarkPriceCandleChannel(channel string) bool {
+	return strings.HasPrefix(channel, wsChannelPrefixMarkPriceCandle)
+}
+
+func isIndexCandleChannel(channel string) bool {
+	return strings.HasPrefix(channel, wsChannelPrefixIndexCandle)
+}
+
+// PriceCandle 表示标记价格/指数 K线数据。
+//
+// OKX 返回为数组：["ts","o","h","l","c","confirm"]
+type PriceCandle struct {
+	TS int64
+
+	Open  string
+	High  string
+	Low   string
+	Close string
+
+	Confirm string
+}
+
+func (c *PriceCandle) UnmarshalJSON(data []byte) error {
+	*c = PriceCandle{}
+
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err
+	}
+	if len(arr) < 6 {
+		return errors.New("okx: invalid price candle")
+	}
+
+	ts, err := strconv.ParseInt(arr[0], 10, 64)
+	if err != nil {
+		return errors.New("okx: invalid price candle ts")
+	}
+
+	c.TS = ts
+	c.Open = arr[1]
+	c.High = arr[2]
+	c.Low = arr[3]
+	c.Close = arr[4]
+	c.Confirm = arr[5]
+	return nil
+}
+
+// WSParseMarkPriceCandles 解析标记价格K线频道推送消息（mark-price-candle*，business WS）。
+func WSParseMarkPriceCandles(message []byte) (*WSData[PriceCandle], bool, error) {
+	dm, ok, err := WSParseData[PriceCandle](message)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	if !isMarkPriceCandleChannel(dm.Arg.Channel) {
+		return nil, false, nil
+	}
+	return dm, true, nil
+}
+
+// WSParseIndexCandles 解析指数K线频道推送消息（index-candle*，business WS）。
+func WSParseIndexCandles(message []byte) (*WSData[PriceCandle], bool, error) {
+	dm, ok, err := WSParseData[PriceCandle](message)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	if !isIndexCandleChannel(dm.Arg.Channel) {
 		return nil, false, nil
 	}
 	return dm, true, nil
@@ -200,6 +344,56 @@ type WSCallAuctionDetails struct {
 // WSParseCallAuctionDetails 解析 call-auction-details 频道推送消息。
 func WSParseCallAuctionDetails(message []byte) (*WSData[WSCallAuctionDetails], bool, error) {
 	return WSParseChannelData[WSCallAuctionDetails](message, WSChannelCallAuctionDetails)
+}
+
+// PriceLimit 表示 WS price-limit 频道推送的数据项。
+type PriceLimit struct {
+	InstType string `json:"instType,omitempty"`
+	InstId   string `json:"instId"`
+
+	BuyLmt  string `json:"buyLmt"`
+	SellLmt string `json:"sellLmt"`
+
+	TS int64 `json:"ts,string"`
+
+	Enabled bool `json:"enabled"`
+}
+
+// IndexTicker 表示 WS index-tickers 频道推送的数据项。
+type IndexTicker struct {
+	InstId string `json:"instId"`
+	IdxPx  string `json:"idxPx"`
+
+	High24h string `json:"high24h"`
+	Low24h  string `json:"low24h"`
+	Open24h string `json:"open24h"`
+
+	SodUtc0 string `json:"sodUtc0"`
+	SodUtc8 string `json:"sodUtc8"`
+
+	TS int64 `json:"ts,string"`
+}
+
+// LiquidationOrder 表示 WS liquidation-orders 频道推送的数据项。
+type LiquidationOrder struct {
+	InstType   string `json:"instType"`
+	InstId     string `json:"instId"`
+	Uly        string `json:"uly,omitempty"`
+	InstFamily string `json:"instFamily,omitempty"`
+
+	Details []LiquidationOrderDetail `json:"details"`
+}
+
+type LiquidationOrderDetail struct {
+	Side    string `json:"side"`
+	PosSide string `json:"posSide"`
+
+	BkPx   string `json:"bkPx"`
+	Sz     string `json:"sz"`
+	BkLoss string `json:"bkLoss"`
+	Ccy    string `json:"ccy"`
+
+	TS int64 `json:"ts,string"`
 }
 
 // WSOrderBook 表示 WS 深度频道推送的数据项。

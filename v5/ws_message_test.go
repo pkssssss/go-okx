@@ -338,3 +338,175 @@ func TestWSParsePublicOptionTradesAndCallAuctionDetails(t *testing.T) {
 		}
 	})
 }
+
+func TestWSParsePublicDataChannels(t *testing.T) {
+	t.Run("open_interest", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"open-interest","instId":"BTC-USDT-SWAP"},"data":[{"instId":"BTC-USDT-SWAP","instType":"SWAP","oi":"2216113.01000000309","oiCcy":"22161.1301000000309","oiUsd":"1939251795.54769270396321","ts":"1743041250440"}]}`)
+		dm, ok, err := WSParseOpenInterest(msg)
+		if err != nil {
+			t.Fatalf("WSParseOpenInterest() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelOpenInterest || dm.Arg.InstId != "BTC-USDT-SWAP" {
+			t.Fatalf("arg = %#v, want open-interest BTC-USDT-SWAP", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstType != "SWAP" || dm.Data[0].TS != 1743041250440 {
+			t.Fatalf("data = %#v, want instType=SWAP ts=1743041250440", dm.Data)
+		}
+	})
+
+	t.Run("funding_rate", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"funding-rate","instId":"BTC-USD-SWAP"},"data":[{"fundingRate":"0.0001875391284828","fundingTime":"1700726400000","instId":"BTC-USD-SWAP","instType":"SWAP","method":"current_period","maxFundingRate":"0.00375","minFundingRate":"-0.00375","nextFundingRate":"","nextFundingTime":"1700755200000","premium":"0.0001233824646391","settFundingRate":"0.0001699799259033","settState":"settled","ts":"1700724675402"}]}`)
+		dm, ok, err := WSParseFundingRate(msg)
+		if err != nil {
+			t.Fatalf("WSParseFundingRate() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelFundingRate || dm.Arg.InstId != "BTC-USD-SWAP" {
+			t.Fatalf("arg = %#v, want funding-rate BTC-USD-SWAP", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].FundingRate != "0.0001875391284828" || dm.Data[0].SettFundingRate != "0.0001699799259033" {
+			t.Fatalf("data = %#v, want fundingRate/settFundingRate", dm.Data)
+		}
+	})
+
+	t.Run("price_limit", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"price-limit","instId":"LTC-USD-190628"},"data":[{"instId":"LTC-USD-190628","buyLmt":"200","sellLmt":"300","ts":"1597026383085","enabled":true}]}`)
+		dm, ok, err := WSParsePriceLimit(msg)
+		if err != nil {
+			t.Fatalf("WSParsePriceLimit() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelPriceLimit || dm.Arg.InstId != "LTC-USD-190628" {
+			t.Fatalf("arg = %#v, want price-limit LTC-USD-190628", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].BuyLmt != "200" || !dm.Data[0].Enabled {
+			t.Fatalf("data = %#v, want buyLmt=200 enabled=true", dm.Data)
+		}
+	})
+
+	t.Run("mark_price", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"mark-price","instId":"BTC-USDT"},"data":[{"instType":"MARGIN","instId":"BTC-USDT","markPx":"42310.6","ts":"1630049139746"}]}`)
+		dm, ok, err := WSParseMarkPrice(msg)
+		if err != nil {
+			t.Fatalf("WSParseMarkPrice() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelMarkPrice || dm.Arg.InstId != "BTC-USDT" {
+			t.Fatalf("arg = %#v, want mark-price BTC-USDT", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].MarkPx != "42310.6" || dm.Data[0].TS != 1630049139746 {
+			t.Fatalf("data = %#v, want markPx=42310.6 ts=1630049139746", dm.Data)
+		}
+	})
+
+	t.Run("index_tickers", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"index-tickers","instId":"BTC-USDT"},"data":[{"instId":"BTC-USDT","idxPx":"0.1","high24h":"0.5","low24h":"0.1","open24h":"0.1","sodUtc0":"0.1","sodUtc8":"0.1","ts":"1597026383085"}]}`)
+		dm, ok, err := WSParseIndexTickers(msg)
+		if err != nil {
+			t.Fatalf("WSParseIndexTickers() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelIndexTickers || dm.Arg.InstId != "BTC-USDT" {
+			t.Fatalf("arg = %#v, want index-tickers BTC-USDT", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].IdxPx != "0.1" || dm.Data[0].TS != 1597026383085 {
+			t.Fatalf("data = %#v, want idxPx=0.1 ts=1597026383085", dm.Data)
+		}
+	})
+
+	t.Run("opt_summary", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"opt-summary","instFamily":"BTC-USD"},"data":[{"instType":"OPTION","instId":"BTC-USD-230224-18000-C","uly":"BTC-USD","askVol":"1","bidVol":"2","markVol":"3","realVol":"4","delta":"0.1","gamma":"0.2","theta":"0.3","vega":"0.4","volLv":"0.5","fwdPx":"17000","distance":"0.9","ts":"1672286551080"}]}`)
+		dm, ok, err := WSParseOptSummary(msg)
+		if err != nil {
+			t.Fatalf("WSParseOptSummary() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelOptSummary || dm.Arg.InstFamily != "BTC-USD" {
+			t.Fatalf("arg = %#v, want opt-summary BTC-USD", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "BTC-USD-230224-18000-C" || dm.Data[0].TS != 1672286551080 {
+			t.Fatalf("data = %#v, want instId=... ts=1672286551080", dm.Data)
+		}
+	})
+
+	t.Run("liquidation_orders", func(t *testing.T) {
+		msg := []byte(`{"id":"1512","arg":{"channel":"liquidation-orders","instType":"SWAP"},"data":[{"details":[{"bkLoss":"0","bkPx":"0.007831","ccy":"","posSide":"short","side":"buy","sz":"13","ts":"1692266434010"}],"instFamily":"IOST-USDT","instId":"IOST-USDT-SWAP","instType":"SWAP","uly":"IOST-USDT"}]}`)
+		dm, ok, err := WSParseLiquidationOrders(msg)
+		if err != nil {
+			t.Fatalf("WSParseLiquidationOrders() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelLiquidationOrders || dm.Arg.InstType != "SWAP" {
+			t.Fatalf("arg = %#v, want liquidation-orders SWAP", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "IOST-USDT-SWAP" || len(dm.Data[0].Details) != 1 || dm.Data[0].Details[0].TS != 1692266434010 {
+			t.Fatalf("data = %#v, want instId=IOST-USDT-SWAP details ts=1692266434010", dm.Data)
+		}
+	})
+}
+
+func TestWSParseMarkPriceAndIndexCandles(t *testing.T) {
+	t.Run("channel_helpers", func(t *testing.T) {
+		if got, want := WSMarkPriceCandleChannel("1D"), "mark-price-candle1D"; got != want {
+			t.Fatalf("WSMarkPriceCandleChannel() = %q, want %q", got, want)
+		}
+		if got, want := WSMarkPriceCandleChannel("mark-price-candle1m"), "mark-price-candle1m"; got != want {
+			t.Fatalf("WSMarkPriceCandleChannel() = %q, want %q", got, want)
+		}
+		if got, want := WSIndexCandleChannel("30m"), "index-candle30m"; got != want {
+			t.Fatalf("WSIndexCandleChannel() = %q, want %q", got, want)
+		}
+		if got, want := WSIndexCandleChannel("index-candle1Dutc"), "index-candle1Dutc"; got != want {
+			t.Fatalf("WSIndexCandleChannel() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("mark_price_candles", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"mark-price-candle1D","instId":"BTC-USD-190628"},"data":[["1597026383085","3.721","3.743","3.677","3.708","0"]]}`)
+		dm, ok, err := WSParseMarkPriceCandles(msg)
+		if err != nil {
+			t.Fatalf("WSParseMarkPriceCandles() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != "mark-price-candle1D" || dm.Arg.InstId != "BTC-USD-190628" {
+			t.Fatalf("arg = %#v, want mark-price-candle1D BTC-USD-190628", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].TS != 1597026383085 || dm.Data[0].Open != "3.721" || dm.Data[0].Confirm != "0" {
+			t.Fatalf("data = %#v, want ts=1597026383085 open=3.721 confirm=0", dm.Data)
+		}
+	})
+
+	t.Run("index_candles", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"index-candle30m","instId":"BTC-USD"},"data":[["1597026383085","3.721","3.743","3.677","3.708","1"]]}`)
+		dm, ok, err := WSParseIndexCandles(msg)
+		if err != nil {
+			t.Fatalf("WSParseIndexCandles() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != "index-candle30m" || dm.Arg.InstId != "BTC-USD" {
+			t.Fatalf("arg = %#v, want index-candle30m BTC-USD", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].TS != 1597026383085 || dm.Data[0].Close != "3.708" || dm.Data[0].Confirm != "1" {
+			t.Fatalf("data = %#v, want ts=1597026383085 close=3.708 confirm=1", dm.Data)
+		}
+	})
+}
