@@ -136,6 +136,8 @@ type WSClient struct {
 	accountHandler            func(balance AccountBalance)
 	positionsHandler          func(position AccountPosition)
 	balanceAndPositionHandler func(data WSBalanceAndPosition)
+	depositInfoHandler        func(info WSDepositInfo)
+	withdrawalInfoHandler     func(info WSWithdrawalInfo)
 	opReplyHandler            func(reply WSOpReply, raw []byte)
 
 	typedAsync  bool
@@ -214,6 +216,30 @@ func (c *Client) NewWSBusiness(opts ...WSOption) *WSClient {
 	w := &WSClient{
 		c:         c,
 		endpoint:  endpoint,
+		connCh:    make(chan struct{}),
+		desired:   map[string]WSArg{},
+		backoff:   250 * time.Millisecond,
+		waiters:   map[string]*wsOpWaiter{},
+		opWaiters: map[string]*wsOpRespWaiter{},
+	}
+	for _, opt := range opts {
+		opt(w)
+	}
+	return w
+}
+
+// NewWSBusinessPrivate 创建 business WS 客户端（需要登录）。
+//
+// 适用场景：资金账户相关推送（如 deposit-info/withdrawal-info）等要求登录的 business 频道。
+func (c *Client) NewWSBusinessPrivate(opts ...WSOption) *WSClient {
+	endpoint := wsBusinessURL
+	if c.demo {
+		endpoint = wsBusinessDemoURL
+	}
+	w := &WSClient{
+		c:         c,
+		endpoint:  endpoint,
+		needLogin: true,
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
 		backoff:   250 * time.Millisecond,
@@ -651,9 +677,11 @@ func (w *WSClient) onDataMessage(message []byte) {
 	accountH := w.accountHandler
 	positionsH := w.positionsHandler
 	balPosH := w.balanceAndPositionHandler
+	depInfoH := w.depositInfoHandler
+	wdInfoH := w.withdrawalInfoHandler
 	w.typedMu.RUnlock()
 
-	if ordersH == nil && fillsH == nil && accountH == nil && positionsH == nil && balPosH == nil {
+	if ordersH == nil && fillsH == nil && accountH == nil && positionsH == nil && balPosH == nil && depInfoH == nil && wdInfoH == nil {
 		return
 	}
 
@@ -713,6 +741,24 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindBalanceAndPosition, balPos: dm.Data})
+	case WSChannelDepositInfo:
+		if depInfoH == nil {
+			return
+		}
+		dm, ok, err := WSParseDepositInfo(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindDepositInfo, depositInfo: dm.Data})
+	case WSChannelWithdrawalInfo:
+		if wdInfoH == nil {
+			return
+		}
+		dm, ok, err := WSParseWithdrawalInfo(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindWithdrawalInfo, withdrawalInfo: dm.Data})
 	default:
 		return
 	}

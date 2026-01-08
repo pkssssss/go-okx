@@ -40,6 +40,22 @@ func WithWSBalanceAndPositionHandler(handler func(data WSBalanceAndPosition)) WS
 	}
 }
 
+// WithWSDepositInfoHandler 设置 deposit-info 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
+	return func(c *WSClient) {
+		c.OnDepositInfo(handler)
+	}
+}
+
+// WithWSWithdrawalInfoHandler 设置 withdrawal-info 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSWithdrawalInfoHandler(handler func(info WSWithdrawalInfo)) WSOption {
+	return func(c *WSClient) {
+		c.OnWithdrawalInfo(handler)
+	}
+}
+
 // WithWSOpReplyHandler 设置 WS 业务 op 回包回调（order/cancel-order/amend-order 等）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSOpReplyHandler(handler func(reply WSOpReply, raw []byte)) WSOption {
@@ -95,6 +111,26 @@ func (w *WSClient) OnBalanceAndPosition(handler func(data WSBalanceAndPosition))
 	}
 	w.typedMu.Lock()
 	w.balanceAndPositionHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnDepositInfo 设置 deposit-info 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnDepositInfo(handler func(info WSDepositInfo)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.depositInfoHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnWithdrawalInfo 设置 withdrawal-info 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnWithdrawalInfo(handler func(info WSWithdrawalInfo)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.withdrawalInfoHandler = handler
 	w.typedMu.Unlock()
 }
 

@@ -258,6 +258,45 @@ func TestWSParsePublicTickersTradesAndOrderBook(t *testing.T) {
 	})
 }
 
+func TestWSParseDepositAndWithdrawalInfo(t *testing.T) {
+	t.Run("deposit_info", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"deposit-info","uid":"289320000000"},"data":[{"actualDepBlkConfirm":"0","amt":"1","areaCodeFrom":"","ccy":"USDT","chain":"USDT-TRC20","depId":"88165462","from":"","fromWdId":"","pTime":"1674103661147","state":"0","subAcct":"test","to":"TEhFAqpuHa3LYxxxxx8ByNoGnrmexeGMw","ts":"1674103661123","txId":"bc5376","uid":"289320000000"}]}`)
+		dm, ok, err := WSParseDepositInfo(msg)
+		if err != nil {
+			t.Fatalf("WSParseDepositInfo() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelDepositInfo || dm.Arg.UID != "289320000000" {
+			t.Fatalf("arg = %#v", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].DepId != "88165462" || dm.Data[0].PTime != 1674103661147 || dm.Data[0].TS != 1674103661123 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+	})
+
+	t.Run("withdrawal_info", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"withdrawal-info","uid":"289333000000"},"data":[{"addrEx":null,"amt":"2","areaCodeFrom":"","areaCodeTo":"","ccy":"USDT","chain":"USDT-TRC20","clientId":"","fee":"0.8","feeCcy":"USDT","from":"","memo":"","nonTradableAsset":false,"note":"","pTime":"1674103268578","pmtId":"","state":"0","subAcct":"test","tag":"","to":"TN8CKTQMnpWfTxxxxxx8KipbJ24ErguhF","toAddrType":"1","ts":"1674103268472","txId":"","uid":"289333000000","wdId":"15447421"}]}`)
+		dm, ok, err := WSParseWithdrawalInfo(msg)
+		if err != nil {
+			t.Fatalf("WSParseWithdrawalInfo() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelWithdrawalInfo || dm.Arg.UID != "289333000000" {
+			t.Fatalf("arg = %#v", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].WdId != "15447421" || dm.Data[0].PTime != 1674103268578 || dm.Data[0].TS != 1674103268472 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+		if dm.Data[0].Fee != "0.8" || dm.Data[0].FeeCcy != "USDT" {
+			t.Fatalf("fee = %s %s", dm.Data[0].Fee, dm.Data[0].FeeCcy)
+		}
+	})
+}
+
 func TestWSParseBusinessCandlesAndTradesAll(t *testing.T) {
 	t.Run("candle_channel_helper", func(t *testing.T) {
 		if got, want := WSCandleChannel("1m"), "candle1m"; got != want {

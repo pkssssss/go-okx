@@ -13,6 +13,8 @@ const (
 	wsTypedKindAccount
 	wsTypedKindPositions
 	wsTypedKindBalanceAndPosition
+	wsTypedKindDepositInfo
+	wsTypedKindWithdrawalInfo
 	wsTypedKindOpReply
 )
 
@@ -28,6 +30,10 @@ func (k wsTypedKind) String() string {
 		return "positions"
 	case wsTypedKindBalanceAndPosition:
 		return "balance_and_position"
+	case wsTypedKindDepositInfo:
+		return "deposit_info"
+	case wsTypedKindWithdrawalInfo:
+		return "withdrawal_info"
 	case wsTypedKindOpReply:
 		return "op_reply"
 	default:
@@ -38,11 +44,13 @@ func (k wsTypedKind) String() string {
 type wsTypedTask struct {
 	kind wsTypedKind
 
-	orders    []TradeOrder
-	fills     []WSFill
-	balances  []AccountBalance
-	positions []AccountPosition
-	balPos    []WSBalanceAndPosition
+	orders         []TradeOrder
+	fills          []WSFill
+	balances       []AccountBalance
+	positions      []AccountPosition
+	balPos         []WSBalanceAndPosition
+	depositInfo    []WSDepositInfo
+	withdrawalInfo []WSWithdrawalInfo
 
 	op    WSOpReply
 	opRaw []byte
@@ -136,6 +144,28 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, data := range task.balPos {
 			d := data
 			w.safeTypedCall(task.kind, func() { h(d) })
+		}
+	case wsTypedKindDepositInfo:
+		w.typedMu.RLock()
+		h := w.depositInfoHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.depositInfo) == 0 {
+			return
+		}
+		for _, info := range task.depositInfo {
+			i := info
+			w.safeTypedCall(task.kind, func() { h(i) })
+		}
+	case wsTypedKindWithdrawalInfo:
+		w.typedMu.RLock()
+		h := w.withdrawalInfoHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.withdrawalInfo) == 0 {
+			return
+		}
+		for _, info := range task.withdrawalInfo {
+			i := info
+			w.safeTypedCall(task.kind, func() { h(i) })
 		}
 	case wsTypedKindOpReply:
 		w.typedMu.RLock()

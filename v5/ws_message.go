@@ -14,6 +14,9 @@ const (
 	WSChannelPositions          = "positions"
 	WSChannelBalanceAndPosition = "balance_and_position"
 
+	WSChannelDepositInfo    = "deposit-info"
+	WSChannelWithdrawalInfo = "withdrawal-info"
+
 	WSChannelTickers   = "tickers"
 	WSChannelTrades    = "trades"
 	WSChannelTradesAll = "trades-all"
@@ -126,6 +129,16 @@ func WSParsePositions(message []byte) (*WSData[AccountPosition], bool, error) {
 // WSParseBalanceAndPosition 解析 balance_and_position 频道推送消息。
 func WSParseBalanceAndPosition(message []byte) (*WSData[WSBalanceAndPosition], bool, error) {
 	return WSParseChannelData[WSBalanceAndPosition](message, WSChannelBalanceAndPosition)
+}
+
+// WSParseDepositInfo 解析 deposit-info 频道推送消息（business WS，需要登录）。
+func WSParseDepositInfo(message []byte) (*WSData[WSDepositInfo], bool, error) {
+	return WSParseChannelData[WSDepositInfo](message, WSChannelDepositInfo)
+}
+
+// WSParseWithdrawalInfo 解析 withdrawal-info 频道推送消息（business WS，需要登录）。
+func WSParseWithdrawalInfo(message []byte) (*WSData[WSWithdrawalInfo], bool, error) {
+	return WSParseChannelData[WSWithdrawalInfo](message, WSChannelWithdrawalInfo)
 }
 
 // WSParseTickers 解析 tickers 频道推送消息。
@@ -462,4 +475,22 @@ type WSFill struct {
 
 	ExecType string `json:"execType"`
 	Count    string `json:"count"`
+}
+
+// WSDepositInfo 表示充值信息推送（deposit-info）。
+type WSDepositInfo struct {
+	AssetDeposit
+
+	PTime   int64  `json:"pTime,string"`
+	SubAcct string `json:"subAcct"`
+	UID     string `json:"uid"`
+}
+
+// WSWithdrawalInfo 表示提币信息推送（withdrawal-info）。
+type WSWithdrawalInfo struct {
+	AssetWithdrawal
+
+	PTime   int64  `json:"pTime,string"`
+	SubAcct string `json:"subAcct"`
+	UID     string `json:"uid"`
 }
