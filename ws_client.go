@@ -211,6 +211,8 @@ func (w *WSClient) Close() {
 	if w.cancel != nil {
 		w.cancel()
 	}
+	// 主动关闭连接以中断 ReadMessage 阻塞，确保 Done() 可及时返回。
+	w.closeConn()
 }
 
 // Done 返回 WS 客户端停止后的信号通道。
