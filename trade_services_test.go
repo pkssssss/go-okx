@@ -706,6 +706,52 @@ func TestOrdersHistoryService_Do(t *testing.T) {
 			t.Fatalf("FillTime = %q, want %q", got, want)
 		}
 	})
+
+	t.Run("ok_with_category_begin_end", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodGet; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/orders-history"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "begin=1597020000000&category=twap&end=1597026383085&instId=BTC-USDT&instType=SPOT&limit=2&ordType=limit&state=filled"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "Nn9nWMIXX7de/UtZPGT830PC4D0cL2PV4onW1J9UvRk="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewOrdersHistoryService().
+			InstType("SPOT").
+			InstId("BTC-USDT").
+			OrdType("limit").
+			State("filled").
+			Category("twap").
+			Begin("1597020000000").
+			End("1597026383085").
+			Limit(2).
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+	})
 }
 
 func TestOrdersHistoryArchiveService_Do(t *testing.T) {

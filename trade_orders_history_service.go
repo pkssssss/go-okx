@@ -17,8 +17,11 @@ type OrdersHistoryService struct {
 	instId     string
 	ordType    string
 	state      string
+	category   string
 	after      string
 	before     string
+	begin      string
+	end        string
 	limit      *int
 }
 
@@ -54,6 +57,12 @@ func (s *OrdersHistoryService) State(state string) *OrdersHistoryService {
 	return s
 }
 
+// Category 设置订单种类（如 twap/adl/...）。
+func (s *OrdersHistoryService) Category(category string) *OrdersHistoryService {
+	s.category = category
+	return s
+}
+
 func (s *OrdersHistoryService) After(after string) *OrdersHistoryService {
 	s.after = after
 	return s
@@ -61,6 +70,18 @@ func (s *OrdersHistoryService) After(after string) *OrdersHistoryService {
 
 func (s *OrdersHistoryService) Before(before string) *OrdersHistoryService {
 	s.before = before
+	return s
+}
+
+// Begin 设置开始时间（Unix 毫秒时间戳字符串）。
+func (s *OrdersHistoryService) Begin(begin string) *OrdersHistoryService {
+	s.begin = begin
+	return s
+}
+
+// End 设置结束时间（Unix 毫秒时间戳字符串）。
+func (s *OrdersHistoryService) End(end string) *OrdersHistoryService {
+	s.end = end
 	return s
 }
 
@@ -91,11 +112,20 @@ func (s *OrdersHistoryService) Do(ctx context.Context) ([]TradeOrder, error) {
 	if s.state != "" {
 		q.Set("state", s.state)
 	}
+	if s.category != "" {
+		q.Set("category", s.category)
+	}
 	if s.after != "" {
 		q.Set("after", s.after)
 	}
 	if s.before != "" {
 		q.Set("before", s.before)
+	}
+	if s.begin != "" {
+		q.Set("begin", s.begin)
+	}
+	if s.end != "" {
+		q.Set("end", s.end)
 	}
 	if s.limit != nil {
 		q.Set("limit", strconv.Itoa(*s.limit))
