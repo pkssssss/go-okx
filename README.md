@@ -6,7 +6,15 @@ OKX V5 API 的 Go SDK（REST + WebSocket），目标是提供工程级的正确�
 
 开发中（尚未发布稳定版本）。
 
+## 安装
+
+```bash
+go get github.com/pkssssss/go-okx/v5
+```
+
 ## 快速开始
+
+仓库使用 Go workspace（`go.work`），可直接从根目录运行 `examples/`；SDK 主模块位于 `v5/`。
 
 获取系统时间：
 

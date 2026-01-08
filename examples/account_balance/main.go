@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/pkssssss/go-okx"
+	"github.com/pkssssss/go-okx/v5"
 )
 
 func main() {

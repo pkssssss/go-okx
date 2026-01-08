@@ -1,4 +1,4 @@
-module github.com/pkssssss/go-okx
+module github.com/pkssssss/go-okx/v5
 
 go 1.25.5
 

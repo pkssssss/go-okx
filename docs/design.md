@@ -1,6 +1,7 @@
 # Go OKX SDK 设计草案（v0.1）
 
 > 仓库：`github.com/pkssssss/go-okx`  
+> 模块：`github.com/pkssssss/go-okx/v5`  
 > Go 最低版本：`go1.25`  
 > 目标：正确性、稳定性优先，其次才是易用性与性能；避免过度设计（KISS / YAGNI）。
 
@@ -84,18 +85,18 @@ v0.1 采用与 `go-binance` 类似的“Service + Do(ctx)”风格，原因：
 go-okx/
   docs/
     design.md
-  internal/
-    rest/              # REST 通用管线（请求构建/签名/发送/解包/错误）
-    ws/                # WS 连接管理（心跳/重连/重订阅/路由）
-    sign/              # 签名与时间源（REST/WS 差异收敛）
-    jsonx/             # 无损数值/时间戳解析工具（可选）
-  okx.go               # package okx：Client、Option、公共类型入口
-  public_*.go           # Public 服务（时间、产品、funding/mark/open-interest 等）
-  market_*.go           # Market 服务（ticker/books/candles/trades 等）
-  trade_*.go            # Trade 服务（下单/撤单/改单/查单/成交）
-  account_*.go          # Account 服务（余额/仓位/杠杆等）
-  ws_public_*.go        # WS public（订阅/事件模型）
-  ws_private_*.go       # WS private（登录/订阅/事件模型）
+  v5/
+    internal/
+      rest/            # REST 通用管线（请求构建/签名/发送/解包/错误）
+      ws/              # WS 连接管理（心跳/重连/重订阅/路由）
+      sign/            # 签名与时间源（REST/WS 差异收敛）
+      jsonx/           # 无损数值/时间戳解析工具（可选）
+    client.go          # package okx：Client、Option、公共类型入口
+    public_*.go        # Public 服务（时间、产品、funding/mark/open-interest 等）
+    market_*.go        # Market 服务（ticker/books/candles/trades 等）
+    trade_*.go         # Trade 服务（下单/撤单/改单/查单/成交）
+    account_*.go       # Account 服务（余额/仓位/杠杆等）
+    ws_*.go            # WS（public/private 订阅与事件模型）
   examples/             # 最小可运行示例（v0.1 必备）
 ```
 

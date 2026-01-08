@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/pkssssss/go-okx/internal/sign"
+	"github.com/pkssssss/go-okx/v5/internal/sign"
 )
 
 const (

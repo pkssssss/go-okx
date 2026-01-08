@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/pkssssss/go-okx"
+	"github.com/pkssssss/go-okx/v5"
 )
 
 func main() {

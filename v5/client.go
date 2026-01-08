@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkssssss/go-okx/internal/rest"
-	"github.com/pkssssss/go-okx/internal/sign"
+	"github.com/pkssssss/go-okx/v5/internal/rest"
+	"github.com/pkssssss/go-okx/v5/internal/sign"
 )
 
 const (
