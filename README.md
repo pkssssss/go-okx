@@ -64,6 +64,21 @@ export OKX_INST_ID="BTC-USDT" # 可选
 go run ./examples/ws_public_books5
 ```
 
+订阅 WS business K线（首次收到消息后退出）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_CANDLE_BAR="1m" # 可选：1m/5m/1H/1D...
+go run ./examples/ws_business_candles
+```
+
+订阅 WS business 全部成交 trades-all（首次收到消息后退出）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+go run ./examples/ws_business_trades_all
+```
+
 订阅 WS 私有订单频道（验证 subscribe/unsubscribe ack，不触发下单；需要 API Key，支持模拟盘）：
 
 ```bash

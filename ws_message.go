@@ -2,6 +2,7 @@ package okx
 
 import (
 	"encoding/json"
+	"strings"
 )
 
 const (
@@ -11,8 +12,9 @@ const (
 	WSChannelPositions          = "positions"
 	WSChannelBalanceAndPosition = "balance_and_position"
 
-	WSChannelTickers = "tickers"
-	WSChannelTrades  = "trades"
+	WSChannelTickers   = "tickers"
+	WSChannelTrades    = "trades"
+	WSChannelTradesAll = "trades-all"
 
 	WSChannelBooks        = "books"
 	WSChannelBooksELP     = "books-elp"
@@ -20,6 +22,9 @@ const (
 	WSChannelBboTbt       = "bbo-tbt"
 	WSChannelBooksL2Tbt   = "books-l2-tbt"
 	WSChannelBooks50L2Tbt = "books50-l2-tbt"
+
+	WSChannelOptionTrades       = "option-trades"
+	WSChannelCallAuctionDetails = "call-auction-details"
 )
 
 // WSEvent 表示 OKX WebSocket 的 event 消息（subscribe/login/error/notice 等）。
@@ -120,6 +125,81 @@ func WSParseTickers(message []byte) (*WSData[MarketTicker], bool, error) {
 // WSParseTrades 解析 trades 频道推送消息。
 func WSParseTrades(message []byte) (*WSData[MarketTrade], bool, error) {
 	return WSParseChannelData[MarketTrade](message, WSChannelTrades)
+}
+
+// WSParseTradesAll 解析 trades-all 频道推送消息。
+func WSParseTradesAll(message []byte) (*WSData[MarketTrade], bool, error) {
+	return WSParseChannelData[MarketTrade](message, WSChannelTradesAll)
+}
+
+// WSCandleChannel 返回 OKX K线频道名（如 bar=1m -> candle1m）。
+func WSCandleChannel(bar string) string {
+	if bar == "" {
+		return ""
+	}
+	if strings.HasPrefix(bar, "candle") {
+		return bar
+	}
+	return "candle" + bar
+}
+
+func isCandleChannel(channel string) bool {
+	return strings.HasPrefix(channel, "candle")
+}
+
+// WSParseCandles 解析 K线频道推送消息（candle*，business WS）。
+func WSParseCandles(message []byte) (*WSData[Candle], bool, error) {
+	dm, ok, err := WSParseData[Candle](message)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	if !isCandleChannel(dm.Arg.Channel) {
+		return nil, false, nil
+	}
+	return dm, true, nil
+}
+
+// WSOptionTrade 表示 option-trades 频道推送的数据项。
+type WSOptionTrade struct {
+	InstId     string `json:"instId"`
+	InstFamily string `json:"instFamily"`
+
+	TradeId string `json:"tradeId"`
+
+	Px   string `json:"px"`
+	Sz   string `json:"sz"`
+	Side string `json:"side"`
+
+	OptType string `json:"optType"`
+	FillVol string `json:"fillVol"`
+	FwdPx   string `json:"fwdPx"`
+	IdxPx   string `json:"idxPx"`
+	MarkPx  string `json:"markPx"`
+
+	TS int64 `json:"ts,string"`
+}
+
+// WSParseOptionTrades 解析 option-trades 频道推送消息。
+func WSParseOptionTrades(message []byte) (*WSData[WSOptionTrade], bool, error) {
+	return WSParseChannelData[WSOptionTrade](message, WSChannelOptionTrades)
+}
+
+// WSCallAuctionDetails 表示 call-auction-details 频道推送的数据项。
+type WSCallAuctionDetails struct {
+	InstId string `json:"instId"`
+
+	EqPx        string `json:"eqPx"`
+	MatchedSz   string `json:"matchedSz"`
+	UnmatchedSz string `json:"unmatchedSz"`
+
+	State          string `json:"state"`
+	AuctionEndTime int64  `json:"auctionEndTime,string"`
+	TS             int64  `json:"ts,string"`
+}
+
+// WSParseCallAuctionDetails 解析 call-auction-details 频道推送消息。
+func WSParseCallAuctionDetails(message []byte) (*WSData[WSCallAuctionDetails], bool, error) {
+	return WSParseChannelData[WSCallAuctionDetails](message, WSChannelCallAuctionDetails)
 }
 
 // WSOrderBook 表示 WS 深度频道推送的数据项。

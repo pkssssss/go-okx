@@ -257,3 +257,84 @@ func TestWSParsePublicTickersTradesAndOrderBook(t *testing.T) {
 		}
 	})
 }
+
+func TestWSParseBusinessCandlesAndTradesAll(t *testing.T) {
+	t.Run("candle_channel_helper", func(t *testing.T) {
+		if got, want := WSCandleChannel("1m"), "candle1m"; got != want {
+			t.Fatalf("WSCandleChannel() = %q, want %q", got, want)
+		}
+		if got, want := WSCandleChannel("candle1D"), "candle1D"; got != want {
+			t.Fatalf("WSCandleChannel() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("candles", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"candle1D","instId":"BTC-USDT"},"data":[["1629993600000","42500","48199.9","41006.1","41006.1","3587.41204591","166741046.22583129","166741046.22583129","0"]]}`)
+		dm, ok, err := WSParseCandles(msg)
+		if err != nil {
+			t.Fatalf("WSParseCandles() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != "candle1D" || dm.Arg.InstId != "BTC-USDT" {
+			t.Fatalf("arg = %#v, want candle1D BTC-USDT", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].TS != 1629993600000 || dm.Data[0].Open != "42500" || dm.Data[0].Confirm != "0" {
+			t.Fatalf("data = %#v, want ts=1629993600000 open=42500 confirm=0", dm.Data)
+		}
+	})
+
+	t.Run("trades_all", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"trades-all","instId":"BTC-USDT"},"data":[{"instId":"BTC-USDT","tradeId":"1","px":"100","sz":"1","side":"buy","ts":"1597026383085","source":"0"}]}`)
+		dm, ok, err := WSParseTradesAll(msg)
+		if err != nil {
+			t.Fatalf("WSParseTradesAll() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelTradesAll || dm.Arg.InstId != "BTC-USDT" {
+			t.Fatalf("arg = %#v, want trades-all BTC-USDT", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].TradeId != "1" || dm.Data[0].Source != "0" {
+			t.Fatalf("data = %#v, want tradeId=1 source=0", dm.Data)
+		}
+	})
+}
+
+func TestWSParsePublicOptionTradesAndCallAuctionDetails(t *testing.T) {
+	t.Run("option_trades", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"option-trades","instType":"OPTION","instFamily":"BTC-USD"},"data":[{"instFamily":"BTC-USD","instId":"BTC-USD-230224-18000-C","markPx":"0.04690107010619562","optType":"C","px":"0.045","side":"sell","sz":"2","tradeId":"38","fillVol":"0.1","fwdPx":"17000","idxPx":"16537.2","ts":"1672286551080"}]}`)
+		dm, ok, err := WSParseOptionTrades(msg)
+		if err != nil {
+			t.Fatalf("WSParseOptionTrades() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelOptionTrades {
+			t.Fatalf("arg = %#v, want channel option-trades", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstFamily != "BTC-USD" || dm.Data[0].OptType != "C" || dm.Data[0].TS != 1672286551080 {
+			t.Fatalf("data = %#v, want instFamily=BTC-USD optType=C ts=1672286551080", dm.Data)
+		}
+	})
+
+	t.Run("call_auction_details", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"call-auction-details","instId":"ONDO-USDC"},"data":[{"instId":"ONDO-USDC","eqPx":"0.6","matchedSz":"44978","unmatchedSz":"123","state":"continuous_trading","auctionEndTime":"1726542000000","ts":"1726542000007"}]}`)
+		dm, ok, err := WSParseCallAuctionDetails(msg)
+		if err != nil {
+			t.Fatalf("WSParseCallAuctionDetails() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelCallAuctionDetails || dm.Arg.InstId != "ONDO-USDC" {
+			t.Fatalf("arg = %#v, want call-auction-details ONDO-USDC", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].EqPx != "0.6" || dm.Data[0].MatchedSz != "44978" || dm.Data[0].AuctionEndTime != 1726542000000 {
+			t.Fatalf("data = %#v, want eqPx=0.6 matchedSz=44978 auctionEndTime=1726542000000", dm.Data)
+		}
+	})
+}
