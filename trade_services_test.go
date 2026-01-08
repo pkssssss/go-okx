@@ -850,7 +850,7 @@ func TestTradeFillsService_Do(t *testing.T) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","tradeId":"1","ordId":"123","clOrdId":"","billId":"b1","subType":"1","tag":"t1","fillPx":"1","fillSz":"1","fillIdxPx":"1.1","fillPnl":"0","fillPxVol":"","fillPxUsd":"","fillMarkVol":"","fillFwdPx":"","fillMarkPx":"","side":"buy","posSide":"net","execType":"T","feeCcy":"BTC","fee":"-0.1","ts":"1597026383085","fillTime":"1597026383085"}]}`))
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","tradeQuoteCcy":"USDT","tradeId":"1","ordId":"123","clOrdId":"","billId":"b1","subType":"1","tag":"t1","fillPx":"1","fillSz":"1","fillIdxPx":"1.1","fillPnl":"0","fillPxVol":"","fillPxUsd":"","fillMarkVol":"","fillFwdPx":"","fillMarkPx":"","side":"buy","posSide":"net","execType":"T","feeCcy":"BTC","fee":"-0.1","ts":"1597026383085","fillTime":"1597026383085"}]}`))
 		}))
 		t.Cleanup(srv.Close)
 
@@ -879,6 +879,9 @@ func TestTradeFillsService_Do(t *testing.T) {
 		}
 		if got[0].TradeId != "1" {
 			t.Fatalf("TradeId = %q, want %q", got[0].TradeId, "1")
+		}
+		if got[0].TradeQuoteCcy != "USDT" {
+			t.Fatalf("TradeQuoteCcy = %q, want %q", got[0].TradeQuoteCcy, "USDT")
 		}
 		if got[0].ExecType != "T" {
 			t.Fatalf("ExecType = %q, want %q", got[0].ExecType, "T")
@@ -933,6 +936,78 @@ func TestTradeFillsService_Do(t *testing.T) {
 			Do(context.Background())
 		if err != nil {
 			t.Fatalf("Do() error = %v", err)
+		}
+	})
+}
+
+func TestTradeFillsHistoryService_Do(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	t.Run("missing_instType", func(t *testing.T) {
+		c := NewClient()
+		_, err := c.NewTradeFillsHistoryService().Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errTradeFillsHistoryMissingInstType {
+			t.Fatalf("error = %v, want %v", err, errTradeFillsHistoryMissingInstType)
+		}
+	})
+
+	t.Run("ok", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodGet; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/fills-history"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "begin=1597020000000&end=1597026383085&instId=BTC-USDT&instType=SPOT&limit=2&ordId=123&subType=1"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "w74/lG5sW2Nj6W6ySaydC6lVUvz2mlQ0F7AyvXGKZXU="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","tradeQuoteCcy":"USDT","tradeId":"1","ordId":"123","clOrdId":"","billId":"b1","subType":"1","tag":"t1","fillPx":"1","fillSz":"1","fillIdxPx":"1.1","fillPnl":"0","fillPxVol":"","fillPxUsd":"","fillMarkVol":"","fillFwdPx":"","fillMarkPx":"","side":"buy","posSide":"net","execType":"T","feeCcy":"BTC","fee":"-0.1","ts":"1597026383085","fillTime":"1597026383085"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		items, err := c.NewTradeFillsHistoryService().
+			InstType("SPOT").
+			InstId("BTC-USDT").
+			OrdId("123").
+			SubType("1").
+			Begin("1597020000000").
+			End("1597026383085").
+			Limit(2).
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if len(items) != 1 {
+			t.Fatalf("len = %d, want %d", len(items), 1)
+		}
+		if items[0].TradeId != "1" {
+			t.Fatalf("TradeId = %q, want %q", items[0].TradeId, "1")
+		}
+		if items[0].TS != 1597026383085 {
+			t.Fatalf("TS = %d, want %d", items[0].TS, 1597026383085)
+		}
+		if items[0].FillTime != 1597026383085 {
+			t.Fatalf("FillTime = %d, want %d", items[0].FillTime, 1597026383085)
 		}
 	})
 }

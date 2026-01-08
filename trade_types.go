@@ -62,8 +62,9 @@ type TradeOrder struct {
 // TradeFill 表示成交明细（精简版）。
 // 价格/数量字段保持为 string（无损），时间戳字段解析为 int64。
 type TradeFill struct {
-	InstType string `json:"instType"`
-	InstId   string `json:"instId"`
+	InstType      string `json:"instType"`
+	InstId        string `json:"instId"`
+	TradeQuoteCcy string `json:"tradeQuoteCcy"`
 
 	TradeId string `json:"tradeId"`
 	OrdId   string `json:"ordId"`
