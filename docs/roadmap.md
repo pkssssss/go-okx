@@ -24,6 +24,14 @@
 
 ## P3（扩展 & 工程化）🟡
 
-- Asset：✅ `asset/currencies`（充提状态/手续费/精度）；✅ `asset/bills`、✅ `asset/bills-history`（资金流水）；✅ `asset/deposit-address`、✅ `asset/deposit-history`；✅ `asset/withdrawal`、✅ `asset/cancel-withdrawal`、✅ `asset/withdrawal-history`；✅ `asset/deposit-withdraw-status`；✅ `asset/exchange-list`（交易所列表）；✅ WS `deposit-info`、✅ WS `withdrawal-info`；TODO：子账户相关
+- Asset：
+  - ✅ 估值/资产：`asset/asset-valuation`、`asset/non-tradable-assets`
+  - ✅ 币种/辅助：`asset/currencies`（充提状态/手续费/精度）、`asset/exchange-list`（交易所列表）
+  - ✅ 资金流水：`asset/bills`、`asset/bills-history`；`account/bills`、`account/bills-archive`
+  - ✅ 划转：`asset/transfer`、`asset/transfer-state`；子账户：`asset/subaccount/balances`、`asset/subaccount/bills`、`asset/subaccount/managed-subaccount-bills`、`asset/subaccount/transfer`
+  - ✅ 充提链路：`asset/deposit-address`、`asset/deposit-history`、`asset/withdrawal`、`asset/cancel-withdrawal`、`asset/withdrawal-history`、`asset/deposit-withdraw-status`
+  - ✅ 月结单：`asset/monthly-statement`（apply/get）
+  - ✅ 闪兑：`asset/convert/currencies`、`asset/convert/currency-pair`、`asset/convert/estimate-quote`、`asset/convert/trade`、`asset/convert/history`
+  - ✅ WS（business）：`deposit-info`、`withdrawal-info`
 - Account：`account/config`、杠杆/风险参数相关
 - 工程化：更细的错误分类（auth/limit/time-skew 等）、可控重试策略（仅幂等 GET）、完善 `README.md` 与 docs
