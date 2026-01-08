@@ -219,6 +219,12 @@ v0.1 路由策略：
 - 先按 `event` 分发控制消息；
 - 数据消息按 `arg.channel + arg.instId/arg.instType/...` 作为 key 路由给对应订阅的 handler。
 
+为了降低上层（量化内核）对 raw message 的耦合，SDK 在 WSClient 内置最小的 typed handler：
+
+- `ws.OnOrders(func(TradeOrder){...})`：逐条处理 orders 推送
+- `ws.OnFills(func(WSFill){...})`：逐条处理 fills 推送
+- `ws.OnOpReply(func(WSOpReply, []byte){...})`：观测业务 op 回包（含 raw 便于日志/审计）
+
 ### 8.5 业务 op 请求/响应（交易链路闭环）
 
 OKX WS 除了 `event` 与 `arg+data` 推送外，还有一类“业务操作回包”：

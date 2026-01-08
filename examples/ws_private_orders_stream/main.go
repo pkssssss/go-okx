@@ -52,20 +52,17 @@ func main() {
 	errCh := make(chan error, 1)
 
 	ws := c.NewWSPrivate()
+	ws.OnOrders(func(order okx.TradeOrder) {
+		select {
+		case orderCh <- order:
+		default:
+		}
+	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := ws.Start(ctx, func(message []byte) {
-		dm, ok, err := okx.WSParseOrders(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
-			return
-		}
-		select {
-		case orderCh <- dm.Data[0]:
-		default:
-		}
-	}, func(err error) {
+	if err := ws.Start(ctx, nil, func(err error) {
 		select {
 		case errCh <- err:
 		default:

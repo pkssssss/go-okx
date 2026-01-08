@@ -2,6 +2,7 @@ package okx
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -110,6 +111,11 @@ type WSClient struct {
 	handler      WSMessageHandler
 	errHandler   WSErrorHandler
 	eventHandler WSEventHandler
+
+	typedMu        sync.RWMutex
+	ordersHandler  func(order TradeOrder)
+	fillsHandler   func(fill WSFill)
+	opReplyHandler func(reply WSOpReply, raw []byte)
 
 	started atomic.Bool
 	cancel  context.CancelFunc
@@ -564,7 +570,9 @@ func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn) error {
 		ev, ok, err := WSParseEvent(msg)
 		if err != nil || !ok {
 			if r, ok2, err2 := WSParseOpReply(msg); err2 == nil && ok2 {
-				w.notifyOpWaiter(*r, msg)
+				w.onOpReply(*r, msg)
+			} else {
+				w.onDataMessage(msg)
 			}
 			continue
 		}
@@ -580,6 +588,65 @@ func (w *WSClient) onEvent(ev WSEvent) {
 	w.notifyOpWaiterError(ev)
 	if w.eventHandler != nil && ev.Event != "" {
 		w.eventHandler(ev)
+	}
+}
+
+func (w *WSClient) onOpReply(reply WSOpReply, raw []byte) {
+	w.notifyOpWaiter(reply, raw)
+
+	w.typedMu.RLock()
+	h := w.opReplyHandler
+	w.typedMu.RUnlock()
+	if h != nil {
+		h(reply, raw)
+	}
+}
+
+func (w *WSClient) onDataMessage(message []byte) {
+	w.typedMu.RLock()
+	ordersH := w.ordersHandler
+	fillsH := w.fillsHandler
+	w.typedMu.RUnlock()
+
+	if ordersH == nil && fillsH == nil {
+		return
+	}
+
+	var probe struct {
+		Arg WSArg `json:"arg"`
+	}
+	if err := json.Unmarshal(message, &probe); err != nil {
+		return
+	}
+	if probe.Arg.Channel == "" {
+		return
+	}
+
+	switch probe.Arg.Channel {
+	case WSChannelOrders:
+		if ordersH == nil {
+			return
+		}
+		dm, ok, err := WSParseOrders(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		for _, o := range dm.Data {
+			ordersH(o)
+		}
+	case WSChannelFills:
+		if fillsH == nil {
+			return
+		}
+		dm, ok, err := WSParseFills(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		for _, f := range dm.Data {
+			fillsH(f)
+		}
+	default:
+		return
 	}
 }
 
