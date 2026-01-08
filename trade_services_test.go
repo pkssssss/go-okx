@@ -708,6 +708,76 @@ func TestOrdersHistoryService_Do(t *testing.T) {
 	})
 }
 
+func TestOrdersHistoryArchiveService_Do(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	t.Run("missing_instType", func(t *testing.T) {
+		c := NewClient()
+		_, err := c.NewOrdersHistoryArchiveService().Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errOrdersHistoryArchiveMissingInstType {
+			t.Fatalf("error = %v, want %v", err, errOrdersHistoryArchiveMissingInstType)
+		}
+	})
+
+	t.Run("ok", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodGet; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/trade/orders-history-archive"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "begin=1597020000000&category=twap&end=1597026383085&instId=BTC-USDT&instType=SPOT&limit=2&ordType=limit&state=filled"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-TIMESTAMP"), "2020-03-28T12:21:41.274Z"; got != want {
+				t.Fatalf("OK-ACCESS-TIMESTAMP = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), "Bcy73sJzeem1LLwEp+u7WcjUY+EyCljibIVh6W1TrOc="; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"2","clOrdId":"","tag":"","side":"buy","posSide":"net","tdMode":"cash","ordType":"limit","state":"filled","ccy":"USDT","tgtCcy":"base_ccy","tradeQuoteCcy":"USDT","reduceOnly":"false","px":"1","pxUsd":"","pxVol":"","pxType":"","sz":"1","avgPx":"1","fillPx":"1","fillSz":"1","accFillSz":"1","tradeId":"1","fillTime":"1597026383085","pnl":"0","fee":"-0.1","feeCcy":"USDT","rebate":"0","rebateCcy":"","stpMode":"cancel_maker","cancelSource":"","cancelSourceReason":"","uTime":"1597026383085","cTime":"1597026383085"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		got, err := c.NewOrdersHistoryArchiveService().
+			InstType("SPOT").
+			InstId("BTC-USDT").
+			OrdType("limit").
+			State("filled").
+			Category("twap").
+			Begin("1597020000000").
+			End("1597026383085").
+			Limit(2).
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if len(got) != 1 {
+			t.Fatalf("len = %d, want %d", len(got), 1)
+		}
+		if got[0].OrdId != "2" {
+			t.Fatalf("OrdId = %q, want %q", got[0].OrdId, "2")
+		}
+	})
+}
+
 func TestGetOrderService_Do(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 
