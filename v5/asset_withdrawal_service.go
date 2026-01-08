@@ -19,6 +19,21 @@ type assetWithdrawalRequest struct {
 	ClientId   string          `json:"clientId,omitempty"`
 }
 
+// AssetWithdrawalReceiverInfo 表示接收方信息（特定主体用户链上提币/闪电网络提币）。
+type AssetWithdrawalReceiverInfo struct {
+	WalletType string `json:"walletType"`
+
+	ExchId string `json:"exchId,omitempty"`
+
+	RcvrFirstName string `json:"rcvrFirstName,omitempty"`
+	RcvrLastName  string `json:"rcvrLastName,omitempty"`
+
+	RcvrCountry            string `json:"rcvrCountry,omitempty"`
+	RcvrCountrySubDivision string `json:"rcvrCountrySubDivision,omitempty"`
+	RcvrTownName           string `json:"rcvrTownName,omitempty"`
+	RcvrStreetName         string `json:"rcvrStreetName,omitempty"`
+}
+
 // AssetWithdrawalAck 表示提币返回项。
 type AssetWithdrawalAck struct {
 	Ccy      string `json:"ccy"`
@@ -89,6 +104,22 @@ func (s *AssetWithdrawalService) RcvrInfoJSON(rcvrInfo json.RawMessage) *AssetWi
 		return s
 	}
 	s.req.RcvrInfo = rcvrInfo
+	return s
+}
+
+// RcvrInfo 设置接收方信息（特定主体用户链上提币需要）。
+// 传入 nil 表示清空。
+func (s *AssetWithdrawalService) RcvrInfo(info *AssetWithdrawalReceiverInfo) *AssetWithdrawalService {
+	if info == nil {
+		s.req.RcvrInfo = nil
+		return s
+	}
+	b, err := json.Marshal(info)
+	if err != nil {
+		s.req.RcvrInfo = nil
+		return s
+	}
+	s.req.RcvrInfo = b
 	return s
 }
 

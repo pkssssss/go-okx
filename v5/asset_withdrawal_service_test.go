@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/pkssssss/go-okx/v5/internal/sign"
 )
 
 func TestAssetWithdrawalService_Do(t *testing.T) {
@@ -103,6 +105,54 @@ func TestAssetWithdrawalService_Do(t *testing.T) {
 		}
 		if got.WdId != "67485" {
 			t.Fatalf("WdId = %q, want %q", got.WdId, "67485")
+		}
+	})
+
+	t.Run("signed_request_and_body_with_rcvr_info", func(t *testing.T) {
+		wantBody := `{"ccy":"BTC","amt":"1","dest":"4","toAddr":"17DKe3kkkkiiiiTvAKKi2vMPbm1Bz3CMKw","chain":"BTC-Bitcoin","rcvrInfo":{"walletType":"exchange","exchId":"did:ethr:0xfeb4f99829a9acdf52979abee87e83addf22a7e1","rcvrFirstName":"Bruce","rcvrLastName":"Wayne"}}`
+		timestamp := sign.TimestampISO8601Millis(fixedNow)
+		wantSig := sign.SignHMACSHA256Base64("mysecret", sign.PrehashREST(timestamp, http.MethodPost, "/api/v5/asset/withdrawal", wantBody))
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bodyBytes, _ := io.ReadAll(r.Body)
+			if got, want := string(bodyBytes), wantBody; got != want {
+				t.Fatalf("body = %q, want %q", got, want)
+			}
+			if got, want := r.Header.Get("OK-ACCESS-SIGN"), wantSig; got != want {
+				t.Fatalf("OK-ACCESS-SIGN = %q, want %q", got, want)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"amt":"1","wdId":"67485","ccy":"BTC","clientId":"","chain":"BTC-Bitcoin"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewAssetWithdrawalService().
+			Ccy("BTC").
+			Amt("1").
+			Dest("4").
+			ToAddr("17DKe3kkkkiiiiTvAKKi2vMPbm1Bz3CMKw").
+			Chain("BTC-Bitcoin").
+			RcvrInfo(&AssetWithdrawalReceiverInfo{
+				WalletType:    "exchange",
+				ExchId:        "did:ethr:0xfeb4f99829a9acdf52979abee87e83addf22a7e1",
+				RcvrFirstName: "Bruce",
+				RcvrLastName:  "Wayne",
+			}).
+			Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
 		}
 	})
 
