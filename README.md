@@ -64,6 +64,14 @@ export OKX_INST_ID="BTC-USDT" # 可选
 go run ./examples/ws_public_books5
 ```
 
+订阅 WS 公共深度 books（本地合并 + seq/checksum 校验，收到两条推送后退出）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_BOOKS_CHANNEL="books" # 可选：books/books-elp/books5/bbo-tbt/books-l2-tbt/books50-l2-tbt
+go run ./examples/ws_public_books
+```
+
 订阅 WS business K线（首次收到消息后退出）：
 
 ```bash
