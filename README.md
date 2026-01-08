@@ -156,8 +156,24 @@ export OKX_DEMO=1 # 可选：1=模拟盘
 export OKX_INST_TYPE="ANY" # 可选：SPOT/MARGIN/SWAP/FUTURES/OPTION/ANY
 export OKX_INST_FAMILY="" # 可选
 export OKX_INST_ID="" # 可选
- export OKX_TIMEOUT="60s" # 可选：等待订单更新的超时
- go run ./examples/ws_private_orders_stream
+export OKX_TIMEOUT="60s" # 可选：等待订单更新的超时
+go run ./examples/ws_private_orders_stream
+```
+
+监听 WS 私有订单推送（异步 typed handler；适合在 handler 内做较重逻辑；需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_INST_TYPE="ANY" # 可选：SPOT/MARGIN/SWAP/FUTURES/OPTION/ANY
+export OKX_INST_FAMILY="" # 可选
+export OKX_INST_ID="" # 可选
+export OKX_WS_ASYNC_BUFFER="1024" # 可选：typed handler 异步队列大小
+export OKX_HANDLER_SLEEP="500ms" # 可选：模拟 handler 耗时（建议 <= timeout）
+export OKX_TIMEOUT="60s" # 可选：等待订单更新的超时
+go run ./examples/ws_private_orders_stream_async
 ```
 
 通过 WS 下单（会真实下单；需要 API Key；建议先用模拟盘；必须显式确认）：
