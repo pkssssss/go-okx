@@ -13,6 +13,7 @@ import (
 type Instrument struct {
 	InstType   string `json:"instType"`
 	InstId     string `json:"instId"`
+	InstIdCode *int64 `json:"instIdCode,omitempty"`
 	InstFamily string `json:"instFamily"`
 	Uly        string `json:"uly"`
 	Category   string `json:"category"`

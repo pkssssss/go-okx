@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/pkssssss/go-okx/v5"
 )
@@ -38,5 +39,9 @@ func main() {
 	}
 
 	it := items[0]
-	fmt.Printf("first instId=%s base=%s quote=%s settle=%s tickSz=%s lotSz=%s minSz=%s state=%s\n", it.InstId, it.BaseCcy, it.QuoteCcy, it.SettleCcy, it.TickSz, it.LotSz, it.MinSz, it.State)
+	instIdCode := ""
+	if it.InstIdCode != nil {
+		instIdCode = strconv.FormatInt(*it.InstIdCode, 10)
+	}
+	fmt.Printf("first instId=%s instIdCode=%s base=%s quote=%s settle=%s tickSz=%s lotSz=%s minSz=%s state=%s\n", it.InstId, instIdCode, it.BaseCcy, it.QuoteCcy, it.SettleCcy, it.TickSz, it.LotSz, it.MinSz, it.State)
 }

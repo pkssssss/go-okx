@@ -35,7 +35,7 @@ func TestPublicInstrumentsService_Do(t *testing.T) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","baseCcy":"BTC","quoteCcy":"USDT","tickSz":"0.1","lotSz":"0.0001","minSz":"0.0001","state":"live"}]}`))
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","instIdCode":211874,"baseCcy":"BTC","quoteCcy":"USDT","tickSz":"0.1","lotSz":"0.0001","minSz":"0.0001","state":"live"}]}`))
 		}))
 		t.Cleanup(srv.Close)
 
@@ -53,6 +53,12 @@ func TestPublicInstrumentsService_Do(t *testing.T) {
 		}
 		if got[0].InstId != "BTC-USDT" {
 			t.Fatalf("InstId = %q, want %q", got[0].InstId, "BTC-USDT")
+		}
+		if got[0].InstIdCode == nil {
+			t.Fatalf("InstIdCode = nil, want %d", 211874)
+		}
+		if *got[0].InstIdCode != 211874 {
+			t.Fatalf("InstIdCode = %d, want %d", *got[0].InstIdCode, 211874)
 		}
 		if got[0].TickSz != "0.1" {
 			t.Fatalf("TickSz = %q, want %q", got[0].TickSz, "0.1")
