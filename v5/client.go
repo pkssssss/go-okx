@@ -173,11 +173,45 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 
 	var env responseEnvelope
 	if err := json.Unmarshal(resp, &env); err != nil {
+		if status < http.StatusBadRequest && out != nil {
+			if err2 := json.Unmarshal(resp, out); err2 == nil {
+				return nil
+			}
+		}
 		return &APIError{
 			HTTPStatus:  status,
 			Method:      method,
 			RequestPath: requestPath,
 			Message:     "invalid JSON response",
+			Raw:         resp,
+			RequestID:   respHeader.Get("x-request-id"),
+		}
+	}
+
+	// OKX 文档中少量接口会省略 code/msg/data 外层（直接返回对象/数组）。
+	// 为提高 SDK 稳定性：在 HTTP 2xx 且缺少 envelope 字段时，尝试直接反序列化为 out。
+	if env.Code == "" && env.Msg == "" && len(env.Data) == 0 {
+		if status >= http.StatusBadRequest {
+			return &APIError{
+				HTTPStatus:  status,
+				Method:      method,
+				RequestPath: requestPath,
+				Message:     "invalid response envelope",
+				Raw:         resp,
+				RequestID:   respHeader.Get("x-request-id"),
+			}
+		}
+		if out == nil {
+			return nil
+		}
+		if err := json.Unmarshal(resp, out); err == nil {
+			return nil
+		}
+		return &APIError{
+			HTTPStatus:  status,
+			Method:      method,
+			RequestPath: requestPath,
+			Message:     "invalid response envelope",
 			Raw:         resp,
 			RequestID:   respHeader.Get("x-request-id"),
 		}
