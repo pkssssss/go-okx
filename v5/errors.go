@@ -3,6 +3,8 @@ package okx
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 )
 
 // APIError 表示 OKX API 返回的错误（HTTP 错误或业务 code != "0"）。
@@ -33,4 +35,48 @@ func (e *APIError) Error() string {
 func IsAPIError(err error) bool {
 	var apiErr *APIError
 	return errors.As(err, &apiErr)
+}
+
+// IsAuthError 判断 err 是否为鉴权/授权相关错误。
+func IsAuthError(err error) bool {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	if apiErr.HTTPStatus == http.StatusUnauthorized {
+		return true
+	}
+	// OKX：API 类错误码（501xx）覆盖 APIKey/签名/时间戳等问题。
+	return strings.HasPrefix(apiErr.Code, "501")
+}
+
+// IsRateLimitError 判断 err 是否为限速错误。
+func IsRateLimitError(err error) bool {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	if apiErr.HTTPStatus == http.StatusTooManyRequests {
+		return true
+	}
+	switch apiErr.Code {
+	case "50011", "50061":
+		return true
+	default:
+		return false
+	}
+}
+
+// IsTimeSkewError 判断 err 是否为时间戳相关错误（常见于本地时间偏差或时间戳格式错误）。
+func IsTimeSkewError(err error) bool {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	switch apiErr.Code {
+	case "50102", "50112":
+		return true
+	default:
+		return false
+	}
 }

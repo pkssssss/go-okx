@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"sync/atomic"
@@ -32,6 +34,8 @@ type Client struct {
 
 	creds *Credentials
 	demo  bool
+
+	retry *RetryConfig
 
 	timeOffsetNanos atomic.Int64
 	now             func() time.Time
@@ -105,6 +109,43 @@ func WithNowFunc(now func() time.Time) Option {
 	}
 }
 
+// RetryConfig 控制 REST 请求的重试策略（仅幂等 GET）。
+//
+// 注意：
+// - 默认不启用重试（MaxRetries=0）。
+// - 重试会重新生成签名时间戳（若为签名请求）。
+type RetryConfig struct {
+	// MaxRetries 表示最多重试次数（不含第一次请求）。
+	MaxRetries int
+
+	// BaseDelay 表示第一次重试的等待时间（指数退避起点）。
+	BaseDelay time.Duration
+
+	// MaxDelay 表示最大等待时间（为 0 表示不限制）。
+	MaxDelay time.Duration
+
+	// RetryOnRateLimit 为 true 时，会在限速错误（HTTP 429 / code 50011/50061）上重试。
+	RetryOnRateLimit bool
+}
+
+// WithRetry 设置重试策略（仅幂等 GET）。
+func WithRetry(cfg RetryConfig) Option {
+	cfgCopy := cfg
+	if cfgCopy.MaxRetries < 0 {
+		cfgCopy.MaxRetries = 0
+	}
+	if cfgCopy.BaseDelay < 0 {
+		cfgCopy.BaseDelay = 0
+	}
+	if cfgCopy.MaxDelay < 0 {
+		cfgCopy.MaxDelay = 0
+	}
+
+	return func(c *Client) {
+		c.retry = &cfgCopy
+	}
+}
+
 var errMissingCredentials = errors.New("okx: missing credentials")
 
 type responseEnvelope struct {
@@ -131,46 +172,152 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 		bodyString = string(b)
 	}
 
-	header := make(http.Header)
-	header.Set("Accept", "application/json")
-	header.Set("Content-Type", "application/json")
-	if c.demo {
-		header.Set("x-simulated-trading", "1")
+	retryCfg := c.retry
+	maxRetries := 0
+	if retryCfg != nil && retryCfg.MaxRetries > 0 && method == http.MethodGet {
+		maxRetries = retryCfg.MaxRetries
 	}
 
-	if signed {
-		if c.creds == nil || c.creds.APIKey == "" || c.creds.SecretKey == "" || c.creds.Passphrase == "" {
-			return errMissingCredentials
+	for attempt := 0; ; attempt++ {
+		header := make(http.Header)
+		header.Set("Accept", "application/json")
+		header.Set("Content-Type", "application/json")
+		if c.demo {
+			header.Set("x-simulated-trading", "1")
 		}
 
-		tm := c.now().Add(-c.TimeOffset())
-		timestamp := sign.TimestampISO8601Millis(tm)
-		prehash := sign.PrehashREST(timestamp, method, requestPath, bodyString)
-		sig := sign.SignHMACSHA256Base64(c.creds.SecretKey, prehash)
+		if signed {
+			if c.creds == nil || c.creds.APIKey == "" || c.creds.SecretKey == "" || c.creds.Passphrase == "" {
+				return errMissingCredentials
+			}
 
-		header.Set("OK-ACCESS-KEY", c.creds.APIKey)
-		header.Set("OK-ACCESS-PASSPHRASE", c.creds.Passphrase)
-		header.Set("OK-ACCESS-TIMESTAMP", timestamp)
-		header.Set("OK-ACCESS-SIGN", sig)
-	}
+			tm := c.now().Add(-c.TimeOffset())
+			timestamp := sign.TimestampISO8601Millis(tm)
+			prehash := sign.PrehashREST(timestamp, method, requestPath, bodyString)
+			sig := sign.SignHMACSHA256Base64(c.creds.SecretKey, prehash)
 
-	if len(extraHeader) > 0 {
-		for k, vs := range extraHeader {
-			if len(vs) == 0 {
+			header.Set("OK-ACCESS-KEY", c.creds.APIKey)
+			header.Set("OK-ACCESS-PASSPHRASE", c.creds.Passphrase)
+			header.Set("OK-ACCESS-TIMESTAMP", timestamp)
+			header.Set("OK-ACCESS-SIGN", sig)
+		}
+
+		if len(extraHeader) > 0 {
+			for k, vs := range extraHeader {
+				if len(vs) == 0 {
+					continue
+				}
+				header.Del(k)
+				for _, v := range vs {
+					header.Add(k, v)
+				}
+			}
+		}
+
+		status, resp, respHeader, err := c.rest.Do(ctx, method, requestPath, bodyBytes, header)
+		if err != nil {
+			if attempt < maxRetries && isRetryableTransportError(err) {
+				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
+					return err
+				}
 				continue
 			}
-			header.Del(k)
-			for _, v := range vs {
-				header.Add(k, v)
+			return err
+		}
+
+		if err := decodeEnvelope(status, resp, respHeader, method, requestPath, out); err != nil {
+			if attempt < maxRetries && isRetryableAPIError(err, retryCfg) {
+				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
+					return err
+				}
+				continue
 			}
+			return err
+		}
+		return nil
+	}
+}
+
+func isRetryableTransportError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	return false
+}
+
+func isRetryableAPIError(err error, cfg *RetryConfig) bool {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	if apiErr.HTTPStatus >= http.StatusInternalServerError {
+		return true
+	}
+
+	if cfg != nil && cfg.RetryOnRateLimit {
+		if apiErr.HTTPStatus == http.StatusTooManyRequests {
+			return true
+		}
+		switch apiErr.Code {
+		case "50011", "50061":
+			return true
 		}
 	}
+	return false
+}
 
-	status, resp, respHeader, err := c.rest.Do(ctx, method, requestPath, bodyBytes, header)
-	if err != nil {
-		return err
+func sleepRetry(ctx context.Context, cfg *RetryConfig, retryIndex int) error {
+	if cfg == nil {
+		return nil
 	}
 
+	d := retryDelay(*cfg, retryIndex)
+	if d <= 0 {
+		return nil
+	}
+
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func retryDelay(cfg RetryConfig, retryIndex int) time.Duration {
+	if cfg.BaseDelay <= 0 || retryIndex <= 0 {
+		return 0
+	}
+
+	d := cfg.BaseDelay
+	for i := 1; i < retryIndex; i++ {
+		if d > 0 && d > (1<<62) {
+			break
+		}
+		d *= 2
+	}
+
+	if cfg.MaxDelay > 0 && d > cfg.MaxDelay {
+		return cfg.MaxDelay
+	}
+	return d
+}
+
+func decodeEnvelope(status int, resp []byte, respHeader http.Header, method, requestPath string, out any) error {
 	var env responseEnvelope
 	if err := json.Unmarshal(resp, &env); err != nil {
 		if status < http.StatusBadRequest && out != nil {

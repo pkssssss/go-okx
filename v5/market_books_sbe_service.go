@@ -61,52 +61,82 @@ func (s *MarketBooksSBEService) Do(ctx context.Context) ([]byte, error) {
 	endpoint := "/api/v5/market/books-sbe"
 	requestPath := rest.BuildRequestPath(endpoint, q)
 
-	header := make(http.Header)
-	header.Set("Accept", "application/sbe,application/json")
-	if s.c.demo {
-		header.Set("x-simulated-trading", "1")
+	retryCfg := s.c.retry
+	maxRetries := 0
+	if retryCfg != nil && retryCfg.MaxRetries > 0 {
+		maxRetries = retryCfg.MaxRetries
 	}
 
-	status, resp, respHeader, err := s.c.rest.Do(ctx, http.MethodGet, requestPath, nil, header)
-	if err != nil {
-		return nil, err
-	}
+	for attempt := 0; ; attempt++ {
+		header := make(http.Header)
+		header.Set("Accept", "application/sbe,application/json")
+		if s.c.demo {
+			header.Set("x-simulated-trading", "1")
+		}
 
-	contentType := respHeader.Get("Content-Type")
-	if status >= http.StatusBadRequest || strings.Contains(contentType, "application/json") {
-		var env responseEnvelope
-		if err := json.Unmarshal(resp, &env); err != nil {
-			return nil, &APIError{
-				HTTPStatus:  status,
-				Method:      http.MethodGet,
-				RequestPath: requestPath,
-				Message:     "invalid JSON response",
-				Raw:         resp,
-				RequestID:   respHeader.Get("x-request-id"),
+		status, resp, respHeader, err := s.c.rest.Do(ctx, http.MethodGet, requestPath, nil, header)
+		if err != nil {
+			if attempt < maxRetries && isRetryableTransportError(err) {
+				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
+					return nil, err
+				}
+				continue
 			}
+			return nil, err
 		}
 
-		if env.Code != "" && env.Code != "0" {
-			return nil, &APIError{
-				HTTPStatus:  status,
-				Method:      http.MethodGet,
-				RequestPath: requestPath,
-				Code:        env.Code,
-				Message:     env.Msg,
-				Raw:         resp,
-				RequestID:   respHeader.Get("x-request-id"),
+		contentType := respHeader.Get("Content-Type")
+		if status >= http.StatusBadRequest || strings.Contains(contentType, "application/json") {
+			var env responseEnvelope
+			if err := json.Unmarshal(resp, &env); err != nil {
+				apiErr := &APIError{
+					HTTPStatus:  status,
+					Method:      http.MethodGet,
+					RequestPath: requestPath,
+					Message:     "invalid JSON response",
+					Raw:         resp,
+					RequestID:   respHeader.Get("x-request-id"),
+				}
+				if attempt < maxRetries && isRetryableAPIError(apiErr, retryCfg) {
+					if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
+						return nil, err
+					}
+					continue
+				}
+				return nil, apiErr
 			}
+
+			var apiErr *APIError
+			if env.Code != "" && env.Code != "0" {
+				apiErr = &APIError{
+					HTTPStatus:  status,
+					Method:      http.MethodGet,
+					RequestPath: requestPath,
+					Code:        env.Code,
+					Message:     env.Msg,
+					Raw:         resp,
+					RequestID:   respHeader.Get("x-request-id"),
+				}
+			} else {
+				apiErr = &APIError{
+					HTTPStatus:  status,
+					Method:      http.MethodGet,
+					RequestPath: requestPath,
+					Message:     "unexpected JSON response",
+					Raw:         resp,
+					RequestID:   respHeader.Get("x-request-id"),
+				}
+			}
+
+			if attempt < maxRetries && isRetryableAPIError(apiErr, retryCfg) {
+				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
+					return nil, err
+				}
+				continue
+			}
+			return nil, apiErr
 		}
 
-		return nil, &APIError{
-			HTTPStatus:  status,
-			Method:      http.MethodGet,
-			RequestPath: requestPath,
-			Message:     "unexpected JSON response",
-			Raw:         resp,
-			RequestID:   respHeader.Get("x-request-id"),
-		}
+		return resp, nil
 	}
-
-	return resp, nil
 }
