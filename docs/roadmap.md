@@ -33,5 +33,5 @@
   - ✅ 月结单：`asset/monthly-statement`（apply/get）
   - ✅ 闪兑：`asset/convert/currencies`、`asset/convert/currency-pair`、`asset/convert/estimate-quote`、`asset/convert/trade`、`asset/convert/history`
   - ✅ WS（business）：`deposit-info`、`withdrawal-info`
-- Account：✅ `account/config`、✅ `account/set-position-mode`、✅ `account/set-leverage`、✅ `account/leverage-info`、✅ `account/max-size`、✅ `account/max-avail-size`、✅ `account/max-loan`、✅ `account/trade-fee`、✅ `account/interest-accrued`、✅ `account/interest-rate`、✅ `account/max-withdrawal`、✅ `account/interest-limits`、✅ `account/position/margin-balance`、✅ `account/spot-manual-borrow-repay`；TODO：保证金/风险参数相关（risk-state/tiers/set-auto-repay 等）
+- Account：✅ `account/config`、✅ `account/set-position-mode`、✅ `account/set-leverage`、✅ `account/leverage-info`、✅ `account/max-size`、✅ `account/max-avail-size`、✅ `account/max-loan`、✅ `account/trade-fee`、✅ `account/interest-accrued`、✅ `account/interest-rate`、✅ `account/max-withdrawal`、✅ `account/interest-limits`、✅ `account/position/margin-balance`、✅ `account/spot-manual-borrow-repay`、✅ `account/risk-state`、✅ `account/set-auto-repay`、✅ `account/spot-borrow-repay-history`；TODO：保证金/风险参数相关（tiers/position-builder 等）
 - 工程化：更细的错误分类（auth/limit/time-skew 等）、可控重试策略（仅幂等 GET）、完善 `README.md` 与 docs
