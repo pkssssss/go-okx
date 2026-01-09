@@ -251,6 +251,14 @@ export OKX_TIMEOUT="10s" # 可选
 go run ./examples/ws_private_trade_batch_ops
 ```
 
+获取全量产品行情（market/tickers；默认 SPOT）：
+
+```bash
+export OKX_INST_TYPE="SPOT" # 可选：SPOT/SWAP/FUTURES/OPTION
+export OKX_INST_FAMILY="" # 可选：仅衍生品/期权有效
+go run ./examples/market_tickers
+```
+
 获取单个产品行情（默认 BTC-USDT）：
 
 ```bash
@@ -266,6 +274,23 @@ export OKX_BOOKS_SZ="5" # 可选
 go run ./examples/market_books
 ```
 
+获取产品完整深度（market/books-full；默认 BTC-USDT，默认 20 档）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_BOOKS_SZ="20" # 可选：最大 5000（买卖深度共 10000 条）
+go run ./examples/market_books_full
+```
+
+获取 SBE 订单簿快照（market/books-sbe；成功返回二进制，失败返回 JSON；默认 SPOT/BTC-USDT）：
+
+```bash
+export OKX_INST_TYPE="SPOT" # 可选：SPOT/SWAP/FUTURES/OPTION
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_SOURCE="0" # 可选：当前仅 0
+go run ./examples/market_books_sbe
+```
+
 获取 K 线（默认 BTC-USDT，默认 1m，默认 5 根）：
 
 ```bash
@@ -273,6 +298,69 @@ export OKX_INST_ID="BTC-USDT" # 可选
 export OKX_CANDLE_BAR="1m" # 可选
 export OKX_CANDLE_LIMIT="5" # 可选
 go run ./examples/market_candles
+```
+
+获取交易产品历史 K 线（market/history-candles；默认 BTC-USDT，默认 1m，默认 5 根）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_CANDLE_BAR="1m" # 可选
+export OKX_CANDLE_LIMIT="5" # 可选
+export OKX_AFTER="" # 可选
+export OKX_BEFORE="" # 可选
+go run ./examples/market_history_candles
+```
+
+获取指数行情（market/index-tickers；instId 与 quoteCcy 二选一）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_QUOTE_CCY="" # 可选：USD/USDT/BTC/USDC
+go run ./examples/market_index_tickers
+```
+
+获取指数 K 线（market/index-candles；默认 BTC-USD，默认 1m，默认 5 根）：
+
+```bash
+export OKX_INST_ID="BTC-USD" # 可选
+export OKX_CANDLE_BAR="1m" # 可选
+export OKX_CANDLE_LIMIT="5" # 可选
+export OKX_AFTER="" # 可选
+export OKX_BEFORE="" # 可选
+go run ./examples/market_index_candles
+```
+
+获取指数历史 K 线（market/history-index-candles；默认 BTC-USD，默认 1m，默认 5 根）：
+
+```bash
+export OKX_INST_ID="BTC-USD" # 可选
+export OKX_CANDLE_BAR="1m" # 可选
+export OKX_CANDLE_LIMIT="5" # 可选
+export OKX_AFTER="" # 可选
+export OKX_BEFORE="" # 可选
+go run ./examples/market_history_index_candles
+```
+
+获取标记价格 K 线（market/mark-price-candles；默认 BTC-USD-240628，默认 1m，默认 5 根）：
+
+```bash
+export OKX_INST_ID="BTC-USD-240628" # 可选
+export OKX_CANDLE_BAR="1m" # 可选
+export OKX_CANDLE_LIMIT="5" # 可选
+export OKX_AFTER="" # 可选
+export OKX_BEFORE="" # 可选
+go run ./examples/market_mark_price_candles
+```
+
+获取标记价格历史 K 线（market/history-mark-price-candles；默认 BTC-USD-240628，默认 1m，默认 5 根）：
+
+```bash
+export OKX_INST_ID="BTC-USD-240628" # 可选
+export OKX_CANDLE_BAR="1m" # 可选
+export OKX_CANDLE_LIMIT="5" # 可选
+export OKX_AFTER="" # 可选
+export OKX_BEFORE="" # 可选
+go run ./examples/market_history_mark_price_candles
 ```
 
 获取最近成交（默认 BTC-USDT，默认 20 条）：
@@ -283,6 +371,17 @@ export OKX_TRADES_LIMIT="20" # 可选
 go run ./examples/market_trades
 ```
 
+获取公共历史成交（market/history-trades；默认 BTC-USDT，默认 20 条）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_TYPE="" # 可选：1=tradeId 分页，2=时间戳分页
+export OKX_AFTER="" # 可选
+export OKX_BEFORE="" # 可选
+export OKX_TRADES_LIMIT="20" # 可选
+go run ./examples/market_history_trades
+```
+
 查询产品信息（默认 SPOT）：
 
 ```bash
@@ -291,6 +390,13 @@ export OKX_ULY="BTC-USD" # 可选
 export OKX_INST_FAMILY="BTC-USD" # 可选
 export OKX_INST_ID="BTC-USDT" # 可选
 go run ./examples/public_instruments
+```
+
+查询限价（public/price-limit；默认 BTC-USDT-SWAP）：
+
+```bash
+export OKX_INST_ID="BTC-USDT-SWAP" # 可选
+go run ./examples/public_price_limit
 ```
 
 查询标记价格（默认 SWAP）：
@@ -427,3 +533,4 @@ go run ./examples/trade_amend_batch_orders
 ## 设计文档
 
 - `docs/design.md`
+- `docs/roadmap.md`
