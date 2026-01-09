@@ -24,6 +24,11 @@
 
 ## P3（扩展 & 工程化）🟡
 
+- Market：
+  - ✅ 历史行情：`market/history-candles`、`market/history-trades`
+  - ✅ 指数K线：`market/index-candles`、`market/history-index-candles`
+  - ✅ 标记价格K线：`market/mark-price-candles`、`market/history-mark-price-candles`
+
 - Asset：
   - ✅ 估值/资产：`asset/asset-valuation`、`asset/non-tradable-assets`
   - ✅ 币种/辅助：`asset/currencies`（充提状态/手续费/精度）、`asset/exchange-list`（交易所列表）
