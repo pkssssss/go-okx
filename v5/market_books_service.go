@@ -9,7 +9,11 @@ import (
 	"strconv"
 )
 
-// OrderBookLevel 表示盘口档位：[价格, 数量, 流动性订单数?, 订单数]（按 OKX 返回的数组顺序）。
+// OrderBookLevel 表示盘口档位。
+//
+// OKX 返回为数组：
+// - market/books: ["px","sz","0","numOrders"]（第3位字段已弃用，始终为 "0"）
+// - market/books-full: ["px","sz","numOrders"]
 type OrderBookLevel struct {
 	Px        string
 	Sz        string
@@ -18,17 +22,25 @@ type OrderBookLevel struct {
 }
 
 func (l *OrderBookLevel) UnmarshalJSON(data []byte) error {
+	*l = OrderBookLevel{}
+
 	var arr []string
 	if err := json.Unmarshal(data, &arr); err != nil {
 		return err
 	}
-	if len(arr) < 4 {
+	if len(arr) < 3 {
 		return errors.New("okx: invalid order book level")
 	}
+
 	l.Px = arr[0]
 	l.Sz = arr[1]
-	l.LiqOrd = arr[2]
-	l.NumOrders = arr[3]
+	if len(arr) >= 4 {
+		l.LiqOrd = arr[2]
+		l.NumOrders = arr[3]
+		return nil
+	}
+
+	l.NumOrders = arr[2]
 	return nil
 }
 
