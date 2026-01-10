@@ -551,6 +551,20 @@ go run ./examples/public_discount_rate_interest_free_quota
 go run ./examples/public_interest_rate_loan_quota
 ```
 
+获取经济日历数据（public/economic-calendar；需要 API Key；仅支持实盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_REGION="" # 可选
+export OKX_IMPORTANCE="" # 可选：1=低，2=中等，3=高
+export OKX_BEFORE="" # 可选：date（Unix 毫秒）
+export OKX_AFTER="" # 可选：date（Unix 毫秒）
+export OKX_LIMIT="100" # 可选
+go run ./examples/public_economic_calendar
+```
+
 张/币转换（public/convert-contract-coin；默认 BTC-USD-SWAP）：
 
 ```bash
