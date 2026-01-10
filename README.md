@@ -442,6 +442,20 @@ export OKX_INST_FAMILY="BTC-USD" # 可选
 go run ./examples/public_instrument_tick_bands
 ```
 
+查询风险保证金余额（public/insurance-fund；默认 SWAP + BTC-USD）：
+
+```bash
+export OKX_INST_TYPE="SWAP" # 必填：MARGIN/SWAP/FUTURES/OPTION
+export OKX_TYPE="" # 可选：regular_update/liquidation_balance_deposit/bankruptcy_loss/platform_revenue/adl
+export OKX_INST_FAMILY="" # 可选（instType=SWAP/FUTURES/OPTION 时，instFamily/uly 至少传一个）
+export OKX_ULY="" # 可选（instType=SWAP/FUTURES/OPTION 时，instFamily/uly 至少传一个）
+export OKX_CCY="" # 可选（instType=MARGIN 时必填）
+export OKX_AFTER="" # 可选
+export OKX_BEFORE="" # 可选
+export OKX_LIMIT="100" # 可选
+go run ./examples/public_insurance_fund
+```
+
 查询未成交订单列表（需要 API Key，支持模拟盘）：
 
 ```bash
