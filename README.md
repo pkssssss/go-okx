@@ -494,6 +494,16 @@ export OKX_CL_ORD_ID="" # OKX_ORD_ID/OKX_CL_ORD_ID 二选一
 go run ./examples/trade_get_order
 ```
 
+查询账户限速信息（需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+go run ./examples/trade_account_rate_limit
+```
+
 批量下单（会实际下单；需要 API Key，支持模拟盘；需显式确认）：
 
 ```bash
@@ -528,6 +538,19 @@ export OKX_DEMO=1 # 可选：1=模拟盘
 export OKX_BATCH_AMEND_ORDERS='[{"instId":"BTC-USDT","ordId":"590909145319051111","newSz":"2"}]'
 export OKX_CONFIRM="YES"
 go run ./examples/trade_amend_batch_orders
+```
+
+设置倒计时全部撤单（会实际撤单；需要 API Key，支持模拟盘；需显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_TIME_OUT="60" # 必填：0 或 10-120
+export OKX_TAG="my-bot" # 可选
+export OKX_CONFIRM="YES"
+go run ./examples/trade_cancel_all_after
 ```
 
 ## 设计文档
