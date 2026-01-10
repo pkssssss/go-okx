@@ -538,6 +538,13 @@ export OKX_LIMIT="100" # 可选
 go run ./examples/public_insurance_fund
 ```
 
+获取免息额度和币种折算率等级（public/discount-rate-interest-free-quota；默认返回全量）：
+
+```bash
+export OKX_CCY="" # 可选
+go run ./examples/public_discount_rate_interest_free_quota
+```
+
 张/币转换（public/convert-contract-coin；默认 BTC-USD-SWAP）：
 
 ```bash
