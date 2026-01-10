@@ -456,6 +456,18 @@ export OKX_LIMIT="100" # 可选
 go run ./examples/public_insurance_fund
 ```
 
+张/币转换（public/convert-contract-coin；默认 BTC-USD-SWAP）：
+
+```bash
+export OKX_INST_ID="BTC-USD-SWAP" # 可选
+export OKX_SZ="0.888" # 必填：币转张时为币数量；张转币时为张数量
+export OKX_CONVERT_TYPE="1" # 可选：1=币转张，2=张转币
+export OKX_PX="35000" # 可选（某些场景必填，按 OKX 规则）
+export OKX_UNIT="coin" # 可选：coin/usds
+export OKX_OP_TYPE="close" # 可选：open/close
+go run ./examples/public_convert_contract_coin
+```
+
 查询未成交订单列表（需要 API Key，支持模拟盘）：
 
 ```bash
