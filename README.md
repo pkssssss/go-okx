@@ -406,6 +406,16 @@ export OKX_INST_ID="BTC-USD-200214" # 可选：仅适用于交割/期权
 go run ./examples/public_estimated_price
 ```
 
+获取交割结算记录（public/settlement-history；默认 BTC-USDT）：
+
+```bash
+export OKX_INST_FAMILY="BTC-USDT" # 可选（必填参数；示例默认 BTC-USDT）
+export OKX_AFTER="" # 可选：ts（Unix 毫秒）
+export OKX_BEFORE="" # 可选：ts（Unix 毫秒）
+export OKX_LIMIT="100" # 可选
+go run ./examples/public_settlement_history
+```
+
 查询限价（public/price-limit；默认 BTC-USDT-SWAP）：
 
 ```bash
