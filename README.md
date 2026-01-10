@@ -504,6 +504,24 @@ export OKX_DEMO=1 # 可选：1=模拟盘
 go run ./examples/trade_account_rate_limit
 ```
 
+市价仓位全平（会实际平仓；需要 API Key，支持模拟盘；需显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_INST_ID="BTC-USDT-SWAP" # 必填
+export OKX_MGN_MODE="cross" # 必填：cross/isolated
+export OKX_POS_SIDE="" # 可选：long/short/net
+export OKX_CCY="" # 可选
+export OKX_AUTO_CXL="true" # 可选：true/false
+export OKX_CL_ORD_ID="" # 可选
+export OKX_TAG="" # 可选
+export OKX_CONFIRM="YES"
+go run ./examples/trade_close_position
+```
+
 批量下单（会实际下单；需要 API Key，支持模拟盘；需显式确认）：
 
 ```bash
