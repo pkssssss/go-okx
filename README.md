@@ -529,6 +529,15 @@ export OKX_OPT_EXP_TIME="260123" # 可选：YYMMDD
 go run ./examples/public_opt_summary
 ```
 
+获取期权公共成交数据（public/option-trades；默认 instFamily=BTC-USD）：
+
+```bash
+export OKX_INST_ID="" # 可选：instId/instFamily 必须传一个；若都传，以 instId 为主
+export OKX_INST_FAMILY="BTC-USD" # 可选
+export OKX_OPT_TYPE="" # 可选：C/P
+go run ./examples/public_option_trades
+```
+
 查询期权价格梯度（public/instrument-tick-bands；默认 OPTION）：
 
 ```bash
