@@ -466,6 +466,25 @@ export OKX_LIMIT="100" # 可选
 go run ./examples/trade_orders_history
 ```
 
+查询历史订单（近三个月，需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_INST_TYPE="SPOT" # 可选（示例默认 SPOT）
+export OKX_INST_FAMILY="BTC-USD" # 可选
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_ORD_TYPE="limit" # 可选（可用逗号分隔多个）
+export OKX_ORDER_STATE="filled" # 可选
+export OKX_CATEGORY="twap" # 可选
+export OKX_BEGIN="1695190491421" # 可选：Unix 毫秒时间戳
+export OKX_END="1695190491421" # 可选：Unix 毫秒时间戳
+export OKX_LIMIT="100" # 可选
+go run ./examples/trade_orders_history_archive
+```
+
 查询成交明细（近三天，需要 API Key，支持模拟盘）：
 
 ```bash
@@ -479,6 +498,24 @@ export OKX_INST_ID="BTC-USDT" # 可选
 export OKX_ORD_ID="123" # 可选
 export OKX_LIMIT="100" # 可选
 go run ./examples/trade_fills
+```
+
+查询成交明细（近三个月，需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_INST_TYPE="SPOT" # 可选（示例默认 SPOT）
+export OKX_INST_FAMILY="BTC-USD" # 可选
+export OKX_INST_ID="BTC-USDT" # 可选
+export OKX_ORD_ID="123" # 可选
+export OKX_SUB_TYPE="1" # 可选
+export OKX_BEGIN="1695190491421" # 可选：Unix 毫秒时间戳
+export OKX_END="1695190491421" # 可选：Unix 毫秒时间戳
+export OKX_LIMIT="100" # 可选
+go run ./examples/trade_fills_history
 ```
 
 查询订单信息（需要 API Key，支持模拟盘）：
