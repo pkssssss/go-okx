@@ -897,3 +897,4 @@ go run ./examples/trade_mass_cancel
 
 - `docs/design.md`
 - `docs/roadmap.md`
+- `docs/coverage.md`
