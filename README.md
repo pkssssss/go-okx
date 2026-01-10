@@ -389,6 +389,19 @@ export OKX_TRADES_LIMIT="20" # 可选
 go run ./examples/market_history_trades
 ```
 
+获取历史市场数据（public/market-data-history；返回可下载的 zip 链接；默认 module=1 + SWAP + BTC-USDT + daily）：
+
+```bash
+export OKX_MODULE="1" # 必填：1/2/3/4/5/6
+export OKX_INST_TYPE="SWAP" # 必填：SPOT/FUTURES/SWAP/OPTION
+export OKX_INST_FAMILY="BTC-USDT" # instType!=SPOT 时必填（英文逗号分隔）
+export OKX_INST_ID="" # instType=SPOT 时必填（英文逗号分隔，示例默认 BTC-USDT）
+export OKX_DATE_AGGR_TYPE="daily" # 必填：daily/monthly
+export OKX_BEGIN="" # 必填：Unix 毫秒
+export OKX_END="" # 必填：Unix 毫秒
+go run ./examples/public_market_data_history
+```
+
 查询产品信息（默认 SPOT）：
 
 ```bash
