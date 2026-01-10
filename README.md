@@ -545,6 +545,12 @@ export OKX_CCY="" # 可选
 go run ./examples/public_discount_rate_interest_free_quota
 ```
 
+获取市场借币杠杆利率和借币限额（public/interest-rate-loan-quota）：
+
+```bash
+go run ./examples/public_interest_rate_loan_quota
+```
+
 张/币转换（public/convert-contract-coin；默认 BTC-USD-SWAP）：
 
 ```bash
