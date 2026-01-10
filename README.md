@@ -416,6 +416,16 @@ export OKX_INST_ID="BTC-USDT-SWAP" # 可选
 go run ./examples/public_funding_rate
 ```
 
+查询永续合约历史资金费率（public/funding-rate-history；默认 BTC-USD-SWAP）：
+
+```bash
+export OKX_INST_ID="BTC-USD-SWAP" # 可选
+export OKX_AFTER="" # 可选：fundingTime（Unix 毫秒）
+export OKX_BEFORE="" # 可选：fundingTime（Unix 毫秒）
+export OKX_LIMIT="400" # 可选
+go run ./examples/public_funding_rate_history
+```
+
 查询持仓总量（默认 SWAP）：
 
 ```bash

@@ -12,7 +12,7 @@
 
 ## P1（行情 & WS Public）✅
 
-- REST 公共/行情：`public_time`、`public_instruments`、`funding/open-interest/mark-price/price-limit/opt-summary/instrument-tick-bands/insurance-fund/convert-contract-coin`、`market_(books/books-full/books-sbe/candles/tickers/trades/index-tickers)`
+- REST 公共/行情：`public_time`、`public_instruments`、`funding/funding-rate-history/open-interest/mark-price/price-limit/opt-summary/instrument-tick-bands/insurance-fund/convert-contract-coin`、`market_(books/books-full/books-sbe/candles/tickers/trades/index-tickers)`
 - WS public：`books/books5/tickers/trades` + 关键频道解析（`open-interest`/`funding-rate`/`mark-price`/`index-tickers`/`price-limit`/`opt-summary`/`liquidation-orders`）
 - WS business：`mark-price-candle*`、`index-candle*`（按需）
 
