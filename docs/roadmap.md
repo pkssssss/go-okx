@@ -22,7 +22,7 @@
 - WS private：orders/fills/positions/account/balance_and_position（含自动重连/重订阅与异步 handler 方案）
 - REST 资产/账单：`account/bills`、`account/bills-archive`、`asset/balances`、`asset/transfer`、`asset/transfer-state`
 
-## P3（扩展 & 工程化）🟡
+## P3（扩展 & 工程化）✅
 
 - Market：
   - ✅ 历史行情：`market/history-candles`、`market/history-trades`

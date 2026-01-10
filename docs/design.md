@@ -2,7 +2,7 @@
 
 > 仓库：`github.com/pkssssss/go-okx`  
 > 模块：`github.com/pkssssss/go-okx/v5`  
-> Go 最低版本：`go1.25`  
+> Go 最低版本：`go1.25.5`  
 > 目标：正确性、稳定性优先，其次才是易用性与性能；避免过度设计（KISS / YAGNI）。
 
 ## 1. 背景与目标
@@ -19,7 +19,7 @@
 
 - **SBE（二进制）行情解码**与专用 WS（`/ws/v5/public-sbe`）不进 v0.1（除非你明确需要极致性能）。  
   但已提供 `market/books-sbe` 的 **原始快照字节**获取（由调用方自行解码）。
-- 资产高级域（充提、子账户、借贷、申购赎回等）暂不覆盖。
+- 不追求 OKX v5 **全量**端点覆盖（长尾/机构/特定业务按需增量）。
 - 过度抽象的“统一交易所接口层”（SDK 做通用 OKX 能力，量化内核自行适配 SDK）。
 
 ## 3. 关键差异点（OKX vs Binance，需要在架构里吸收）
@@ -89,9 +89,7 @@ go-okx/
   v5/
     internal/
       rest/            # REST 通用管线（请求构建/签名/发送/解包/错误）
-      ws/              # WS 连接管理（心跳/重连/重订阅/路由）
       sign/            # 签名与时间源（REST/WS 差异收敛）
-      jsonx/           # 无损数值/时间戳解析工具（可选）
     client.go          # package okx：Client、Option、公共类型入口
     public_*.go        # Public 服务（时间、产品、funding/mark/open-interest 等）
     market_*.go        # Market 服务（ticker/books/candles/trades 等）
