@@ -460,6 +460,19 @@ export OKX_INST_ID="BTC-USDT-SWAP" # 可选
 go run ./examples/public_open_interest
 ```
 
+查询衍生品仓位档位（public/position-tiers；默认 SWAP + cross + BTC-USDT）：
+
+```bash
+export OKX_INST_TYPE="SWAP" # 可选：MARGIN/SWAP/FUTURES/OPTION
+export OKX_TD_MODE="cross" # 可选：cross/isolated
+export OKX_INST_FAMILY="BTC-USDT" # 可选（instType!=MARGIN 时，instFamily/uly 需提供一个；示例默认 BTC-USDT）
+export OKX_ULY="" # 可选（等价于 instFamily）
+export OKX_INST_ID="" # 可选（instType=MARGIN 时，与 OKX_CCY 二选一；示例默认 BTC-USDT）
+export OKX_CCY="" # 可选
+export OKX_TIER="1" # 可选
+go run ./examples/public_position_tiers
+```
+
 查询期权行情概要（默认 BTC-USD）：
 
 ```bash
