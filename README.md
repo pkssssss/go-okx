@@ -413,6 +413,13 @@ export OKX_INST_ID="BTC-USD-200214" # 可选：仅适用于交割/期权
 go run ./examples/public_estimated_price
 ```
 
+获取交割预估结算价格（public/estimated-settlement-info；结算前一小时才有值；默认 XRP-USDT-250307）：
+
+```bash
+export OKX_INST_ID="XRP-USDT-250307" # 可选（必填参数；示例默认 XRP-USDT-250307）
+go run ./examples/public_estimated_settlement_info
+```
+
 获取交割结算记录（public/settlement-history；默认 BTC-USDT）：
 
 ```bash
