@@ -399,6 +399,13 @@ export OKX_INST_TYPE="FUTURES" # 可选：SWAP/FUTURES/OPTION
 go run ./examples/public_underlying
 ```
 
+获取预估交割/行权价格（public/estimated-price；交割/行权前一小时才有值；默认 BTC-USD-200214）：
+
+```bash
+export OKX_INST_ID="BTC-USD-200214" # 可选：仅适用于交割/期权
+go run ./examples/public_estimated_price
+```
+
 查询限价（public/price-limit；默认 BTC-USDT-SWAP）：
 
 ```bash
