@@ -43,6 +43,7 @@
 - Trade（策略委托）：✅ `trade/order-precheck`、✅ `trade/order-algo`（place/get）、✅ `trade/cancel-algos`、✅ `trade/amend-algos`、✅ `trade/orders-algo-pending`、✅ `trade/orders-algo-history`
 - Trade（平仓）：✅ `trade/close-position`
 - Trade（风控/限速）：✅ `trade/cancel-all-after`、✅ `trade/account-rate-limit`
+- Trade（MMP）：✅ `trade/mass-cancel`
 - 工程化：
   - ✅ 错误分类：`IsAuthError` / `IsRateLimitError` / `IsTimeSkewError`
   - ✅ 可控重试（仅幂等 GET）：`WithRetry(RetryConfig{...})`

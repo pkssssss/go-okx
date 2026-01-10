@@ -608,6 +608,18 @@ export OKX_CONFIRM="YES"
 go run ./examples/trade_cancel_all_after
 ```
 
+撤销 MMP 订单（会实际撤单；需要 API Key；仅适用于组合保证金期权账户且有 MMP 权限；需显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_INST_FAMILY="BTC-USD" # 必填
+export OKX_LOCK_INTERVAL="0" # 可选：0-10000（毫秒）
+export OKX_CONFIRM="YES"
+go run ./examples/trade_mass_cancel
+```
+
 ## 设计文档
 
 - `docs/design.md`
