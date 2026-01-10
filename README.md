@@ -423,6 +423,17 @@ export OKX_LIMIT="100" # 可选
 go run ./examples/public_settlement_history
 ```
 
+获取交割和行权记录（public/delivery-exercise-history；默认 FUTURES + BTC-USD）：
+
+```bash
+export OKX_INST_TYPE="FUTURES" # 可选：FUTURES/OPTION
+export OKX_INST_FAMILY="BTC-USD" # 可选（必填参数；示例默认 BTC-USD）
+export OKX_AFTER="" # 可选：ts（Unix 毫秒）
+export OKX_BEFORE="" # 可选：ts（Unix 毫秒）
+export OKX_LIMIT="100" # 可选
+go run ./examples/public_delivery_exercise_history
+```
+
 查询限价（public/price-limit；默认 BTC-USDT-SWAP）：
 
 ```bash
