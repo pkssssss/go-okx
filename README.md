@@ -392,6 +392,13 @@ export OKX_INST_ID="BTC-USDT" # 可选
 go run ./examples/public_instruments
 ```
 
+获取衍生品标的指数（public/underlying；默认 FUTURES）：
+
+```bash
+export OKX_INST_TYPE="FUTURES" # 可选：SWAP/FUTURES/OPTION
+go run ./examples/public_underlying
+```
+
 查询限价（public/price-limit；默认 BTC-USDT-SWAP）：
 
 ```bash
