@@ -440,6 +440,16 @@ export OKX_LIMIT="400" # 可选
 go run ./examples/public_funding_rate_history
 ```
 
+查询溢价指数历史（public/premium-history；默认 BTC-USDT-SWAP）：
+
+```bash
+export OKX_INST_ID="BTC-USDT-SWAP" # 可选
+export OKX_AFTER="" # 可选：ts（Unix 毫秒）
+export OKX_BEFORE="" # 可选：ts（Unix 毫秒）
+export OKX_LIMIT="100" # 可选
+go run ./examples/public_premium_history
+```
+
 查询持仓总量（默认 SWAP）：
 
 ```bash
