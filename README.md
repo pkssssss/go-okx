@@ -371,6 +371,13 @@ export OKX_TRADES_LIMIT="20" # 可选
 go run ./examples/market_trades
 ```
 
+获取大宗交易公共单腿成交数据（public/block-trades；默认 BTC-USDT）：
+
+```bash
+export OKX_INST_ID="BTC-USDT" # 可选（必填参数；示例默认 BTC-USDT）
+go run ./examples/public_block_trades
+```
+
 获取公共历史成交（market/history-trades；默认 BTC-USDT，默认 20 条）：
 
 ```bash
