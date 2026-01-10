@@ -45,6 +45,7 @@
 - Trade（风控/限速）：✅ `trade/cancel-all-after`、✅ `trade/account-rate-limit`
 - Trade（MMP）：✅ `trade/mass-cancel`
 - Trade（一键还债 v2）：✅ `trade/one-click-repay-currency-list-v2`、✅ `trade/one-click-repay-v2`、✅ `trade/one-click-repay-history-v2`
+- Trade（一键兑换）：✅ `trade/easy-convert-currency-list`、✅ `trade/easy-convert`、✅ `trade/easy-convert-history`
 - 工程化：
   - ✅ 错误分类：`IsAuthError` / `IsRateLimitError` / `IsTimeSkewError`
   - ✅ 可控重试（仅幂等 GET）：`WithRetry(RetryConfig{...})`

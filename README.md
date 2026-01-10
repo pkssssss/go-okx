@@ -541,6 +541,43 @@ export OKX_DEMO=1 # 可选：1=模拟盘
 go run ./examples/trade_account_rate_limit
 ```
 
+查询小币一键兑换主流币币种列表（需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_SOURCE="1" # 可选：1=交易账户，2=资金账户
+go run ./examples/trade_easy_convert_currency_list
+```
+
+查询小币一键兑换主流币历史记录（需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_AFTER="" # 可选：Unix 毫秒时间戳
+export OKX_BEFORE="" # 可选：Unix 毫秒时间戳
+export OKX_LIMIT="100" # 可选
+go run ./examples/trade_easy_convert_history
+```
+
+小币一键兑换主流币交易（会实际交易；需要 API Key；需显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_FROM_CCY_LIST='["ADA","USDC"]' # 必填：JSON array（最多 5 个）
+export OKX_TO_CCY="OKB" # 必填
+export OKX_SOURCE="1" # 可选：1=交易账户，2=资金账户
+export OKX_CONFIRM="YES"
+go run ./examples/trade_easy_convert
+```
+
 查询一键还债币种列表（新，仅适用于现货模式；需要 API Key，支持模拟盘）：
 
 ```bash
