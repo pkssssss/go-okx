@@ -434,6 +434,14 @@ export OKX_OPT_EXP_TIME="260123" # 可选：YYMMDD
 go run ./examples/public_opt_summary
 ```
 
+查询期权价格梯度（public/instrument-tick-bands；默认 OPTION）：
+
+```bash
+export OKX_INST_TYPE="OPTION" # 必填：当前仅支持 OPTION
+export OKX_INST_FAMILY="BTC-USD" # 可选
+go run ./examples/public_instrument_tick_bands
+```
+
 查询未成交订单列表（需要 API Key，支持模拟盘）：
 
 ```bash
