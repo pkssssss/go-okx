@@ -541,6 +541,41 @@ export OKX_DEMO=1 # 可选：1=模拟盘
 go run ./examples/trade_account_rate_limit
 ```
 
+查询一键还债币种列表（新，仅适用于现货模式；需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+go run ./examples/trade_one_click_repay_currency_list_v2
+```
+
+查询一键还债历史记录（新，仅适用于现货模式；需要 API Key，支持模拟盘）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEMO=1 # 可选：1=模拟盘
+export OKX_AFTER="" # 可选：Unix 毫秒时间戳
+export OKX_BEFORE="" # 可选：Unix 毫秒时间戳
+export OKX_LIMIT="100" # 可选
+go run ./examples/trade_one_click_repay_history_v2
+```
+
+一键还债交易（新，仅适用于现货模式；会实际交易；需要 API Key；需显式确认）：
+
+```bash
+export OKX_API_KEY="..."
+export OKX_API_SECRET="..."
+export OKX_API_PASSPHRASE="..."
+export OKX_DEBT_CCY="USDC" # 必填
+export OKX_REPAY_CCY_LIST='["USDC","BTC"]' # 必填：JSON array（排序代表偿还优先级）
+export OKX_CONFIRM="YES"
+go run ./examples/trade_one_click_repay_v2
+```
+
 市价仓位全平（会实际平仓；需要 API Key，支持模拟盘；需显式确认）：
 
 ```bash
