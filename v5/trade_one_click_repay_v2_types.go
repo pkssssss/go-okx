@@ -1,19 +1,5 @@
 package okx
 
-// OneClickRepayDebtData 表示一键还债负债币种信息。
-// 数值字段按 OKX 返回保持为 string（无损）。
-type OneClickRepayDebtData struct {
-	DebtAmt string `json:"debtAmt"`
-	DebtCcy string `json:"debtCcy"`
-}
-
-// OneClickRepayRepayData 表示一键还债偿还币种信息。
-// 数值字段按 OKX 返回保持为 string（无损）。
-type OneClickRepayRepayData struct {
-	RepayAmt string `json:"repayAmt"`
-	RepayCcy string `json:"repayCcy"`
-}
-
 // OneClickRepayCurrencyListV2Item 表示一键还债币种列表（新）。
 type OneClickRepayCurrencyListV2Item struct {
 	DebtData  []OneClickRepayDebtData  `json:"debtData"`
