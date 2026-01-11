@@ -60,6 +60,7 @@ OKX 常见返回 envelope：`code/msg/data`：
 ### 3.3 WebSocket 心跳与升级通知
 
 - OKX 服务器会发 opcode=9 的 ping，客户端需尽快以 opcode=10 pong 响应，并**复制 ping payload**。
+- 若 N 秒内没有收到任何新消息，OKX 建议客户端发送文本 `"ping"` 并期待 `"pong"`（N < 30s）。
 - 会推送 `event=notice, code=64008`，提示 60 秒后升级断线，建议主动重连。
 
 > 结论：WS 连接管理必须内置“心跳处理 + notice 触发重连 + 自动重订阅”。
@@ -193,6 +194,7 @@ demo 对应 host：`wspap.okx.com`
 ### 8.2 心跳与断线策略
 
 - 设置 PingHandler：收到 ping(opcode=9) 后，立即回 pong(opcode=10)，payload 原样复制。
+- 文本心跳：若 N 秒无新消息，发送 `"ping"` 并期待 `"pong"`；SDK 默认启用（25s，可通过 `WithWSHeartbeat` 调整或关闭）。
 - 收到 `event=notice code=64008`：触发“主动重连”，并在新连接上恢复订阅（避免被动断线导致数据空窗）。
 
 ### 8.3 自动重连 + 自动重订阅（状态机）

@@ -194,3 +194,167 @@ func TestWSClient_onDataMessage_SprdTrades_TypedAsync_Dispatches(t *testing.T) {
 		t.Fatalf("timeout waiting trade")
 	}
 }
+
+func TestWSClient_onDataMessage_Tickers_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan MarketTicker, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnTickers(func(ticker MarketTicker) {
+		select {
+		case gotCh <- ticker:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"tickers"},"data":[{"instId":"BTC-USDT","last":"1","bidPx":"0.9","bidSz":"1","askPx":"1.1","askSz":"2","ts":"1700000000000"}]}`))
+
+	select {
+	case tk := <-gotCh:
+		if tk.InstId != "BTC-USDT" || tk.Last != "1" || tk.TS != 1700000000000 {
+			t.Fatalf("ticker = %#v", tk)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting ticker")
+	}
+}
+
+func TestWSClient_onDataMessage_Candles_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSCandle, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnCandles(func(candle WSCandle) {
+		select {
+		case gotCh <- candle:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"candle1m","instId":"BTC-USDT"},"data":[["1700000000000","1","2","0.5","1.5","100","10","15","1"]]}`))
+
+	select {
+	case c := <-gotCh:
+		if c.Arg.InstId != "BTC-USDT" || c.Arg.Channel != "candle1m" {
+			t.Fatalf("candle arg = %#v", c.Arg)
+		}
+		if c.Candle.TS != 1700000000000 || c.Candle.Close != "1.5" || c.Candle.Confirm != "1" {
+			t.Fatalf("candle = %#v", c.Candle)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting candle")
+	}
+}
+
+func TestWSClient_onDataMessage_PriceCandles_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSPriceCandle, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnPriceCandles(func(candle WSPriceCandle) {
+		select {
+		case gotCh <- candle:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"mark-price-candle1m","instId":"BTC-USDT-SWAP"},"data":[["1700000000000","1","2","0.5","1.5","1"]]}`))
+
+	select {
+	case c := <-gotCh:
+		if c.Arg.InstId != "BTC-USDT-SWAP" || c.Arg.Channel != "mark-price-candle1m" {
+			t.Fatalf("price candle arg = %#v", c.Arg)
+		}
+		if c.Candle.TS != 1700000000000 || c.Candle.Close != "1.5" || c.Candle.Confirm != "1" {
+			t.Fatalf("price candle = %#v", c.Candle)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting price candle")
+	}
+}
+
+func TestWSClient_onDataMessage_SprdTickers_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan MarketSprdTicker, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnSprdTickers(func(ticker MarketSprdTicker) {
+		select {
+		case gotCh <- ticker:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"sprd-tickers"},"data":[{"sprdId":"s1","last":"1","bidPx":"0.9","bidSz":"1","askPx":"1.1","askSz":"2","ts":"1700000000000"}]}`))
+
+	select {
+	case tk := <-gotCh:
+		if tk.SprdId != "s1" || tk.Last != "1" || tk.TS != 1700000000000 {
+			t.Fatalf("ticker = %#v", tk)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting sprd ticker")
+	}
+}
+
+func TestWSClient_onDataMessage_OrderBook_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSData[WSOrderBook], 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnOrderBook(func(data WSData[WSOrderBook]) {
+		select {
+		case gotCh <- data:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"books5","instId":"BTC-USDT"},"action":"snapshot","data":[{"asks":[["1","2","0","1"]],"bids":[["1","2","0","1"]],"instId":"BTC-USDT","ts":"1700000000000","checksum":1,"prevSeqId":-1,"seqId":10}]}`))
+
+	select {
+	case dm := <-gotCh:
+		if dm.Arg.Channel != "books5" || dm.Arg.InstId != "BTC-USDT" || dm.Action != "snapshot" {
+			t.Fatalf("dm = %#v", dm)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "BTC-USDT" || dm.Data[0].TS != 1700000000000 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting order book")
+	}
+}

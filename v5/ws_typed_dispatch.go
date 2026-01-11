@@ -17,6 +17,23 @@ const (
 	wsTypedKindWithdrawalInfo
 	wsTypedKindSprdOrders
 	wsTypedKindSprdTrades
+	wsTypedKindTickers
+	wsTypedKindTrades
+	wsTypedKindTradesAll
+	wsTypedKindOrderBook
+	wsTypedKindOpenInterest
+	wsTypedKindFundingRate
+	wsTypedKindMarkPrice
+	wsTypedKindIndexTickers
+	wsTypedKindPriceLimit
+	wsTypedKindOptSummary
+	wsTypedKindLiquidationOrders
+	wsTypedKindOptionTrades
+	wsTypedKindCallAuctionDetails
+	wsTypedKindCandles
+	wsTypedKindPriceCandles
+	wsTypedKindSprdPublicTrades
+	wsTypedKindSprdTickers
 	wsTypedKindOpReply
 )
 
@@ -40,6 +57,40 @@ func (k wsTypedKind) String() string {
 		return "sprd_orders"
 	case wsTypedKindSprdTrades:
 		return "sprd_trades"
+	case wsTypedKindTickers:
+		return "tickers"
+	case wsTypedKindTrades:
+		return "trades"
+	case wsTypedKindTradesAll:
+		return "trades_all"
+	case wsTypedKindOrderBook:
+		return "order_book"
+	case wsTypedKindOpenInterest:
+		return "open_interest"
+	case wsTypedKindFundingRate:
+		return "funding_rate"
+	case wsTypedKindMarkPrice:
+		return "mark_price"
+	case wsTypedKindIndexTickers:
+		return "index_tickers"
+	case wsTypedKindPriceLimit:
+		return "price_limit"
+	case wsTypedKindOptSummary:
+		return "opt_summary"
+	case wsTypedKindLiquidationOrders:
+		return "liquidation_orders"
+	case wsTypedKindOptionTrades:
+		return "option_trades"
+	case wsTypedKindCallAuctionDetails:
+		return "call_auction_details"
+	case wsTypedKindCandles:
+		return "candles"
+	case wsTypedKindPriceCandles:
+		return "price_candles"
+	case wsTypedKindSprdPublicTrades:
+		return "sprd_public_trades"
+	case wsTypedKindSprdTickers:
+		return "sprd_tickers"
 	case wsTypedKindOpReply:
 		return "op_reply"
 	default:
@@ -59,6 +110,26 @@ type wsTypedTask struct {
 	withdrawalInfo []WSWithdrawalInfo
 	sprdOrders     []SprdOrder
 	sprdTrades     []WSSprdTrade
+	tickers        []MarketTicker
+	trades         []MarketTrade
+	tradesAll      []MarketTrade
+	orderBooks     []WSData[WSOrderBook]
+	openInterests  []OpenInterest
+	fundingRates   []FundingRate
+	markPrices     []MarkPrice
+	indexTickers   []IndexTicker
+	priceLimits    []PriceLimit
+	optSummaries   []OptSummary
+
+	liquidationOrders  []LiquidationOrder
+	optionTrades       []WSOptionTrade
+	callAuctionDetails []WSCallAuctionDetails
+
+	candles      []WSCandle
+	priceCandles []WSPriceCandle
+
+	sprdPublicTrades []WSSprdPublicTrade
+	sprdTickers      []MarketSprdTicker
 
 	op    WSOpReply
 	opRaw []byte
@@ -196,6 +267,193 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, trade := range task.sprdTrades {
 			tr := trade
 			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindTickers:
+		w.typedMu.RLock()
+		h := w.tickersHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.tickers) == 0 {
+			return
+		}
+		for _, ticker := range task.tickers {
+			tk := ticker
+			w.safeTypedCall(task.kind, func() { h(tk) })
+		}
+	case wsTypedKindTrades:
+		w.typedMu.RLock()
+		h := w.tradesHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.trades) == 0 {
+			return
+		}
+		for _, trade := range task.trades {
+			tr := trade
+			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindTradesAll:
+		w.typedMu.RLock()
+		h := w.tradesAllHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.tradesAll) == 0 {
+			return
+		}
+		for _, trade := range task.tradesAll {
+			tr := trade
+			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindOrderBook:
+		w.typedMu.RLock()
+		h := w.orderBookHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.orderBooks) == 0 {
+			return
+		}
+		for _, data := range task.orderBooks {
+			d := data
+			w.safeTypedCall(task.kind, func() { h(d) })
+		}
+	case wsTypedKindOpenInterest:
+		w.typedMu.RLock()
+		h := w.openInterestHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.openInterests) == 0 {
+			return
+		}
+		for _, oi := range task.openInterests {
+			v := oi
+			w.safeTypedCall(task.kind, func() { h(v) })
+		}
+	case wsTypedKindFundingRate:
+		w.typedMu.RLock()
+		h := w.fundingRateHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.fundingRates) == 0 {
+			return
+		}
+		for _, rate := range task.fundingRates {
+			r := rate
+			w.safeTypedCall(task.kind, func() { h(r) })
+		}
+	case wsTypedKindMarkPrice:
+		w.typedMu.RLock()
+		h := w.markPriceHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.markPrices) == 0 {
+			return
+		}
+		for _, price := range task.markPrices {
+			p := price
+			w.safeTypedCall(task.kind, func() { h(p) })
+		}
+	case wsTypedKindIndexTickers:
+		w.typedMu.RLock()
+		h := w.indexTickersHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.indexTickers) == 0 {
+			return
+		}
+		for _, ticker := range task.indexTickers {
+			tk := ticker
+			w.safeTypedCall(task.kind, func() { h(tk) })
+		}
+	case wsTypedKindPriceLimit:
+		w.typedMu.RLock()
+		h := w.priceLimitHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.priceLimits) == 0 {
+			return
+		}
+		for _, limit := range task.priceLimits {
+			pl := limit
+			w.safeTypedCall(task.kind, func() { h(pl) })
+		}
+	case wsTypedKindOptSummary:
+		w.typedMu.RLock()
+		h := w.optSummaryHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.optSummaries) == 0 {
+			return
+		}
+		for _, summary := range task.optSummaries {
+			s := summary
+			w.safeTypedCall(task.kind, func() { h(s) })
+		}
+	case wsTypedKindLiquidationOrders:
+		w.typedMu.RLock()
+		h := w.liquidationOrdersHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.liquidationOrders) == 0 {
+			return
+		}
+		for _, order := range task.liquidationOrders {
+			o := order
+			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindOptionTrades:
+		w.typedMu.RLock()
+		h := w.optionTradesHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.optionTrades) == 0 {
+			return
+		}
+		for _, trade := range task.optionTrades {
+			tr := trade
+			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindCallAuctionDetails:
+		w.typedMu.RLock()
+		h := w.callAuctionDetailsHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.callAuctionDetails) == 0 {
+			return
+		}
+		for _, detail := range task.callAuctionDetails {
+			d := detail
+			w.safeTypedCall(task.kind, func() { h(d) })
+		}
+	case wsTypedKindCandles:
+		w.typedMu.RLock()
+		h := w.candlesHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.candles) == 0 {
+			return
+		}
+		for _, candle := range task.candles {
+			c := candle
+			w.safeTypedCall(task.kind, func() { h(c) })
+		}
+	case wsTypedKindPriceCandles:
+		w.typedMu.RLock()
+		h := w.priceCandlesHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.priceCandles) == 0 {
+			return
+		}
+		for _, candle := range task.priceCandles {
+			c := candle
+			w.safeTypedCall(task.kind, func() { h(c) })
+		}
+	case wsTypedKindSprdPublicTrades:
+		w.typedMu.RLock()
+		h := w.sprdPublicTradesHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.sprdPublicTrades) == 0 {
+			return
+		}
+		for _, trade := range task.sprdPublicTrades {
+			tr := trade
+			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindSprdTickers:
+		w.typedMu.RLock()
+		h := w.sprdTickersHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.sprdTickers) == 0 {
+			return
+		}
+		for _, ticker := range task.sprdTickers {
+			tk := ticker
+			w.safeTypedCall(task.kind, func() { h(tk) })
 		}
 	case wsTypedKindOpReply:
 		w.typedMu.RLock()

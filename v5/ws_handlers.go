@@ -72,6 +72,143 @@ func WithWSSprdTradesHandler(handler func(trade WSSprdTrade)) WSOption {
 	}
 }
 
+// WithWSTickersHandler 设置 tickers 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSTickersHandler(handler func(ticker MarketTicker)) WSOption {
+	return func(c *WSClient) {
+		c.OnTickers(handler)
+	}
+}
+
+// WithWSTradesHandler 设置 trades 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSTradesHandler(handler func(trade MarketTrade)) WSOption {
+	return func(c *WSClient) {
+		c.OnTrades(handler)
+	}
+}
+
+// WithWSTradesAllHandler 设置 trades-all 推送的逐条回调（business WS）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSTradesAllHandler(handler func(trade MarketTrade)) WSOption {
+	return func(c *WSClient) {
+		c.OnTradesAll(handler)
+	}
+}
+
+// WithWSOrderBookHandler 设置深度（order book）推送回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 建议配合 WSOrderBookStore 合并 snapshot/update 并校验 seqId/checksum。
+func WithWSOrderBookHandler(handler func(data WSData[WSOrderBook])) WSOption {
+	return func(c *WSClient) {
+		c.OnOrderBook(handler)
+	}
+}
+
+// WithWSOpenInterestHandler 设置 open-interest 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSOpenInterestHandler(handler func(oi OpenInterest)) WSOption {
+	return func(c *WSClient) {
+		c.OnOpenInterest(handler)
+	}
+}
+
+// WithWSFundingRateHandler 设置 funding-rate 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSFundingRateHandler(handler func(rate FundingRate)) WSOption {
+	return func(c *WSClient) {
+		c.OnFundingRate(handler)
+	}
+}
+
+// WithWSMarkPriceHandler 设置 mark-price 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSMarkPriceHandler(handler func(price MarkPrice)) WSOption {
+	return func(c *WSClient) {
+		c.OnMarkPrice(handler)
+	}
+}
+
+// WithWSIndexTickersHandler 设置 index-tickers 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSIndexTickersHandler(handler func(ticker IndexTicker)) WSOption {
+	return func(c *WSClient) {
+		c.OnIndexTickers(handler)
+	}
+}
+
+// WithWSPriceLimitHandler 设置 price-limit 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSPriceLimitHandler(handler func(limit PriceLimit)) WSOption {
+	return func(c *WSClient) {
+		c.OnPriceLimit(handler)
+	}
+}
+
+// WithWSOptSummaryHandler 设置 opt-summary 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSOptSummaryHandler(handler func(summary OptSummary)) WSOption {
+	return func(c *WSClient) {
+		c.OnOptSummary(handler)
+	}
+}
+
+// WithWSLiquidationOrdersHandler 设置 liquidation-orders 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSLiquidationOrdersHandler(handler func(order LiquidationOrder)) WSOption {
+	return func(c *WSClient) {
+		c.OnLiquidationOrders(handler)
+	}
+}
+
+// WithWSOptionTradesHandler 设置 option-trades 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSOptionTradesHandler(handler func(trade WSOptionTrade)) WSOption {
+	return func(c *WSClient) {
+		c.OnOptionTrades(handler)
+	}
+}
+
+// WithWSCallAuctionDetailsHandler 设置 call-auction-details 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSCallAuctionDetailsHandler(handler func(detail WSCallAuctionDetails)) WSOption {
+	return func(c *WSClient) {
+		c.OnCallAuctionDetails(handler)
+	}
+}
+
+// WithWSCandlesHandler 设置 K线推送的逐条回调（candle* / sprd-candle*，business WS）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSCandlesHandler(handler func(candle WSCandle)) WSOption {
+	return func(c *WSClient) {
+		c.OnCandles(handler)
+	}
+}
+
+// WithWSPriceCandlesHandler 设置指数/标记价格K线推送的逐条回调（mark-price-candle* / index-candle*，business WS）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSPriceCandlesHandler(handler func(candle WSPriceCandle)) WSOption {
+	return func(c *WSClient) {
+		c.OnPriceCandles(handler)
+	}
+}
+
+// WithWSSprdPublicTradesHandler 设置 sprd-public-trades 推送的逐条回调（business WS，无需登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSSprdPublicTradesHandler(handler func(trade WSSprdPublicTrade)) WSOption {
+	return func(c *WSClient) {
+		c.OnSprdPublicTrades(handler)
+	}
+}
+
+// WithWSSprdTickersHandler 设置 sprd-tickers 推送的逐条回调（business WS，无需登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSSprdTickersHandler(handler func(ticker MarketSprdTicker)) WSOption {
+	return func(c *WSClient) {
+		c.OnSprdTickers(handler)
+	}
+}
+
 // WithWSOpReplyHandler 设置 WS 业务 op 回包回调（order/cancel-order/amend-order 等）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSOpReplyHandler(handler func(reply WSOpReply, raw []byte)) WSOption {
@@ -167,6 +304,176 @@ func (w *WSClient) OnSprdTrades(handler func(trade WSSprdTrade)) {
 	}
 	w.typedMu.Lock()
 	w.sprdTradesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnTickers 设置 tickers 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnTickers(handler func(ticker MarketTicker)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.tickersHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnTrades 设置 trades 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnTrades(handler func(trade MarketTrade)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.tradesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnTradesAll 设置 trades-all 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnTradesAll(handler func(trade MarketTrade)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.tradesAllHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnOrderBook 设置深度（order book）推送回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnOrderBook(handler func(data WSData[WSOrderBook])) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.orderBookHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnOpenInterest 设置 open-interest 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnOpenInterest(handler func(oi OpenInterest)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.openInterestHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnFundingRate 设置 funding-rate 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnFundingRate(handler func(rate FundingRate)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.fundingRateHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnMarkPrice 设置 mark-price 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnMarkPrice(handler func(price MarkPrice)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.markPriceHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnIndexTickers 设置 index-tickers 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnIndexTickers(handler func(ticker IndexTicker)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.indexTickersHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnPriceLimit 设置 price-limit 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnPriceLimit(handler func(limit PriceLimit)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.priceLimitHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnOptSummary 设置 opt-summary 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnOptSummary(handler func(summary OptSummary)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.optSummaryHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnLiquidationOrders 设置 liquidation-orders 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnLiquidationOrders(handler func(order LiquidationOrder)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.liquidationOrdersHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnOptionTrades 设置 option-trades 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnOptionTrades(handler func(trade WSOptionTrade)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.optionTradesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnCallAuctionDetails 设置 call-auction-details 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnCallAuctionDetails(handler func(detail WSCallAuctionDetails)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.callAuctionDetailsHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnCandles 设置 K线推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnCandles(handler func(candle WSCandle)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.candlesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnPriceCandles 设置指数/标记价格 K线推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnPriceCandles(handler func(candle WSPriceCandle)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.priceCandlesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnSprdPublicTrades 设置 sprd-public-trades 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnSprdPublicTrades(handler func(trade WSSprdPublicTrade)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.sprdPublicTradesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnSprdTickers 设置 sprd-tickers 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnSprdTickers(handler func(ticker MarketSprdTicker)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.sprdTickersHandler = handler
 	w.typedMu.Unlock()
 }
 

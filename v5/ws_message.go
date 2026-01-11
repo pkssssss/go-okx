@@ -329,6 +329,22 @@ func WSParseIndexCandles(message []byte) (*WSData[PriceCandle], bool, error) {
 	return dm, true, nil
 }
 
+// WSCandle 表示 K线推送的单条数据项（含订阅 Arg 上下文）。
+//
+// 说明：OKX K线数据本身不包含 instId/sprdId，因此需要通过 Arg 携带产品信息。
+type WSCandle struct {
+	Arg    WSArg
+	Candle Candle
+}
+
+// WSPriceCandle 表示指数/标记价格 K线推送的单条数据项（含订阅 Arg 上下文）。
+//
+// 说明：OKX PriceCandle 数据本身不包含 instId，因此需要通过 Arg 携带产品信息。
+type WSPriceCandle struct {
+	Arg    WSArg
+	Candle PriceCandle
+}
+
 // WSOptionTrade 表示 option-trades 频道推送的数据项。
 type WSOptionTrade struct {
 	InstId     string `json:"instId"`

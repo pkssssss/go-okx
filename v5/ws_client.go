@@ -1,6 +1,7 @@
 package okx
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -79,6 +80,18 @@ func WithWSURL(url string) WSOption {
 	}
 }
 
+// WithWSHeartbeat 设置 WS 文本心跳间隔。
+//
+// OKX 建议：若 N 秒内未收到新消息，发送字符串 "ping"，期待收到字符串 "pong" 作为回应；
+// 且 N 需小于 30 秒（否则可能被服务器断开）。
+//
+// 默认启用（25s）。传入 interval<=0 可禁用。
+func WithWSHeartbeat(interval time.Duration) WSOption {
+	return func(c *WSClient) {
+		c.heartbeat = interval
+	}
+}
+
 // WithWSTypedHandlerAsync 启用 typed handler 的异步分发（orders/fills/account/positions/balance_and_position/deposit-info/withdrawal-info/sprd-orders/sprd-trades/op reply）。
 //
 // 默认情况下，typed handler 会在 WS read goroutine 中执行；若 handler 逻辑较重可能阻塞读取导致断线/重连。
@@ -127,6 +140,10 @@ type WSClient struct {
 	dialer    *websocket.Dialer
 	needLogin bool
 
+	heartbeat time.Duration
+	lastRecv  atomic.Int64
+	lastPing  atomic.Int64
+
 	handler      WSMessageHandler
 	errHandler   WSErrorHandler
 	eventHandler WSEventHandler
@@ -141,6 +158,23 @@ type WSClient struct {
 	withdrawalInfoHandler     func(info WSWithdrawalInfo)
 	sprdOrdersHandler         func(order SprdOrder)
 	sprdTradesHandler         func(trade WSSprdTrade)
+	tickersHandler            func(ticker MarketTicker)
+	tradesHandler             func(trade MarketTrade)
+	tradesAllHandler          func(trade MarketTrade)
+	orderBookHandler          func(data WSData[WSOrderBook])
+	openInterestHandler       func(oi OpenInterest)
+	fundingRateHandler        func(rate FundingRate)
+	markPriceHandler          func(price MarkPrice)
+	indexTickersHandler       func(ticker IndexTicker)
+	priceLimitHandler         func(limit PriceLimit)
+	optSummaryHandler         func(summary OptSummary)
+	liquidationOrdersHandler  func(order LiquidationOrder)
+	optionTradesHandler       func(trade WSOptionTrade)
+	callAuctionDetailsHandler func(detail WSCallAuctionDetails)
+	candlesHandler            func(candle WSCandle)
+	priceCandlesHandler       func(candle WSPriceCandle)
+	sprdPublicTradesHandler   func(trade WSSprdPublicTrade)
+	sprdTickersHandler        func(ticker MarketSprdTicker)
 	opReplyHandler            func(reply WSOpReply, raw []byte)
 
 	typedAsync  bool
@@ -179,6 +213,7 @@ func (c *Client) NewWSPublic(opts ...WSOption) *WSClient {
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
 		backoff:   250 * time.Millisecond,
+		heartbeat: 25 * time.Second,
 		waiters:   map[string]*wsOpWaiter{},
 		opWaiters: map[string]*wsOpRespWaiter{},
 	}
@@ -201,6 +236,7 @@ func (c *Client) NewWSPrivate(opts ...WSOption) *WSClient {
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
 		backoff:   250 * time.Millisecond,
+		heartbeat: 25 * time.Second,
 		waiters:   map[string]*wsOpWaiter{},
 		opWaiters: map[string]*wsOpRespWaiter{},
 	}
@@ -222,6 +258,7 @@ func (c *Client) NewWSBusiness(opts ...WSOption) *WSClient {
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
 		backoff:   250 * time.Millisecond,
+		heartbeat: 25 * time.Second,
 		waiters:   map[string]*wsOpWaiter{},
 		opWaiters: map[string]*wsOpRespWaiter{},
 	}
@@ -246,6 +283,7 @@ func (c *Client) NewWSBusinessPrivate(opts ...WSOption) *WSClient {
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
 		backoff:   250 * time.Millisecond,
+		heartbeat: 25 * time.Second,
 		waiters:   map[string]*wsOpWaiter{},
 		opWaiters: map[string]*wsOpRespWaiter{},
 	}
@@ -264,6 +302,7 @@ func (w *WSClient) Start(ctx context.Context, handler WSMessageHandler, errHandl
 	w.handler = handler
 	w.errHandler = errHandler
 	w.done = make(chan struct{})
+	w.touchRecv()
 
 	runCtx, cancel := context.WithCancel(ctx)
 	w.cancel = cancel
@@ -275,6 +314,10 @@ func (w *WSClient) Start(ctx context.Context, handler WSMessageHandler, errHandl
 		}
 		w.typedQueue = make(chan wsTypedTask, buf)
 		go w.typedDispatchLoop(runCtx)
+	}
+
+	if w.heartbeat > 0 {
+		go w.heartbeatLoop(runCtx)
 	}
 
 	go w.run(runCtx)
@@ -594,8 +637,13 @@ func (w *WSClient) login(ctx context.Context, conn *websocket.Conn) error {
 			return err
 		}
 
+		w.touchRecv()
+		if w.handleHeartbeatMessage(conn, msg) {
+			continue
+		}
+
 		if w.handler != nil {
-			w.handler(msg)
+			w.safeRawHandlerCall(msg)
 		}
 
 		ev, ok, err := WSParseEvent(msg)
@@ -626,8 +674,13 @@ func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn) error {
 			return err
 		}
 
+		w.touchRecv()
+		if w.handleHeartbeatMessage(conn, msg) {
+			continue
+		}
+
 		if w.handler != nil {
-			w.handler(msg)
+			w.safeRawHandlerCall(msg)
 		}
 
 		ev, ok, err := WSParseEvent(msg)
@@ -650,7 +703,7 @@ func (w *WSClient) onEvent(ev WSEvent) {
 	w.notifyWaiter(ev)
 	w.notifyOpWaiterError(ev)
 	if w.eventHandler != nil && ev.Event != "" {
-		w.eventHandler(ev)
+		w.safeEventHandlerCall(ev)
 	}
 }
 
@@ -684,9 +737,51 @@ func (w *WSClient) onDataMessage(message []byte) {
 	wdInfoH := w.withdrawalInfoHandler
 	sprdOrdersH := w.sprdOrdersHandler
 	sprdTradesH := w.sprdTradesHandler
+	tickersH := w.tickersHandler
+	tradesH := w.tradesHandler
+	tradesAllH := w.tradesAllHandler
+	orderBookH := w.orderBookHandler
+	openInterestH := w.openInterestHandler
+	fundingRateH := w.fundingRateHandler
+	markPriceH := w.markPriceHandler
+	indexTickersH := w.indexTickersHandler
+	priceLimitH := w.priceLimitHandler
+	optSummaryH := w.optSummaryHandler
+	liquidationOrdersH := w.liquidationOrdersHandler
+	optionTradesH := w.optionTradesHandler
+	callAuctionDetailsH := w.callAuctionDetailsHandler
+	candlesH := w.candlesHandler
+	priceCandlesH := w.priceCandlesHandler
+	sprdPublicTradesH := w.sprdPublicTradesHandler
+	sprdTickersH := w.sprdTickersHandler
 	w.typedMu.RUnlock()
 
-	if ordersH == nil && fillsH == nil && accountH == nil && positionsH == nil && balPosH == nil && depInfoH == nil && wdInfoH == nil && sprdOrdersH == nil && sprdTradesH == nil {
+	if ordersH == nil &&
+		fillsH == nil &&
+		accountH == nil &&
+		positionsH == nil &&
+		balPosH == nil &&
+		depInfoH == nil &&
+		wdInfoH == nil &&
+		sprdOrdersH == nil &&
+		sprdTradesH == nil &&
+		tickersH == nil &&
+		tradesH == nil &&
+		tradesAllH == nil &&
+		orderBookH == nil &&
+		openInterestH == nil &&
+		fundingRateH == nil &&
+		markPriceH == nil &&
+		indexTickersH == nil &&
+		priceLimitH == nil &&
+		optSummaryH == nil &&
+		liquidationOrdersH == nil &&
+		optionTradesH == nil &&
+		callAuctionDetailsH == nil &&
+		candlesH == nil &&
+		priceCandlesH == nil &&
+		sprdPublicTradesH == nil &&
+		sprdTickersH == nil {
 		return
 	}
 
@@ -782,7 +877,206 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdTrades, sprdTrades: dm.Data})
+	case WSChannelTickers:
+		if tickersH == nil {
+			return
+		}
+		dm, ok, err := WSParseTickers(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindTickers, tickers: dm.Data})
+	case WSChannelTrades:
+		if tradesH == nil {
+			return
+		}
+		dm, ok, err := WSParseTrades(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindTrades, trades: dm.Data})
+	case WSChannelTradesAll:
+		if tradesAllH == nil {
+			return
+		}
+		dm, ok, err := WSParseTradesAll(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindTradesAll, tradesAll: dm.Data})
+	case WSChannelOpenInterest:
+		if openInterestH == nil {
+			return
+		}
+		dm, ok, err := WSParseOpenInterest(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOpenInterest, openInterests: dm.Data})
+	case WSChannelFundingRate:
+		if fundingRateH == nil {
+			return
+		}
+		dm, ok, err := WSParseFundingRate(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindFundingRate, fundingRates: dm.Data})
+	case WSChannelMarkPrice:
+		if markPriceH == nil {
+			return
+		}
+		dm, ok, err := WSParseMarkPrice(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindMarkPrice, markPrices: dm.Data})
+	case WSChannelIndexTickers:
+		if indexTickersH == nil {
+			return
+		}
+		dm, ok, err := WSParseIndexTickers(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindIndexTickers, indexTickers: dm.Data})
+	case WSChannelPriceLimit:
+		if priceLimitH == nil {
+			return
+		}
+		dm, ok, err := WSParsePriceLimit(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindPriceLimit, priceLimits: dm.Data})
+	case WSChannelOptSummary:
+		if optSummaryH == nil {
+			return
+		}
+		dm, ok, err := WSParseOptSummary(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOptSummary, optSummaries: dm.Data})
+	case WSChannelLiquidationOrders:
+		if liquidationOrdersH == nil {
+			return
+		}
+		dm, ok, err := WSParseLiquidationOrders(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindLiquidationOrders, liquidationOrders: dm.Data})
+	case WSChannelOptionTrades:
+		if optionTradesH == nil {
+			return
+		}
+		dm, ok, err := WSParseOptionTrades(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOptionTrades, optionTrades: dm.Data})
+	case WSChannelCallAuctionDetails:
+		if callAuctionDetailsH == nil {
+			return
+		}
+		dm, ok, err := WSParseCallAuctionDetails(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindCallAuctionDetails, callAuctionDetails: dm.Data})
+	case WSChannelSprdPublicTrades:
+		if sprdPublicTradesH == nil {
+			return
+		}
+		dm, ok, err := WSParseSprdPublicTrades(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdPublicTrades, sprdPublicTrades: dm.Data})
+	case WSChannelSprdTickers:
+		if sprdTickersH == nil {
+			return
+		}
+		dm, ok, err := WSParseSprdTickers(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdTickers, sprdTickers: dm.Data})
 	default:
+		channel := probe.Arg.Channel
+
+		if orderBookH != nil && isOrderBookChannel(channel) {
+			dm, ok, err := WSParseOrderBook(message)
+			if err != nil || !ok || len(dm.Data) == 0 {
+				return
+			}
+			w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrderBook, orderBooks: []WSData[WSOrderBook]{*dm}})
+			return
+		}
+
+		if candlesH != nil {
+			switch {
+			case isCandleChannel(channel):
+				dm, ok, err := WSParseCandles(message)
+				if err != nil || !ok || len(dm.Data) == 0 {
+					return
+				}
+				out := make([]WSCandle, 0, len(dm.Data))
+				for _, c := range dm.Data {
+					cc := c
+					out = append(out, WSCandle{Arg: dm.Arg, Candle: cc})
+				}
+				w.dispatchTyped(wsTypedTask{kind: wsTypedKindCandles, candles: out})
+				return
+			case isSprdCandleChannel(channel):
+				dm, ok, err := WSParseSprdCandles(message)
+				if err != nil || !ok || len(dm.Data) == 0 {
+					return
+				}
+				out := make([]WSCandle, 0, len(dm.Data))
+				for _, c := range dm.Data {
+					cc := c
+					out = append(out, WSCandle{Arg: dm.Arg, Candle: cc})
+				}
+				w.dispatchTyped(wsTypedTask{kind: wsTypedKindCandles, candles: out})
+				return
+			default:
+				// continue
+			}
+		}
+
+		if priceCandlesH != nil {
+			switch {
+			case isMarkPriceCandleChannel(channel):
+				dm, ok, err := WSParseMarkPriceCandles(message)
+				if err != nil || !ok || len(dm.Data) == 0 {
+					return
+				}
+				out := make([]WSPriceCandle, 0, len(dm.Data))
+				for _, c := range dm.Data {
+					cc := c
+					out = append(out, WSPriceCandle{Arg: dm.Arg, Candle: cc})
+				}
+				w.dispatchTyped(wsTypedTask{kind: wsTypedKindPriceCandles, priceCandles: out})
+				return
+			case isIndexCandleChannel(channel):
+				dm, ok, err := WSParseIndexCandles(message)
+				if err != nil || !ok || len(dm.Data) == 0 {
+					return
+				}
+				out := make([]WSPriceCandle, 0, len(dm.Data))
+				for _, c := range dm.Data {
+					cc := c
+					out = append(out, WSPriceCandle{Arg: dm.Arg, Candle: cc})
+				}
+				w.dispatchTyped(wsTypedTask{kind: wsTypedKindPriceCandles, priceCandles: out})
+				return
+			default:
+				// continue
+			}
+		}
+
 		return
 	}
 }
@@ -793,6 +1087,12 @@ func (w *WSClient) writeJSON(conn *websocket.Conn, v any) error {
 	return conn.WriteJSON(v)
 }
 
+func (w *WSClient) writeText(conn *websocket.Conn, message string) error {
+	w.writeMu.Lock()
+	defer w.writeMu.Unlock()
+	return conn.WriteMessage(websocket.TextMessage, []byte(message))
+}
+
 func (w *WSClient) writeControl(conn *websocket.Conn, messageType int, data []byte, timeout time.Duration) error {
 	w.writeMu.Lock()
 	defer w.writeMu.Unlock()
@@ -801,7 +1101,130 @@ func (w *WSClient) writeControl(conn *websocket.Conn, messageType int, data []by
 
 func (w *WSClient) onError(err error) {
 	if w.errHandler != nil && err != nil && !errors.Is(err, context.Canceled) {
+		defer func() {
+			_ = recover() // 避免用户 errHandler panic 影响 WS 主循环
+		}()
 		w.errHandler(err)
+	}
+}
+
+func (w *WSClient) safeRawHandlerCall(message []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			w.onError(fmt.Errorf("okx: ws raw handler panic: %v", r))
+		}
+	}()
+	w.handler(message)
+}
+
+func (w *WSClient) safeEventHandlerCall(event WSEvent) {
+	defer func() {
+		if r := recover(); r != nil {
+			w.onError(fmt.Errorf("okx: ws event handler panic: %v", r))
+		}
+	}()
+	w.eventHandler(event)
+}
+
+func (w *WSClient) touchRecv() {
+	if w == nil {
+		return
+	}
+	w.lastRecv.Store(time.Now().UnixNano())
+}
+
+func isWSPongMessage(message []byte) bool {
+	m := bytes.TrimSpace(message)
+	return bytes.Equal(m, []byte("pong")) || bytes.Equal(m, []byte(`"pong"`))
+}
+
+func isWSPingMessage(message []byte) bool {
+	m := bytes.TrimSpace(message)
+	return bytes.Equal(m, []byte("ping")) || bytes.Equal(m, []byte(`"ping"`))
+}
+
+// handleHeartbeatMessage 处理 OKX 文本 ping/pong 心跳消息，返回 true 表示已处理且应跳过后续 JSON 解析/回调。
+func (w *WSClient) handleHeartbeatMessage(conn *websocket.Conn, message []byte) bool {
+	if isWSPongMessage(message) {
+		return true
+	}
+	if isWSPingMessage(message) {
+		if err := w.writeText(conn, "pong"); err != nil {
+			w.onError(err)
+			w.closeConn()
+		}
+		return true
+	}
+	return false
+}
+
+func (w *WSClient) heartbeatLoop(ctx context.Context) {
+	interval := w.heartbeat
+	if interval <= 0 {
+		return
+	}
+
+	pongTimeout := 10 * time.Second
+	if interval < pongTimeout {
+		pongTimeout = interval
+	}
+
+	checkInterval := interval / 2
+	if checkInterval < time.Second {
+		checkInterval = time.Second
+	}
+
+	ticker := time.NewTicker(checkInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
+		now := time.Now()
+
+		lastRecvNano := w.lastRecv.Load()
+		if lastRecvNano == 0 {
+			w.lastRecv.Store(now.UnixNano())
+			continue
+		}
+
+		lastRecv := time.Unix(0, lastRecvNano)
+		if now.Sub(lastRecv) < interval {
+			continue
+		}
+
+		lastPingNano := w.lastPing.Load()
+		if lastPingNano != 0 && lastRecvNano < lastPingNano {
+			lastPing := time.Unix(0, lastPingNano)
+			if now.Sub(lastPing) > pongTimeout {
+				w.onError(errors.New("okx: ws heartbeat pong timeout"))
+				w.closeConn()
+			}
+			continue
+		}
+
+		w.mu.Lock()
+		conn := w.conn
+		w.mu.Unlock()
+		if conn == nil {
+			continue
+		}
+
+		// 二次判定：避免刚收到消息就发 ping
+		if now.Sub(time.Unix(0, w.lastRecv.Load())) < interval {
+			continue
+		}
+
+		if err := w.writeText(conn, "ping"); err != nil {
+			w.onError(err)
+			w.closeConn()
+			continue
+		}
+		w.lastPing.Store(now.UnixNano())
 	}
 }
 
@@ -833,6 +1256,9 @@ func (w *WSClient) setConn(conn *websocket.Conn) {
 	w.backoff = 250 * time.Millisecond
 	w.notifyConnChangeLocked()
 	w.mu.Unlock()
+
+	w.lastPing.Store(0)
+	w.touchRecv()
 }
 
 func (w *WSClient) closeConn() {
@@ -844,6 +1270,7 @@ func (w *WSClient) closeConn() {
 	if conn != nil {
 		_ = conn.Close()
 	}
+	w.lastPing.Store(0)
 	w.failOpWaiters(errors.New("okx: ws disconnected"))
 	w.failWaiters(errors.New("okx: ws disconnected"))
 }

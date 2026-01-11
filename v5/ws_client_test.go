@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -147,5 +148,118 @@ func TestWSClient_PrivateLogin_Subscribe_PingPong(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatalf("timeout waiting subscribe")
+	}
+}
+
+func TestWSClient_ReadLoop_RespondsToPingText(t *testing.T) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	gotCh := make(chan string, 1)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("upgrade error: %v", err)
+		}
+		defer c.Close()
+
+		if err := c.WriteMessage(websocket.TextMessage, []byte("ping")); err != nil {
+			t.Fatalf("server write ping text: %v", err)
+		}
+
+		_ = c.SetReadDeadline(time.Now().Add(2 * time.Second))
+		_, msg, err := c.ReadMessage()
+		if err != nil {
+			t.Fatalf("server read pong text: %v", err)
+		}
+		gotCh <- string(msg)
+	}))
+	t.Cleanup(srv.Close)
+
+	wsURL := "ws" + srv.URL[len("http"):]
+
+	c := NewClient()
+	ws := c.NewWSPublic(WithWSURL(wsURL), WithWSHeartbeat(0))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	if err := ws.Start(ctx, nil, nil); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	t.Cleanup(ws.Close)
+
+	select {
+	case got := <-gotCh:
+		if strings.TrimSpace(got) != "pong" {
+			t.Fatalf("pong = %q, want %q", got, "pong")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting pong")
+	}
+}
+
+func TestWSClient_ReadLoop_IgnoresPongTextInRawHandler(t *testing.T) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("upgrade error: %v", err)
+		}
+		defer c.Close()
+
+		_ = c.WriteMessage(websocket.TextMessage, []byte("pong"))
+		_ = c.WriteMessage(websocket.TextMessage, []byte(`{"event":"subscribe","arg":{"channel":"tickers","instId":"BTC-USDT"},"connId":"x"}`))
+
+		// 等待客户端关闭
+		for {
+			if _, _, err := c.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	wsURL := "ws" + srv.URL[len("http"):]
+
+	c := NewClient()
+	ws := c.NewWSPublic(WithWSURL(wsURL), WithWSHeartbeat(0))
+
+	gotCh := make(chan string, 2)
+	rawHandler := func(message []byte) {
+		select {
+		case gotCh <- string(message):
+		default:
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	if err := ws.Start(ctx, rawHandler, nil); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	t.Cleanup(ws.Close)
+
+	select {
+	case got := <-gotCh:
+		if strings.TrimSpace(got) == "pong" {
+			t.Fatalf("raw handler received pong: %q", got)
+		}
+		if !strings.Contains(got, `"event":"subscribe"`) {
+			t.Fatalf("raw handler = %q", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting raw handler")
+	}
+
+	select {
+	case got := <-gotCh:
+		t.Fatalf("unexpected extra raw handler message: %q", got)
+	case <-time.After(200 * time.Millisecond):
+		// ok
 	}
 }
