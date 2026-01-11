@@ -149,6 +149,11 @@ func WSParseWithdrawalInfo(message []byte) (*WSData[WSWithdrawalInfo], bool, err
 	return WSParseChannelData[WSWithdrawalInfo](message, WSChannelWithdrawalInfo)
 }
 
+// WSParseSprdTickers 解析 sprd-tickers 频道推送消息（business WS，无需登录）。
+func WSParseSprdTickers(message []byte) (*WSData[MarketSprdTicker], bool, error) {
+	return WSParseChannelData[MarketSprdTicker](message, WSChannelSprdTickers)
+}
+
 // WSParseSprdOrders 解析 sprd-orders 频道推送消息（business WS，需要登录）。
 func WSParseSprdOrders(message []byte) (*WSData[SprdOrder], bool, error) {
 	return WSParseChannelData[SprdOrder](message, WSChannelSprdOrders)
@@ -224,6 +229,23 @@ func isCandleChannel(channel string) bool {
 	return strings.HasPrefix(channel, "candle")
 }
 
+const wsChannelPrefixSprdCandle = "sprd-candle"
+
+// WSSprdCandleChannel 返回价差交易 K线频道名（如 bar=1D -> sprd-candle1D）。
+func WSSprdCandleChannel(bar string) string {
+	if bar == "" {
+		return ""
+	}
+	if strings.HasPrefix(bar, wsChannelPrefixSprdCandle) {
+		return bar
+	}
+	return wsChannelPrefixSprdCandle + bar
+}
+
+func isSprdCandleChannel(channel string) bool {
+	return strings.HasPrefix(channel, wsChannelPrefixSprdCandle)
+}
+
 // WSParseCandles 解析 K线频道推送消息（candle*，business WS）。
 func WSParseCandles(message []byte) (*WSData[Candle], bool, error) {
 	dm, ok, err := WSParseData[Candle](message)
@@ -231,6 +253,18 @@ func WSParseCandles(message []byte) (*WSData[Candle], bool, error) {
 		return nil, ok, err
 	}
 	if !isCandleChannel(dm.Arg.Channel) {
+		return nil, false, nil
+	}
+	return dm, true, nil
+}
+
+// WSParseSprdCandles 解析价差交易 K线频道推送消息（sprd-candle*，business WS，无需登录）。
+func WSParseSprdCandles(message []byte) (*WSData[Candle], bool, error) {
+	dm, ok, err := WSParseData[Candle](message)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	if !isSprdCandleChannel(dm.Arg.Channel) {
 		return nil, false, nil
 	}
 	return dm, true, nil
