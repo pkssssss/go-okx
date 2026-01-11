@@ -154,6 +154,8 @@ type WSClient struct {
 	accountHandler            func(balance AccountBalance)
 	positionsHandler          func(position AccountPosition)
 	balanceAndPositionHandler func(data WSBalanceAndPosition)
+	liquidationWarningHandler func(warning WSLiquidationWarning)
+	accountGreeksHandler      func(greeks AccountGreeks)
 	depositInfoHandler        func(info WSDepositInfo)
 	withdrawalInfoHandler     func(info WSWithdrawalInfo)
 	sprdOrdersHandler         func(order SprdOrder)
@@ -162,6 +164,7 @@ type WSClient struct {
 	tradesHandler             func(trade MarketTrade)
 	tradesAllHandler          func(trade MarketTrade)
 	orderBookHandler          func(data WSData[WSOrderBook])
+	statusHandler             func(status SystemStatus)
 	openInterestHandler       func(oi OpenInterest)
 	fundingRateHandler        func(rate FundingRate)
 	markPriceHandler          func(price MarkPrice)
@@ -733,6 +736,8 @@ func (w *WSClient) onDataMessage(message []byte) {
 	accountH := w.accountHandler
 	positionsH := w.positionsHandler
 	balPosH := w.balanceAndPositionHandler
+	liqWarningH := w.liquidationWarningHandler
+	accountGreeksH := w.accountGreeksHandler
 	depInfoH := w.depositInfoHandler
 	wdInfoH := w.withdrawalInfoHandler
 	sprdOrdersH := w.sprdOrdersHandler
@@ -741,6 +746,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 	tradesH := w.tradesHandler
 	tradesAllH := w.tradesAllHandler
 	orderBookH := w.orderBookHandler
+	statusH := w.statusHandler
 	openInterestH := w.openInterestHandler
 	fundingRateH := w.fundingRateHandler
 	markPriceH := w.markPriceHandler
@@ -761,6 +767,8 @@ func (w *WSClient) onDataMessage(message []byte) {
 		accountH == nil &&
 		positionsH == nil &&
 		balPosH == nil &&
+		liqWarningH == nil &&
+		accountGreeksH == nil &&
 		depInfoH == nil &&
 		wdInfoH == nil &&
 		sprdOrdersH == nil &&
@@ -769,6 +777,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		tradesH == nil &&
 		tradesAllH == nil &&
 		orderBookH == nil &&
+		statusH == nil &&
 		openInterestH == nil &&
 		fundingRateH == nil &&
 		markPriceH == nil &&
@@ -841,6 +850,24 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindBalanceAndPosition, balPos: dm.Data})
+	case WSChannelLiquidationWarning:
+		if liqWarningH == nil {
+			return
+		}
+		dm, ok, err := WSParseLiquidationWarning(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindLiquidationWarning, liquidationWarnings: dm.Data})
+	case WSChannelAccountGreeks:
+		if accountGreeksH == nil {
+			return
+		}
+		dm, ok, err := WSParseAccountGreeks(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAccountGreeks, accountGreeks: dm.Data})
 	case WSChannelDepositInfo:
 		if depInfoH == nil {
 			return
@@ -904,6 +931,15 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindTradesAll, tradesAll: dm.Data})
+	case WSChannelStatus:
+		if statusH == nil {
+			return
+		}
+		dm, ok, err := WSParseStatus(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindStatus, statuses: dm.Data})
 	case WSChannelOpenInterest:
 		if openInterestH == nil {
 			return

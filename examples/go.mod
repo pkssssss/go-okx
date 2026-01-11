@@ -1,6 +1,6 @@
 module github.com/pkssssss/go-okx/examples
 
-go 1.25.5
+go 1.25
 
 require github.com/pkssssss/go-okx/v5 v5.0.0
 

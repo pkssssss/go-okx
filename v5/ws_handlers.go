@@ -40,6 +40,22 @@ func WithWSBalanceAndPositionHandler(handler func(data WSBalanceAndPosition)) WS
 	}
 }
 
+// WithWSLiquidationWarningHandler 设置 liquidation-warning 推送的逐条回调（private WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSLiquidationWarningHandler(handler func(warning WSLiquidationWarning)) WSOption {
+	return func(c *WSClient) {
+		c.OnLiquidationWarning(handler)
+	}
+}
+
+// WithWSAccountGreeksHandler 设置 account-greeks 推送的逐条回调（private WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSAccountGreeksHandler(handler func(greeks AccountGreeks)) WSOption {
+	return func(c *WSClient) {
+		c.OnAccountGreeks(handler)
+	}
+}
+
 // WithWSDepositInfoHandler 设置 deposit-info 推送的逐条回调（business WS，需要登录）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
@@ -93,6 +109,14 @@ func WithWSTradesHandler(handler func(trade MarketTrade)) WSOption {
 func WithWSTradesAllHandler(handler func(trade MarketTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnTradesAll(handler)
+	}
+}
+
+// WithWSStatusHandler 设置 status 推送的逐条回调（public WS）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSStatusHandler(handler func(status SystemStatus)) WSOption {
+	return func(c *WSClient) {
+		c.OnStatus(handler)
 	}
 }
 
@@ -267,6 +291,26 @@ func (w *WSClient) OnBalanceAndPosition(handler func(data WSBalanceAndPosition))
 	w.typedMu.Unlock()
 }
 
+// OnLiquidationWarning 设置 liquidation-warning 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnLiquidationWarning(handler func(warning WSLiquidationWarning)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.liquidationWarningHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnAccountGreeks 设置 account-greeks 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnAccountGreeks(handler func(greeks AccountGreeks)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.accountGreeksHandler = handler
+	w.typedMu.Unlock()
+}
+
 // OnDepositInfo 设置 deposit-info 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
 func (w *WSClient) OnDepositInfo(handler func(info WSDepositInfo)) {
 	if w == nil {
@@ -334,6 +378,16 @@ func (w *WSClient) OnTradesAll(handler func(trade MarketTrade)) {
 	}
 	w.typedMu.Lock()
 	w.tradesAllHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnStatus 设置 status 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnStatus(handler func(status SystemStatus)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.statusHandler = handler
 	w.typedMu.Unlock()
 }
 

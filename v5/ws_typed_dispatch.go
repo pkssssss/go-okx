@@ -13,6 +13,8 @@ const (
 	wsTypedKindAccount
 	wsTypedKindPositions
 	wsTypedKindBalanceAndPosition
+	wsTypedKindLiquidationWarning
+	wsTypedKindAccountGreeks
 	wsTypedKindDepositInfo
 	wsTypedKindWithdrawalInfo
 	wsTypedKindSprdOrders
@@ -20,6 +22,7 @@ const (
 	wsTypedKindTickers
 	wsTypedKindTrades
 	wsTypedKindTradesAll
+	wsTypedKindStatus
 	wsTypedKindOrderBook
 	wsTypedKindOpenInterest
 	wsTypedKindFundingRate
@@ -49,6 +52,10 @@ func (k wsTypedKind) String() string {
 		return "positions"
 	case wsTypedKindBalanceAndPosition:
 		return "balance_and_position"
+	case wsTypedKindLiquidationWarning:
+		return "liquidation_warning"
+	case wsTypedKindAccountGreeks:
+		return "account_greeks"
 	case wsTypedKindDepositInfo:
 		return "deposit_info"
 	case wsTypedKindWithdrawalInfo:
@@ -63,6 +70,8 @@ func (k wsTypedKind) String() string {
 		return "trades"
 	case wsTypedKindTradesAll:
 		return "trades_all"
+	case wsTypedKindStatus:
+		return "status"
 	case wsTypedKindOrderBook:
 		return "order_book"
 	case wsTypedKindOpenInterest:
@@ -101,25 +110,28 @@ func (k wsTypedKind) String() string {
 type wsTypedTask struct {
 	kind wsTypedKind
 
-	orders         []TradeOrder
-	fills          []WSFill
-	balances       []AccountBalance
-	positions      []AccountPosition
-	balPos         []WSBalanceAndPosition
-	depositInfo    []WSDepositInfo
-	withdrawalInfo []WSWithdrawalInfo
-	sprdOrders     []SprdOrder
-	sprdTrades     []WSSprdTrade
-	tickers        []MarketTicker
-	trades         []MarketTrade
-	tradesAll      []MarketTrade
-	orderBooks     []WSData[WSOrderBook]
-	openInterests  []OpenInterest
-	fundingRates   []FundingRate
-	markPrices     []MarkPrice
-	indexTickers   []IndexTicker
-	priceLimits    []PriceLimit
-	optSummaries   []OptSummary
+	orders              []TradeOrder
+	fills               []WSFill
+	balances            []AccountBalance
+	positions           []AccountPosition
+	balPos              []WSBalanceAndPosition
+	liquidationWarnings []WSLiquidationWarning
+	accountGreeks       []AccountGreeks
+	depositInfo         []WSDepositInfo
+	withdrawalInfo      []WSWithdrawalInfo
+	sprdOrders          []SprdOrder
+	sprdTrades          []WSSprdTrade
+	tickers             []MarketTicker
+	trades              []MarketTrade
+	tradesAll           []MarketTrade
+	statuses            []SystemStatus
+	orderBooks          []WSData[WSOrderBook]
+	openInterests       []OpenInterest
+	fundingRates        []FundingRate
+	markPrices          []MarkPrice
+	indexTickers        []IndexTicker
+	priceLimits         []PriceLimit
+	optSummaries        []OptSummary
 
 	liquidationOrders  []LiquidationOrder
 	optionTrades       []WSOptionTrade
@@ -224,6 +236,28 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 			d := data
 			w.safeTypedCall(task.kind, func() { h(d) })
 		}
+	case wsTypedKindLiquidationWarning:
+		w.typedMu.RLock()
+		h := w.liquidationWarningHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.liquidationWarnings) == 0 {
+			return
+		}
+		for _, warning := range task.liquidationWarnings {
+			v := warning
+			w.safeTypedCall(task.kind, func() { h(v) })
+		}
+	case wsTypedKindAccountGreeks:
+		w.typedMu.RLock()
+		h := w.accountGreeksHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.accountGreeks) == 0 {
+			return
+		}
+		for _, greeks := range task.accountGreeks {
+			g := greeks
+			w.safeTypedCall(task.kind, func() { h(g) })
+		}
 	case wsTypedKindDepositInfo:
 		w.typedMu.RLock()
 		h := w.depositInfoHandler
@@ -300,6 +334,17 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, trade := range task.tradesAll {
 			tr := trade
 			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindStatus:
+		w.typedMu.RLock()
+		h := w.statusHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.statuses) == 0 {
+			return
+		}
+		for _, status := range task.statuses {
+			s := status
+			w.safeTypedCall(task.kind, func() { h(s) })
 		}
 	case wsTypedKindOrderBook:
 		w.typedMu.RLock()

@@ -2,7 +2,7 @@
 
 > 仓库：`github.com/pkssssss/go-okx`  
 > 模块：`github.com/pkssssss/go-okx/v5`  
-> Go 最低版本：`go1.25.5`  
+> Go 最低版本：`go1.25`  
 > 目标：正确性、稳定性优先，其次才是易用性与性能；避免过度设计（KISS / YAGNI）。
 
 ## 1. 背景与目标

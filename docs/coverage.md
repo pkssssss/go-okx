@@ -226,20 +226,33 @@
 | `POST /api/v5/sprd/mass-cancel` | `private` | [`sprd_mass_cancel`](../v5/sprd_mass_cancel_service.go) | ✅ [test](../v5/sprd_mass_cancel_service_test.go) | [ex](../examples/sprd_mass_cancel) | `rest, auth-private, sprd, orders` |
 | `POST /api/v5/sprd/cancel-all-after` | `private` | [`sprd_cancel_all_after`](../v5/sprd_cancel_all_after_service.go) | ✅ [test](../v5/sprd_cancel_all_after_service_test.go) | [ex](../examples/sprd_cancel_all_after) | `rest, auth-private, sprd, risk` |
 
+### System（系统）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `GET /api/v5/system/status` | `public` | [`system_status`](../v5/system_status_service.go) | ✅ [test](../v5/system_status_service_test.go) | [ex](../examples/system_status) | `rest, auth-public, system, status` |
+
+### Support（公告/支持）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `GET /api/v5/support/announcements` | `public` | [`support_announcements`](../v5/support_announcements_service.go) | ✅ [test](../v5/support_announcements_service_test.go) | [ex](../examples/support_announcements) | `rest, auth-public, support, announcement` |
+| `GET /api/v5/support/announcement-types` | `public` | [`support_announcement_types`](../v5/support_announcement_types_service.go) | ✅ [test](../v5/support_announcement_types_service_test.go) | [ex](../examples/support_announcement_types) | `rest, auth-public, support, announcement` |
+
 ## WebSocket
 
 > 说明：WS 的订阅以 `WSArg{Channel: ..., InstId/InstType/...}` 为核心；连接管理（自动重连/重订阅/心跳/notice）在 `WSClient` 内部处理。
 
 ### Public（无需登录）
 
-- 频道（已解析 + typed handler）：`tickers`、`trades`、深度 `books/books-elp/books5/bbo-tbt/books-l2-tbt/books50-l2-tbt`（回调为 `WSData[WSOrderBook]`，推荐配合 `WSOrderBookStore` 合并 snapshot/update 并校验 seqId/checksum）、`open-interest`、`funding-rate`、`mark-price`、`index-tickers`、`price-limit`、`opt-summary`、`liquidation-orders`、`option-trades`、`call-auction-details`
-- Examples：[examples/ws_public_tickers](../examples/ws_public_tickers)、[examples/ws_public_trades](../examples/ws_public_trades)、[examples/ws_public_books](../examples/ws_public_books)、[examples/ws_public_books5](../examples/ws_public_books5)、[examples/ws_public_books_store_typed](../examples/ws_public_books_store_typed)、[examples/ws_public_open_interest](../examples/ws_public_open_interest)、[examples/ws_public_funding_rate](../examples/ws_public_funding_rate)、[examples/ws_public_mark_price](../examples/ws_public_mark_price)、[examples/ws_public_index_tickers](../examples/ws_public_index_tickers)、[examples/ws_public_price_limit](../examples/ws_public_price_limit)、[examples/ws_public_opt_summary](../examples/ws_public_opt_summary)、[examples/ws_public_liquidation_orders](../examples/ws_public_liquidation_orders)、[examples/ws_public_option_trades](../examples/ws_public_option_trades)、[examples/ws_public_call_auction_details](../examples/ws_public_call_auction_details)
+- 频道（已解析 + typed handler）：`tickers`、`trades`、深度 `books/books-elp/books5/bbo-tbt/books-l2-tbt/books50-l2-tbt`（回调为 `WSData[WSOrderBook]`，推荐配合 `WSOrderBookStore` 合并 snapshot/update 并校验 seqId/checksum）、`status`、`open-interest`、`funding-rate`、`mark-price`、`index-tickers`、`price-limit`、`opt-summary`、`liquidation-orders`、`option-trades`、`call-auction-details`
+- Examples：[examples/ws_public_tickers](../examples/ws_public_tickers)、[examples/ws_public_trades](../examples/ws_public_trades)、[examples/ws_public_books](../examples/ws_public_books)、[examples/ws_public_books5](../examples/ws_public_books5)、[examples/ws_public_books_store_typed](../examples/ws_public_books_store_typed)、[examples/ws_public_status](../examples/ws_public_status)、[examples/ws_public_open_interest](../examples/ws_public_open_interest)、[examples/ws_public_funding_rate](../examples/ws_public_funding_rate)、[examples/ws_public_mark_price](../examples/ws_public_mark_price)、[examples/ws_public_index_tickers](../examples/ws_public_index_tickers)、[examples/ws_public_price_limit](../examples/ws_public_price_limit)、[examples/ws_public_opt_summary](../examples/ws_public_opt_summary)、[examples/ws_public_liquidation_orders](../examples/ws_public_liquidation_orders)、[examples/ws_public_option_trades](../examples/ws_public_option_trades)、[examples/ws_public_call_auction_details](../examples/ws_public_call_auction_details)
 
 ### Private（需要登录）
 
-- 频道（已解析 + typed handler）：`orders`、`fills`、`account`、`positions`、`balance_and_position`
+- 频道（已解析 + typed handler）：`orders`、`fills`、`account`、`positions`、`balance_and_position`、`liquidation-warning`、`account-greeks`
 - 业务 op（交易闭环）：`order`、`cancel-order`、`amend-order`（含 batch 等待/错误归一）
-- Examples：[examples/ws_private_orders](../examples/ws_private_orders)、[examples/ws_private_fills](../examples/ws_private_fills)、[examples/ws_private_account](../examples/ws_private_account)、[examples/ws_private_positions](../examples/ws_private_positions)、[examples/ws_private_balance_and_position](../examples/ws_private_balance_and_position)、[examples/ws_private_trade_order](../examples/ws_private_trade_order)、[examples/ws_private_trade_cancel](../examples/ws_private_trade_cancel)、[examples/ws_private_trade_amend](../examples/ws_private_trade_amend)、[examples/ws_private_trade_batch_ops](../examples/ws_private_trade_batch_ops)
+- Examples：[examples/ws_private_orders](../examples/ws_private_orders)、[examples/ws_private_fills](../examples/ws_private_fills)、[examples/ws_private_account](../examples/ws_private_account)、[examples/ws_private_positions](../examples/ws_private_positions)、[examples/ws_private_balance_and_position](../examples/ws_private_balance_and_position)、[examples/ws_private_liquidation_warning](../examples/ws_private_liquidation_warning)、[examples/ws_private_account_greeks](../examples/ws_private_account_greeks)、[examples/ws_private_trade_order](../examples/ws_private_trade_order)、[examples/ws_private_trade_cancel](../examples/ws_private_trade_cancel)、[examples/ws_private_trade_amend](../examples/ws_private_trade_amend)、[examples/ws_private_trade_batch_ops](../examples/ws_private_trade_batch_ops)
 
 ### Business（按频道决定是否需要登录）
 

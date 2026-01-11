@@ -358,3 +358,96 @@ func TestWSClient_onDataMessage_OrderBook_TypedAsync_Dispatches(t *testing.T) {
 		t.Fatalf("timeout waiting order book")
 	}
 }
+
+func TestWSClient_onDataMessage_LiquidationWarning_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSLiquidationWarning, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnLiquidationWarning(func(warning WSLiquidationWarning) {
+		select {
+		case gotCh <- warning:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"liquidation-warning","uid":"u1","instType":"FUTURES"},"data":[{"instType":"FUTURES","mgnMode":"isolated","posId":"p1","posSide":"long","pos":"1","posCcy":"","instId":"ETH-USD-210430","lever":"10","markPx":"2353.849","mgnRatio":"11.731726509588816","ccy":"ETH","cTime":"1619507758793","uTime":"1619507761462","pTime":"1619507761462"}]}`))
+
+	select {
+	case warning := <-gotCh:
+		if warning.PosId != "p1" || warning.InstId != "ETH-USD-210430" || warning.MarkPx != "2353.849" || warning.CTime != 1619507758793 {
+			t.Fatalf("warning = %#v", warning)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting liquidation warning")
+	}
+}
+
+func TestWSClient_onDataMessage_AccountGreeks_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan AccountGreeks, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnAccountGreeks(func(greeks AccountGreeks) {
+		select {
+		case gotCh <- greeks:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"account-greeks","ccy":"BTC","uid":"u1"},"data":[{"ccy":"BTC","deltaBS":"1.1","deltaPA":"2.2","gammaBS":"0","gammaPA":"0.1","thetaBS":"0","thetaPA":"0","vegaBS":"0","vegaPA":"0","ts":"1597026383085"}]}`))
+
+	select {
+	case greeks := <-gotCh:
+		if greeks.Ccy != "BTC" || greeks.DeltaBS != "1.1" || greeks.TS != 1597026383085 {
+			t.Fatalf("greeks = %#v", greeks)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting account greeks")
+	}
+}
+
+func TestWSClient_onDataMessage_Status_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan SystemStatus, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnStatus(func(status SystemStatus) {
+		select {
+		case gotCh <- status:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"status"},"data":[{"title":"Trading account WebSocket system upgrade","state":"completed","begin":"1672823400000","end":"1672825980000","href":"","preOpenBegin":"","scheDesc":"","serviceType":"0","system":"unified","maintType":"1","env":"1","ts":"1672826038470"}]}`))
+
+	select {
+	case status := <-gotCh:
+		if status.Title == "" || status.Begin != 1672823400000 || status.TS != 1672826038470 {
+			t.Fatalf("status = %#v", status)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting status")
+	}
+}

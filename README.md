@@ -21,7 +21,7 @@ OKX V5 API 的 Go SDK（REST + WebSocket），目标是提供工程级的正确�
 go get github.com/pkssssss/go-okx/v5
 ```
 
-> 最低 Go 版本：`go1.25.5`  
+> 最低 Go 版本：`go1.25`  
 > 固定版本安装：`go get github.com/pkssssss/go-okx/v5@v5.0.0`
 
 ## 快速开始

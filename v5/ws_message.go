@@ -12,12 +12,17 @@ const (
 	WSChannelPositions          = "positions"
 	WSChannelBalanceAndPosition = "balance_and_position"
 
+	WSChannelLiquidationWarning = "liquidation-warning"
+	WSChannelAccountGreeks      = "account-greeks"
+
 	WSChannelDepositInfo    = "deposit-info"
 	WSChannelWithdrawalInfo = "withdrawal-info"
 
 	WSChannelTickers   = "tickers"
 	WSChannelTrades    = "trades"
 	WSChannelTradesAll = "trades-all"
+
+	WSChannelStatus = "status"
 
 	WSChannelOpenInterest = "open-interest"
 	WSChannelFundingRate  = "funding-rate"
@@ -102,6 +107,25 @@ func WSParseData[T any](message []byte) (*WSData[T], bool, error) {
 	return &dm, true, nil
 }
 
+// WSLiquidationWarning 表示爆仓风险预警推送（liquidation-warning）。
+type WSLiquidationWarning struct {
+	InstType string `json:"instType"`
+	MgnMode  string `json:"mgnMode"`
+	PosId    string `json:"posId"`
+	PosSide  string `json:"posSide"`
+	Pos      string `json:"pos"`
+	PosCcy   string `json:"posCcy"`
+	InstId   string `json:"instId"`
+	Lever    string `json:"lever"`
+	MarkPx   string `json:"markPx"`
+	MgnRatio string `json:"mgnRatio"`
+	Ccy      string `json:"ccy"`
+
+	CTime UnixMilli `json:"cTime"`
+	UTime UnixMilli `json:"uTime"`
+	PTime UnixMilli `json:"pTime"`
+}
+
 // WSParseChannelData 解析指定 channel 的 data 推送消息。
 func WSParseChannelData[T any](message []byte, channel string) (*WSData[T], bool, error) {
 	dm, ok, err := WSParseData[T](message)
@@ -137,6 +161,16 @@ func WSParsePositions(message []byte) (*WSData[AccountPosition], bool, error) {
 // WSParseBalanceAndPosition 解析 balance_and_position 频道推送消息。
 func WSParseBalanceAndPosition(message []byte) (*WSData[WSBalanceAndPosition], bool, error) {
 	return WSParseChannelData[WSBalanceAndPosition](message, WSChannelBalanceAndPosition)
+}
+
+// WSParseLiquidationWarning 解析 liquidation-warning 频道推送消息（private WS，需要登录）。
+func WSParseLiquidationWarning(message []byte) (*WSData[WSLiquidationWarning], bool, error) {
+	return WSParseChannelData[WSLiquidationWarning](message, WSChannelLiquidationWarning)
+}
+
+// WSParseAccountGreeks 解析 account-greeks 频道推送消息（private WS，需要登录）。
+func WSParseAccountGreeks(message []byte) (*WSData[AccountGreeks], bool, error) {
+	return WSParseChannelData[AccountGreeks](message, WSChannelAccountGreeks)
 }
 
 // WSParseDepositInfo 解析 deposit-info 频道推送消息（business WS，需要登录）。
@@ -177,6 +211,11 @@ func WSParseTrades(message []byte) (*WSData[MarketTrade], bool, error) {
 // WSParseTradesAll 解析 trades-all 频道推送消息。
 func WSParseTradesAll(message []byte) (*WSData[MarketTrade], bool, error) {
 	return WSParseChannelData[MarketTrade](message, WSChannelTradesAll)
+}
+
+// WSParseStatus 解析 status 频道推送消息（public WS）。
+func WSParseStatus(message []byte) (*WSData[SystemStatus], bool, error) {
+	return WSParseChannelData[SystemStatus](message, WSChannelStatus)
 }
 
 // WSParseOpenInterest 解析 open-interest 频道推送消息。
