@@ -199,6 +199,12 @@
 | `POST /api/v5/users/subaccount/modify-apikey` | `private` | [`users_subaccount_modify_apikey`](../v5/users_subaccount_modify_apikey_service.go) | ✅ [test](../v5/users_subaccount_modify_apikey_service_test.go) | [ex](../examples/users_subaccount_modify_apikey) | `auth-private, subaccount, apikey` |
 | `POST /api/v5/users/subaccount/set-transfer-out` | `private` | [`users_subaccount_set_transfer_out`](../v5/users_subaccount_set_transfer_out_service.go) | ✅ [test](../v5/users_subaccount_set_transfer_out_service_test.go) | [ex](../examples/users_subaccount_set_transfer_out) | `auth-private, subaccount, transfer` |
 
+### RFQ（大宗交易/询价）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `GET /api/v5/rfq/public-trades` | `public` | [`rfq_public_trades`](../v5/rfq_public_trades_service.go) | ✅ [test](../v5/rfq_public_trades_service_test.go) | [ex](../examples/rfq_public_trades) | `rest, auth-public, rfq` |
+
 ## WebSocket
 
 > 说明：WS 的订阅以 `WSArg{Channel: ..., InstId/InstType/...}` 为核心；连接管理（自动重连/重订阅/心跳/notice）在 `WSClient` 内部处理。
@@ -232,6 +238,7 @@
 - 子账户：`subaccount`、`apikey`
 - 期权相关：`option`、`mmp`
 - 风控/限速：`risk`
+- 大宗交易：`rfq`
 
 ## 维护说明
 
