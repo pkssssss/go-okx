@@ -4,13 +4,25 @@ OKX V5 API 的 Go SDK（REST + WebSocket），目标是提供工程级的正确�
 
 ## 状态
 
-开发中（尚未发布稳定版本）。
+已发布 `v5.0.0`（持续迭代）。
+
+## Release Notes
+
+### v5.0.0
+
+- REST：通用签名/错误模型 + 主要业务端点覆盖（详见 `docs/coverage.md`）
+- WebSocket：public/private/business + 自动重连/重订阅 + typed handler（含 `WSOrderBookStore`/文本心跳等）
+- 示例：`examples/` 覆盖行情/交易/资产/WS 主链路
+- 自检：`./check.sh`（`gofmt`/`vet`/`test`/`race`/`examples`）
 
 ## 安装
 
 ```bash
 go get github.com/pkssssss/go-okx/v5
 ```
+
+> 最低 Go 版本：`go1.25.5`  
+> 固定版本安装：`go get github.com/pkssssss/go-okx/v5@v5.0.0`
 
 ## 快速开始
 
