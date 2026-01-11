@@ -219,6 +219,12 @@
 | `POST /api/v5/sprd/cancel-order` | `private` | [`sprd_cancel_order`](../v5/sprd_cancel_order_service.go) | ✅ [test](../v5/sprd_cancel_order_service_test.go) | [ex](../examples/sprd_cancel_order) | `rest, auth-private, sprd, orders` |
 | `POST /api/v5/sprd/amend-order` | `private` | [`sprd_amend_order`](../v5/sprd_amend_order_service.go) | ✅ [test](../v5/sprd_amend_order_service_test.go) | [ex](../examples/sprd_amend_order) | `rest, auth-private, sprd, orders` |
 | `GET /api/v5/sprd/order` | `private` | [`sprd_get_order`](../v5/sprd_get_order_service.go) | ✅ [test](../v5/sprd_get_order_service_test.go) | [ex](../examples/sprd_get_order) | `rest, auth-private, sprd, orders` |
+| `GET /api/v5/sprd/orders-pending` | `private` | [`sprd_orders_pending`](../v5/sprd_orders_pending_service.go) | ✅ [test](../v5/sprd_orders_pending_service_test.go) | [ex](../examples/sprd_orders_pending) | `rest, auth-private, sprd, orders` |
+| `GET /api/v5/sprd/orders-history` | `private` | [`sprd_orders_history`](../v5/sprd_orders_history_service.go) | ✅ [test](../v5/sprd_orders_history_service_test.go) | [ex](../examples/sprd_orders_history) | `rest, auth-private, sprd, orders, history` |
+| `GET /api/v5/sprd/orders-history-archive` | `private` | [`sprd_orders_history_archive`](../v5/sprd_orders_history_archive_service.go) | ✅ [test](../v5/sprd_orders_history_archive_service_test.go) | [ex](../examples/sprd_orders_history_archive) | `rest, auth-private, sprd, orders, history` |
+| `GET /api/v5/sprd/trades` | `private` | [`sprd_trades`](../v5/sprd_trades_service.go) | ✅ [test](../v5/sprd_trades_service_test.go) | [ex](../examples/sprd_trades) | `rest, auth-private, sprd, fills` |
+| `POST /api/v5/sprd/mass-cancel` | `private` | [`sprd_mass_cancel`](../v5/sprd_mass_cancel_service.go) | ✅ [test](../v5/sprd_mass_cancel_service_test.go) | [ex](../examples/sprd_mass_cancel) | `rest, auth-private, sprd, orders` |
+| `POST /api/v5/sprd/cancel-all-after` | `private` | [`sprd_cancel_all_after`](../v5/sprd_cancel_all_after_service.go) | ✅ [test](../v5/sprd_cancel_all_after_service_test.go) | [ex](../examples/sprd_cancel_all_after) | `rest, auth-private, sprd, risk` |
 
 ## WebSocket
 
@@ -239,7 +245,8 @@
 
 - 频道（已解析）：K 线 `candle*`、标记价格 K 线 `mark-price-candle*`、指数 K 线 `index-candle*`、`trades-all`、`sprd-public-trades`、SPRD 深度 `sprd-bbo-tbt/sprd-books5/sprd-books-l2-tbt`
 - 需要登录的频道（已解析 + typed handler）：`deposit-info`、`withdrawal-info`、`sprd-orders`、`sprd-trades`
-- Examples：[examples/ws_business_candles](../examples/ws_business_candles)、[examples/ws_business_mark_price_candles](../examples/ws_business_mark_price_candles)、[examples/ws_business_index_candles](../examples/ws_business_index_candles)、[examples/ws_business_trades_all](../examples/ws_business_trades_all)、[examples/ws_business_sprd_public_trades](../examples/ws_business_sprd_public_trades)、[examples/ws_business_sprd_books](../examples/ws_business_sprd_books)、[examples/ws_business_sprd_orders](../examples/ws_business_sprd_orders)、[examples/ws_business_sprd_trades](../examples/ws_business_sprd_trades)、[examples/ws_business_deposit_info](../examples/ws_business_deposit_info)、[examples/ws_business_withdrawal_info](../examples/ws_business_withdrawal_info)
+- 业务 op（价差交易）：`sprd-order`、`sprd-cancel-order`、`sprd-amend-order`、`sprd-mass-cancel`
+- Examples：[examples/ws_business_candles](../examples/ws_business_candles)、[examples/ws_business_mark_price_candles](../examples/ws_business_mark_price_candles)、[examples/ws_business_index_candles](../examples/ws_business_index_candles)、[examples/ws_business_trades_all](../examples/ws_business_trades_all)、[examples/ws_business_sprd_public_trades](../examples/ws_business_sprd_public_trades)、[examples/ws_business_sprd_books](../examples/ws_business_sprd_books)、[examples/ws_business_sprd_orders](../examples/ws_business_sprd_orders)、[examples/ws_business_sprd_trades](../examples/ws_business_sprd_trades)、[examples/ws_business_trade_sprd_order](../examples/ws_business_trade_sprd_order)、[examples/ws_business_trade_sprd_cancel_order](../examples/ws_business_trade_sprd_cancel_order)、[examples/ws_business_trade_sprd_amend_order](../examples/ws_business_trade_sprd_amend_order)、[examples/ws_business_trade_sprd_mass_cancel](../examples/ws_business_trade_sprd_mass_cancel)、[examples/ws_business_deposit_info](../examples/ws_business_deposit_info)、[examples/ws_business_withdrawal_info](../examples/ws_business_withdrawal_info)
 
 ## 场景索引（标签）
 
