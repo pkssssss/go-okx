@@ -1,0 +1,44 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+
+	"github.com/pkssssss/go-okx/v5"
+)
+
+func main() {
+	sprdId := os.Getenv("OKX_SPRD_ID")
+	if sprdId == "" {
+		sprdId = "BTC-USDT_BTC-USDT-SWAP"
+	}
+
+	sz := 5
+	if v := os.Getenv("OKX_BOOKS_SZ"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			log.Fatalf("invalid OKX_BOOKS_SZ: %v", err)
+		}
+		sz = n
+	}
+
+	c := okx.NewClient()
+
+	ob, err := c.NewSprdBooksService().SprdId(sprdId).Sz(sz).Do(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var bestAskPx, bestAskSz, bestBidPx, bestBidSz string
+	if len(ob.Asks) > 0 {
+		bestAskPx, bestAskSz = ob.Asks[0].Px, ob.Asks[0].Sz
+	}
+	if len(ob.Bids) > 0 {
+		bestBidPx, bestBidSz = ob.Bids[0].Px, ob.Bids[0].Sz
+	}
+
+	fmt.Printf("sprdId=%s asks=%d bids=%d bestAsk=%s/%s bestBid=%s/%s ts=%d\n", sprdId, len(ob.Asks), len(ob.Bids), bestAskPx, bestAskSz, bestBidPx, bestBidSz, ob.TS)
+}

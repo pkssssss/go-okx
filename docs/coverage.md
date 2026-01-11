@@ -209,6 +209,8 @@
 
 | Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
 |---|---|---|---|---|---|
+| `GET /api/v5/sprd/spreads` | `public` | [`sprd_spreads`](../v5/sprd_spreads_service.go) | ✅ [test](../v5/sprd_spreads_service_test.go) | [ex](../examples/sprd_spreads) | `rest, auth-public, sprd` |
+| `GET /api/v5/sprd/books` | `public` | [`sprd_books`](../v5/sprd_books_service.go) | ✅ [test](../v5/sprd_books_service_test.go) | [ex](../examples/sprd_books) | `rest, auth-public, sprd, orderbook` |
 | `GET /api/v5/sprd/public-trades` | `public` | [`sprd_public_trades`](../v5/sprd_public_trades_service.go) | ✅ [test](../v5/sprd_public_trades_service_test.go) | [ex](../examples/sprd_public_trades) | `rest, auth-public, sprd` |
 
 ## WebSocket
