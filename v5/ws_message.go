@@ -19,6 +19,7 @@ const (
 	WSChannelAlgoAdvance        = "algo-advance"
 	WSChannelGridOrdersSpot     = "grid-orders-spot"
 	WSChannelGridOrdersContract = "grid-orders-contract"
+	WSChannelGridPositions      = "grid-positions"
 	WSChannelGridSubOrders      = "grid-sub-orders"
 	WSChannelAlgoRecurringBuy   = "algo-recurring-buy"
 
@@ -198,6 +199,11 @@ func WSParseGridOrdersSpot(message []byte) (*WSData[WSGridOrder], bool, error) {
 // WSParseGridOrdersContract 解析 grid-orders-contract 频道推送消息（business WS，需要登录）。
 func WSParseGridOrdersContract(message []byte) (*WSData[WSGridOrder], bool, error) {
 	return WSParseChannelData[WSGridOrder](message, WSChannelGridOrdersContract)
+}
+
+// WSParseGridPositions 解析 grid-positions 频道推送消息（business WS，需要登录）。
+func WSParseGridPositions(message []byte) (*WSData[WSGridPosition], bool, error) {
+	return WSParseChannelData[WSGridPosition](message, WSChannelGridPositions)
 }
 
 // WSParseGridSubOrders 解析 grid-sub-orders 频道推送消息（business WS，需要登录）。
@@ -676,6 +682,41 @@ type WSGridOrder struct {
 	TpTriggerPx string `json:"tpTriggerPx"`
 
 	TradeNum string `json:"tradeNum"`
+}
+
+// WSGridPosition 表示网格策略持仓推送（grid-positions）的数据项（精简版）。
+//
+// 说明：该频道 subscribe 参数需要提供 arg.algoId。
+type WSGridPosition struct {
+	AlgoClOrdId string `json:"algoClOrdId"`
+	AlgoId      string `json:"algoId"`
+
+	InstType string `json:"instType"`
+	InstId   string `json:"instId"`
+
+	Ccy string `json:"ccy"`
+
+	MgnMode  string `json:"mgnMode"`
+	PosSide  string `json:"posSide"`
+	Pos      string `json:"pos"`
+	Lever    string `json:"lever"`
+	AvgPx    string `json:"avgPx"`
+	Last     string `json:"last"`
+	MarkPx   string `json:"markPx"`
+	LiqPx    string `json:"liqPx"`
+	MgnRatio string `json:"mgnRatio"`
+
+	IMR         string `json:"imr"`
+	MMR         string `json:"mmr"`
+	NotionalUSD string `json:"notionalUsd"`
+
+	ADL      string `json:"adl"`
+	Upl      string `json:"upl"`
+	UplRatio string `json:"uplRatio"`
+
+	CTime int64 `json:"cTime,string"`
+	UTime int64 `json:"uTime,string"`
+	PTime int64 `json:"pTime,string"`
 }
 
 // WSGridSubOrder 表示网格策略子订单推送（grid-sub-orders）的数据项（精简版）。

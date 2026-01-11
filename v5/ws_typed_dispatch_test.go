@@ -607,6 +607,37 @@ func TestWSClient_onDataMessage_GridSubOrders_TypedAsync_Dispatches(t *testing.T
 	}
 }
 
+func TestWSClient_onDataMessage_GridPositions_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSGridPosition, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnGridPositions(func(position WSGridPosition) {
+		select {
+		case gotCh <- position:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"grid-positions","algoId":"449327675342323712"},"data":[{"algoId":"449327675342323712","adl":"1","instType":"SWAP","instId":"BTC-USDT-SWAP","pos":"35","mgnMode":"cross","posSide":"net","avgPx":"29181.4638888888888895","cTime":"1653400065917","uTime":"1653445498682","pTime":"1653536068723"}]}`))
+
+	select {
+	case position := <-gotCh:
+		if position.AlgoId != "449327675342323712" || position.InstId != "BTC-USDT-SWAP" || position.Pos != "35" || position.PTime != 1653536068723 {
+			t.Fatalf("position = %#v", position)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting grid-positions")
+	}
+}
+
 func TestWSClient_onDataMessage_AlgoRecurringBuy_TypedAsync_Dispatches(t *testing.T) {
 	gotCh := make(chan WSRecurringBuyOrder, 1)
 

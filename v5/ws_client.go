@@ -161,6 +161,7 @@ type WSClient struct {
 	algoAdvanceHandler        func(order TradeAlgoOrder)
 	gridOrdersSpotHandler     func(order WSGridOrder)
 	gridOrdersContractHandler func(order WSGridOrder)
+	gridPositionsHandler      func(position WSGridPosition)
 	gridSubOrdersHandler      func(order WSGridSubOrder)
 	algoRecurringBuyHandler   func(order WSRecurringBuyOrder)
 	depositInfoHandler        func(info WSDepositInfo)
@@ -749,6 +750,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 	algoAdvanceH := w.algoAdvanceHandler
 	gridOrdersSpotH := w.gridOrdersSpotHandler
 	gridOrdersContractH := w.gridOrdersContractHandler
+	gridPositionsH := w.gridPositionsHandler
 	gridSubOrdersH := w.gridSubOrdersHandler
 	algoRecurringBuyH := w.algoRecurringBuyHandler
 	depInfoH := w.depositInfoHandler
@@ -786,6 +788,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		algoAdvanceH == nil &&
 		gridOrdersSpotH == nil &&
 		gridOrdersContractH == nil &&
+		gridPositionsH == nil &&
 		gridSubOrdersH == nil &&
 		algoRecurringBuyH == nil &&
 		depInfoH == nil &&
@@ -923,6 +926,15 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridOrdersContract, gridOrdersContract: dm.Data})
+	case WSChannelGridPositions:
+		if gridPositionsH == nil {
+			return
+		}
+		dm, ok, err := WSParseGridPositions(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridPositions, gridPositions: dm.Data})
 	case WSChannelGridSubOrders:
 		if gridSubOrdersH == nil {
 			return

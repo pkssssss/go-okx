@@ -19,6 +19,7 @@ const (
 	wsTypedKindAlgoAdvance
 	wsTypedKindGridOrdersSpot
 	wsTypedKindGridOrdersContract
+	wsTypedKindGridPositions
 	wsTypedKindGridSubOrders
 	wsTypedKindAlgoRecurringBuy
 	wsTypedKindDepositInfo
@@ -70,6 +71,8 @@ func (k wsTypedKind) String() string {
 		return "grid_orders_spot"
 	case wsTypedKindGridOrdersContract:
 		return "grid_orders_contract"
+	case wsTypedKindGridPositions:
+		return "grid_positions"
 	case wsTypedKindGridSubOrders:
 		return "grid_sub_orders"
 	case wsTypedKindAlgoRecurringBuy:
@@ -139,6 +142,7 @@ type wsTypedTask struct {
 	algoAdvance         []TradeAlgoOrder
 	gridOrdersSpot      []WSGridOrder
 	gridOrdersContract  []WSGridOrder
+	gridPositions       []WSGridPosition
 	gridSubOrders       []WSGridSubOrder
 	algoRecurringBuy    []WSRecurringBuyOrder
 	depositInfo         []WSDepositInfo
@@ -325,6 +329,17 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, order := range task.gridOrdersContract {
 			o := order
 			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindGridPositions:
+		w.typedMu.RLock()
+		h := w.gridPositionsHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.gridPositions) == 0 {
+			return
+		}
+		for _, position := range task.gridPositions {
+			p := position
+			w.safeTypedCall(task.kind, func() { h(p) })
 		}
 	case wsTypedKindGridSubOrders:
 		w.typedMu.RLock()

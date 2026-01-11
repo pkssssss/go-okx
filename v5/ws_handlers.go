@@ -88,6 +88,14 @@ func WithWSGridOrdersContractHandler(handler func(order WSGridOrder)) WSOption {
 	}
 }
 
+// WithWSGridPositionsHandler 设置 grid-positions 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSGridPositionsHandler(handler func(position WSGridPosition)) WSOption {
+	return func(c *WSClient) {
+		c.OnGridPositions(handler)
+	}
+}
+
 // WithWSGridSubOrdersHandler 设置 grid-sub-orders 推送的逐条回调（business WS，需要登录）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSGridSubOrdersHandler(handler func(order WSGridSubOrder)) WSOption {
@@ -396,6 +404,16 @@ func (w *WSClient) OnGridOrdersContract(handler func(order WSGridOrder)) {
 	}
 	w.typedMu.Lock()
 	w.gridOrdersContractHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnGridPositions 设置 grid-positions 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnGridPositions(handler func(position WSGridPosition)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.gridPositionsHandler = handler
 	w.typedMu.Unlock()
 }
 
