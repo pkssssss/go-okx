@@ -702,3 +702,105 @@ func TestWSClient_onDataMessage_CopyTradingLeadNotification_TypedAsync_Dispatche
 		t.Fatalf("timeout waiting copytrading-lead-notification")
 	}
 }
+
+func TestWSClient_onDataMessage_RFQs_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSRFQ, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnRFQs(func(rfq WSRFQ) {
+		select {
+		case gotCh <- rfq:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"rfqs"},"data":[{"cTime":"1611033737572","uTime":"1611033737572","traderCode":"DSK2","rfqId":"22534","clRfqId":"","tag":"123456","state":"active","flowType":"","validUntil":"1611033857557","allowPartialExecution":false,"counterparties":["DSK4"],"legs":[{"instId":"BTCUSD-211208-36000-C","tdMode":"cross","ccy":"USDT","sz":"25.0","side":"buy","posSide":"long","tgtCcy":""}]}]}`))
+
+	select {
+	case rfq := <-gotCh:
+		if rfq.RfqId != "22534" || rfq.State != "active" || rfq.CTime != 1611033737572 || rfq.TraderCode != "DSK2" {
+			t.Fatalf("rfq = %#v", rfq)
+		}
+		if len(rfq.Legs) != 1 || rfq.Legs[0].InstId != "BTCUSD-211208-36000-C" {
+			t.Fatalf("legs = %#v", rfq.Legs)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting rfqs")
+	}
+}
+
+func TestWSClient_onDataMessage_Quotes_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSQuote, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnQuotes(func(quote WSQuote) {
+		select {
+		case gotCh <- quote:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"quotes"},"data":[{"validUntil":"1608997227854","uTime":"1608267227834","cTime":"1608267227834","legs":[{"px":"0.0023","sz":"25.0","instId":"BTC-USD-220114-25000-C","tdMode":"cross","ccy":"USDT","side":"sell","posSide":"long","tgtCcy":""}],"quoteId":"25092","rfqId":"18753","tag":"123456","traderCode":"SATS","quoteSide":"sell","state":"canceled","reason":"mmp_canceled","clQuoteId":""}]}`))
+
+	select {
+	case quote := <-gotCh:
+		if quote.QuoteId != "25092" || quote.RfqId != "18753" || quote.State != "canceled" || quote.Reason != "mmp_canceled" || quote.CTime != 1608267227834 {
+			t.Fatalf("quote = %#v", quote)
+		}
+		if len(quote.Legs) != 1 || quote.Legs[0].InstId != "BTC-USD-220114-25000-C" || quote.Legs[0].Px != "0.0023" {
+			t.Fatalf("legs = %#v", quote.Legs)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting quotes")
+	}
+}
+
+func TestWSClient_onDataMessage_StrucBlockTrades_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSStrucBlockTrade, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnStrucBlockTrades(func(trade WSStrucBlockTrade) {
+		select {
+		case gotCh <- trade:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"struc-block-trades"},"data":[{"cTime":"1608267227834","rfqId":"18753","clRfqId":"","quoteId":"25092","clQuoteId":"","blockTdId":"180184","tag":"123456","tTraderCode":"ANAND","mTraderCode":"WAGMI","isSuccessful":true,"errorCode":"","legs":[{"px":"0.0023","sz":"25.0","instId":"BTC-USD-20220630-60000-C","side":"sell","fee":"0.1001","feeCcy":"BTC","tradeId":"10211","tgtCcy":""}]}]}`))
+
+	select {
+	case trade := <-gotCh:
+		if trade.BlockTdId != "180184" || trade.RfqId != "18753" || !trade.IsSuccessful || trade.CTime != 1608267227834 {
+			t.Fatalf("trade = %#v", trade)
+		}
+		if len(trade.Legs) != 1 || trade.Legs[0].TradeId != "10211" || trade.Legs[0].FeeCcy != "BTC" {
+			t.Fatalf("legs = %#v", trade.Legs)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting struc-block-trades")
+	}
+}

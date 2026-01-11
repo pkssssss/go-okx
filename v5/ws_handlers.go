@@ -120,6 +120,30 @@ func WithWSCopyTradingLeadNotificationHandler(handler func(note WSCopyTradingLea
 	}
 }
 
+// WithWSRFQsHandler 设置 rfqs 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSRFQsHandler(handler func(rfq WSRFQ)) WSOption {
+	return func(c *WSClient) {
+		c.OnRFQs(handler)
+	}
+}
+
+// WithWSQuotesHandler 设置 quotes 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSQuotesHandler(handler func(quote WSQuote)) WSOption {
+	return func(c *WSClient) {
+		c.OnQuotes(handler)
+	}
+}
+
+// WithWSStrucBlockTradesHandler 设置 struc-block-trades 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSStrucBlockTradesHandler(handler func(trade WSStrucBlockTrade)) WSOption {
+	return func(c *WSClient) {
+		c.OnStrucBlockTrades(handler)
+	}
+}
+
 // WithWSDepositInfoHandler 设置 deposit-info 推送的逐条回调（business WS，需要登录）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
@@ -452,6 +476,36 @@ func (w *WSClient) OnCopyTradingLeadNotification(handler func(note WSCopyTrading
 	}
 	w.typedMu.Lock()
 	w.copyTradingLeadNotificationHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnRFQs 设置 rfqs 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnRFQs(handler func(rfq WSRFQ)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.rfqsHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnQuotes 设置 quotes 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnQuotes(handler func(quote WSQuote)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.quotesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnStrucBlockTrades 设置 struc-block-trades 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnStrucBlockTrades(handler func(trade WSStrucBlockTrade)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.strucBlockTradesHandler = handler
 	w.typedMu.Unlock()
 }
 

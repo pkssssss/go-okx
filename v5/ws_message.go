@@ -24,6 +24,10 @@ const (
 	WSChannelAlgoRecurringBuy            = "algo-recurring-buy"
 	WSChannelCopytradingLeadNotification = "copytrading-lead-notification"
 
+	WSChannelRFQs             = "rfqs"
+	WSChannelQuotes           = "quotes"
+	WSChannelStrucBlockTrades = "struc-block-trades"
+
 	WSChannelDepositInfo    = "deposit-info"
 	WSChannelWithdrawalInfo = "withdrawal-info"
 
@@ -220,6 +224,21 @@ func WSParseAlgoRecurringBuy(message []byte) (*WSData[WSRecurringBuyOrder], bool
 // WSParseCopytradingLeadNotification 解析 copytrading-lead-notification 频道推送消息（business WS，需要登录）。
 func WSParseCopytradingLeadNotification(message []byte) (*WSData[WSCopyTradingLeadNotification], bool, error) {
 	return WSParseChannelData[WSCopyTradingLeadNotification](message, WSChannelCopytradingLeadNotification)
+}
+
+// WSParseRFQs 解析 rfqs 频道推送消息（business WS，需要登录）。
+func WSParseRFQs(message []byte) (*WSData[WSRFQ], bool, error) {
+	return WSParseChannelData[WSRFQ](message, WSChannelRFQs)
+}
+
+// WSParseQuotes 解析 quotes 频道推送消息（business WS，需要登录）。
+func WSParseQuotes(message []byte) (*WSData[WSQuote], bool, error) {
+	return WSParseChannelData[WSQuote](message, WSChannelQuotes)
+}
+
+// WSParseStrucBlockTrades 解析 struc-block-trades 频道推送消息（business WS，需要登录）。
+func WSParseStrucBlockTrades(message []byte) (*WSData[WSStrucBlockTrade], bool, error) {
+	return WSParseChannelData[WSStrucBlockTrade](message, WSChannelStrucBlockTrades)
 }
 
 // WSParseDepositInfo 解析 deposit-info 频道推送消息（business WS，需要登录）。
@@ -828,4 +847,117 @@ type WSRecurringBuyItem struct {
 	AvgPx    string `json:"avgPx"`
 	Profit   string `json:"profit"`
 	TotalAmt string `json:"totalAmt"`
+}
+
+// WSRFQ 表示询价单推送（rfqs）的数据项（精简版）。
+type WSRFQ struct {
+	RfqId   string `json:"rfqId"`
+	ClRfqId string `json:"clRfqId"`
+	Tag     string `json:"tag"`
+
+	CTime int64 `json:"cTime,string"`
+	UTime int64 `json:"uTime,string"`
+
+	State      string `json:"state"`
+	FlowType   string `json:"flowType"`
+	TraderCode string `json:"traderCode"`
+
+	ValidUntil            int64    `json:"validUntil,string"`
+	AllowPartialExecution bool     `json:"allowPartialExecution"`
+	Counterparties        []string `json:"counterparties"`
+
+	Legs []WSRFQLeg `json:"legs"`
+
+	GroupId   string           `json:"groupId"`
+	AcctAlloc []WSRFQAcctAlloc `json:"acctAlloc"`
+}
+
+type WSRFQLeg struct {
+	InstId  string `json:"instId"`
+	TdMode  string `json:"tdMode"`
+	Ccy     string `json:"ccy"`
+	Sz      string `json:"sz"`
+	Side    string `json:"side"`
+	PosSide string `json:"posSide"`
+	TgtCcy  string `json:"tgtCcy"`
+
+	TradeQuoteCcy string `json:"tradeQuoteCcy"`
+}
+
+type WSRFQAcctAlloc struct {
+	Acct string              `json:"acct"`
+	Legs []WSRFQAcctAllocLeg `json:"legs"`
+}
+
+type WSRFQAcctAllocLeg struct {
+	InstId string `json:"instId"`
+	Sz     string `json:"sz"`
+	TdMode string `json:"tdMode"`
+	Ccy    string `json:"ccy"`
+}
+
+// WSQuote 表示报价单推送（quotes）的数据项（精简版）。
+type WSQuote struct {
+	QuoteId   string `json:"quoteId"`
+	ClQuoteId string `json:"clQuoteId"`
+	RfqId     string `json:"rfqId"`
+	Tag       string `json:"tag"`
+
+	ValidUntil int64 `json:"validUntil,string"`
+	CTime      int64 `json:"cTime,string"`
+	UTime      int64 `json:"uTime,string"`
+
+	TraderCode string `json:"traderCode"`
+	QuoteSide  string `json:"quoteSide"`
+	State      string `json:"state"`
+	Reason     string `json:"reason"`
+
+	Legs []WSQuoteLeg `json:"legs"`
+}
+
+type WSQuoteLeg struct {
+	Px     string `json:"px"`
+	Sz     string `json:"sz"`
+	InstId string `json:"instId"`
+
+	TdMode  string `json:"tdMode"`
+	Ccy     string `json:"ccy"`
+	Side    string `json:"side"`
+	PosSide string `json:"posSide"`
+	TgtCcy  string `json:"tgtCcy"`
+
+	TradeQuoteCcy string `json:"tradeQuoteCcy"`
+}
+
+// WSStrucBlockTrade 表示大宗交易推送（struc-block-trades）的数据项（精简版）。
+type WSStrucBlockTrade struct {
+	CTime int64 `json:"cTime,string"`
+
+	RfqId     string `json:"rfqId"`
+	ClRfqId   string `json:"clRfqId"`
+	QuoteId   string `json:"quoteId"`
+	ClQuoteId string `json:"clQuoteId"`
+	BlockTdId string `json:"blockTdId"`
+	Tag       string `json:"tag"`
+
+	TTraderCode string `json:"tTraderCode"`
+	MTraderCode string `json:"mTraderCode"`
+
+	IsSuccessful bool   `json:"isSuccessful"`
+	ErrorCode    string `json:"errorCode"`
+
+	Legs []WSStrucBlockTradeLeg `json:"legs"`
+}
+
+type WSStrucBlockTradeLeg struct {
+	Px     string `json:"px"`
+	Sz     string `json:"sz"`
+	InstId string `json:"instId"`
+	Side   string `json:"side"`
+
+	Fee    string `json:"fee"`
+	FeeCcy string `json:"feeCcy"`
+
+	TradeId string `json:"tradeId"`
+	TgtCcy  string `json:"tgtCcy"`
 }
