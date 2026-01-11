@@ -206,6 +206,25 @@
 
 | Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
 |---|---|---|---|---|---|
+| `GET /api/v5/rfq/counterparties` | `private` | [`rfq_counterparties`](../v5/rfq_counterparties_service.go) | ✅ [test](../v5/rfq_counterparties_service_test.go) | [ex](../examples/rfq_counterparties) | `rest, auth-private, rfq` |
+| `POST /api/v5/rfq/create-rfq` | `private` | [`rfq_create_rfq`](../v5/rfq_create_rfq_service.go) | ✅ [test](../v5/rfq_create_rfq_service_test.go) | [ex](../examples/rfq_create_rfq) | `rest, auth-private, rfq, trade` |
+| `POST /api/v5/rfq/cancel-rfq` | `private` | [`rfq_cancel_rfq`](../v5/rfq_cancel_rfq_service.go) | ✅ [test](../v5/rfq_cancel_rfq_service_test.go) | [ex](../examples/rfq_cancel_rfq) | `rest, auth-private, rfq, trade` |
+| `POST /api/v5/rfq/cancel-batch-rfqs` | `private` | [`rfq_cancel_batch_rfqs`](../v5/rfq_cancel_batch_rfqs_service.go) | ✅ [test](../v5/rfq_cancel_batch_rfqs_service_test.go) | — | `rest, auth-private, rfq, trade` |
+| `POST /api/v5/rfq/cancel-all-rfqs` | `private` | [`rfq_cancel_all_rfqs`](../v5/rfq_cancel_all_rfqs_service.go) | ✅ [test](../v5/rfq_cancel_all_rfqs_service_test.go) | — | `rest, auth-private, rfq, trade` |
+| `POST /api/v5/rfq/execute-quote` | `private` | [`rfq_execute_quote`](../v5/rfq_execute_quote_service.go) | ✅ [test](../v5/rfq_execute_quote_service_test.go) | [ex](../examples/rfq_execute_quote) | `rest, auth-private, rfq, trade` |
+| `GET /api/v5/rfq/maker-instrument-settings` | `private` | [`rfq_maker_instrument_settings`](../v5/rfq_maker_instrument_settings_service.go) | ✅ [test](../v5/rfq_maker_instrument_settings_service_test.go) | [ex](../examples/rfq_maker_instrument_settings) | `rest, auth-private, rfq, maker` |
+| `POST /api/v5/rfq/maker-instrument-settings` | `private` | [`rfq_set_maker_instrument_settings`](../v5/rfq_set_maker_instrument_settings_service.go) | ✅ [test](../v5/rfq_set_maker_instrument_settings_service_test.go) | [ex](../examples/rfq_set_maker_instrument_settings) | `rest, auth-private, rfq, maker` |
+| `POST /api/v5/rfq/mmp-reset` | `private` | [`rfq_mmp_reset`](../v5/rfq_mmp_reset_service.go) | ✅ [test](../v5/rfq_mmp_reset_service_test.go) | [ex](../examples/rfq_mmp_reset) | `rest, auth-private, rfq, maker, mmp` |
+| `POST /api/v5/rfq/mmp-config` | `private` | [`rfq_set_mmp_config`](../v5/rfq_set_mmp_config_service.go) | ✅ [test](../v5/rfq_set_mmp_config_service_test.go) | [ex](../examples/rfq_set_mmp_config) | `rest, auth-private, rfq, maker, mmp` |
+| `GET /api/v5/rfq/mmp-config` | `private` | [`rfq_mmp_config`](../v5/rfq_mmp_config_service.go) | ✅ [test](../v5/rfq_mmp_config_service_test.go) | [ex](../examples/rfq_mmp_config) | `rest, auth-private, rfq, maker, mmp` |
+| `POST /api/v5/rfq/create-quote` | `private` | [`rfq_create_quote`](../v5/rfq_create_quote_service.go) | ✅ [test](../v5/rfq_create_quote_service_test.go) | [ex](../examples/rfq_create_quote) | `rest, auth-private, rfq, maker, trade` |
+| `POST /api/v5/rfq/cancel-quote` | `private` | [`rfq_cancel_quote`](../v5/rfq_cancel_quote_service.go) | ✅ [test](../v5/rfq_cancel_quote_service_test.go) | [ex](../examples/rfq_cancel_quote) | `rest, auth-private, rfq, maker, trade` |
+| `POST /api/v5/rfq/cancel-batch-quotes` | `private` | [`rfq_cancel_batch_quotes`](../v5/rfq_cancel_batch_quotes_service.go) | ✅ [test](../v5/rfq_cancel_batch_quotes_service_test.go) | — | `rest, auth-private, rfq, maker, trade` |
+| `POST /api/v5/rfq/cancel-all-quotes` | `private` | [`rfq_cancel_all_quotes`](../v5/rfq_cancel_all_quotes_service.go) | ✅ [test](../v5/rfq_cancel_all_quotes_service_test.go) | — | `rest, auth-private, rfq, maker, trade` |
+| `POST /api/v5/rfq/cancel-all-after` | `private` | [`rfq_cancel_all_after`](../v5/rfq_cancel_all_after_service.go) | ✅ [test](../v5/rfq_cancel_all_after_service_test.go) | [ex](../examples/rfq_cancel_all_after) | `rest, auth-private, rfq, risk` |
+| `GET /api/v5/rfq/rfqs` | `private` | [`rfq_rfqs`](../v5/rfq_rfqs_service.go) | ✅ [test](../v5/rfq_rfqs_service_test.go) | [ex](../examples/rfq_rfqs) | `rest, auth-private, rfq` |
+| `GET /api/v5/rfq/quotes` | `private` | [`rfq_quotes`](../v5/rfq_quotes_service.go) | ✅ [test](../v5/rfq_quotes_service_test.go) | [ex](../examples/rfq_quotes) | `rest, auth-private, rfq` |
+| `GET /api/v5/rfq/trades` | `private` | [`rfq_trades`](../v5/rfq_trades_service.go) | ✅ [test](../v5/rfq_trades_service_test.go) | [ex](../examples/rfq_trades) | `rest, auth-private, rfq` |
 | `GET /api/v5/rfq/public-trades` | `public` | [`rfq_public_trades`](../v5/rfq_public_trades_service.go) | ✅ [test](../v5/rfq_public_trades_service_test.go) | [ex](../examples/rfq_public_trades) | `rest, auth-public, rfq` |
 
 ### SPRD（价差交易）

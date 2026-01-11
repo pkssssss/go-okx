@@ -874,26 +874,29 @@ type WSRFQ struct {
 
 type WSRFQLeg struct {
 	InstId  string `json:"instId"`
-	TdMode  string `json:"tdMode"`
-	Ccy     string `json:"ccy"`
+	TdMode  string `json:"tdMode,omitempty"`
+	Ccy     string `json:"ccy,omitempty"`
 	Sz      string `json:"sz"`
 	Side    string `json:"side"`
-	PosSide string `json:"posSide"`
-	TgtCcy  string `json:"tgtCcy"`
+	PosSide string `json:"posSide,omitempty"`
+	TgtCcy  string `json:"tgtCcy,omitempty"`
 
-	TradeQuoteCcy string `json:"tradeQuoteCcy"`
+	TradeQuoteCcy string `json:"tradeQuoteCcy,omitempty"`
 }
 
 type WSRFQAcctAlloc struct {
-	Acct string              `json:"acct"`
-	Legs []WSRFQAcctAllocLeg `json:"legs"`
+	Acct  string              `json:"acct"`
+	SCode string              `json:"sCode,omitempty"`
+	SMsg  string              `json:"sMsg,omitempty"`
+	Legs  []WSRFQAcctAllocLeg `json:"legs"`
 }
 
 type WSRFQAcctAllocLeg struct {
-	InstId string `json:"instId"`
-	Sz     string `json:"sz"`
-	TdMode string `json:"tdMode"`
-	Ccy    string `json:"ccy"`
+	InstId  string `json:"instId"`
+	Sz      string `json:"sz"`
+	TdMode  string `json:"tdMode,omitempty"`
+	Ccy     string `json:"ccy,omitempty"`
+	PosSide string `json:"posSide,omitempty"`
 }
 
 // WSQuote 表示报价单推送（quotes）的数据项（精简版）。
@@ -901,6 +904,7 @@ type WSQuote struct {
 	QuoteId   string `json:"quoteId"`
 	ClQuoteId string `json:"clQuoteId"`
 	RfqId     string `json:"rfqId"`
+	ClRfqId   string `json:"clRfqId"`
 	Tag       string `json:"tag"`
 
 	ValidUntil int64 `json:"validUntil,string"`
@@ -920,13 +924,13 @@ type WSQuoteLeg struct {
 	Sz     string `json:"sz"`
 	InstId string `json:"instId"`
 
-	TdMode  string `json:"tdMode"`
-	Ccy     string `json:"ccy"`
+	TdMode  string `json:"tdMode,omitempty"`
+	Ccy     string `json:"ccy,omitempty"`
 	Side    string `json:"side"`
-	PosSide string `json:"posSide"`
-	TgtCcy  string `json:"tgtCcy"`
+	PosSide string `json:"posSide,omitempty"`
+	TgtCcy  string `json:"tgtCcy,omitempty"`
 
-	TradeQuoteCcy string `json:"tradeQuoteCcy"`
+	TradeQuoteCcy string `json:"tradeQuoteCcy,omitempty"`
 }
 
 // WSStrucBlockTrade 表示大宗交易推送（struc-block-trades）的数据项（精简版）。
@@ -946,7 +950,8 @@ type WSStrucBlockTrade struct {
 	IsSuccessful bool   `json:"isSuccessful"`
 	ErrorCode    string `json:"errorCode"`
 
-	Legs []WSStrucBlockTradeLeg `json:"legs"`
+	Legs      []WSStrucBlockTradeLeg       `json:"legs"`
+	AcctAlloc []WSStrucBlockTradeAcctAlloc `json:"acctAlloc,omitempty"`
 }
 
 type WSStrucBlockTradeLeg struct {
@@ -958,6 +963,27 @@ type WSStrucBlockTradeLeg struct {
 	Fee    string `json:"fee"`
 	FeeCcy string `json:"feeCcy"`
 
-	TradeId string `json:"tradeId"`
-	TgtCcy  string `json:"tgtCcy"`
+	TradeId       string `json:"tradeId"`
+	TgtCcy        string `json:"tgtCcy,omitempty"`
+	TradeQuoteCcy string `json:"tradeQuoteCcy,omitempty"`
+}
+
+type WSStrucBlockTradeAcctAlloc struct {
+	BlockTdId string                          `json:"blockTdId"`
+	ErrorCode string                          `json:"errorCode"`
+	Acct      string                          `json:"acct"`
+	Legs      []WSStrucBlockTradeAcctAllocLeg `json:"legs"`
+}
+
+type WSStrucBlockTradeAcctAllocLeg struct {
+	InstId string `json:"instId"`
+	Px     string `json:"px"`
+	Sz     string `json:"sz"`
+	Side   string `json:"side"`
+
+	Fee    string `json:"fee"`
+	FeeCcy string `json:"feeCcy"`
+
+	TradeId       string `json:"tradeId"`
+	TradeQuoteCcy string `json:"tradeQuoteCcy,omitempty"`
 }
