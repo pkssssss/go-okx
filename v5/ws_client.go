@@ -149,44 +149,45 @@ type WSClient struct {
 	errHandler   WSErrorHandler
 	eventHandler WSEventHandler
 
-	typedMu                   sync.RWMutex
-	ordersHandler             func(order TradeOrder)
-	fillsHandler              func(fill WSFill)
-	accountHandler            func(balance AccountBalance)
-	positionsHandler          func(position AccountPosition)
-	balanceAndPositionHandler func(data WSBalanceAndPosition)
-	liquidationWarningHandler func(warning WSLiquidationWarning)
-	accountGreeksHandler      func(greeks AccountGreeks)
-	ordersAlgoHandler         func(order TradeAlgoOrder)
-	algoAdvanceHandler        func(order TradeAlgoOrder)
-	gridOrdersSpotHandler     func(order WSGridOrder)
-	gridOrdersContractHandler func(order WSGridOrder)
-	gridPositionsHandler      func(position WSGridPosition)
-	gridSubOrdersHandler      func(order WSGridSubOrder)
-	algoRecurringBuyHandler   func(order WSRecurringBuyOrder)
-	depositInfoHandler        func(info WSDepositInfo)
-	withdrawalInfoHandler     func(info WSWithdrawalInfo)
-	sprdOrdersHandler         func(order SprdOrder)
-	sprdTradesHandler         func(trade WSSprdTrade)
-	tickersHandler            func(ticker MarketTicker)
-	tradesHandler             func(trade MarketTrade)
-	tradesAllHandler          func(trade MarketTrade)
-	orderBookHandler          func(data WSData[WSOrderBook])
-	statusHandler             func(status SystemStatus)
-	openInterestHandler       func(oi OpenInterest)
-	fundingRateHandler        func(rate FundingRate)
-	markPriceHandler          func(price MarkPrice)
-	indexTickersHandler       func(ticker IndexTicker)
-	priceLimitHandler         func(limit PriceLimit)
-	optSummaryHandler         func(summary OptSummary)
-	liquidationOrdersHandler  func(order LiquidationOrder)
-	optionTradesHandler       func(trade WSOptionTrade)
-	callAuctionDetailsHandler func(detail WSCallAuctionDetails)
-	candlesHandler            func(candle WSCandle)
-	priceCandlesHandler       func(candle WSPriceCandle)
-	sprdPublicTradesHandler   func(trade WSSprdPublicTrade)
-	sprdTickersHandler        func(ticker MarketSprdTicker)
-	opReplyHandler            func(reply WSOpReply, raw []byte)
+	typedMu                            sync.RWMutex
+	ordersHandler                      func(order TradeOrder)
+	fillsHandler                       func(fill WSFill)
+	accountHandler                     func(balance AccountBalance)
+	positionsHandler                   func(position AccountPosition)
+	balanceAndPositionHandler          func(data WSBalanceAndPosition)
+	liquidationWarningHandler          func(warning WSLiquidationWarning)
+	accountGreeksHandler               func(greeks AccountGreeks)
+	ordersAlgoHandler                  func(order TradeAlgoOrder)
+	algoAdvanceHandler                 func(order TradeAlgoOrder)
+	gridOrdersSpotHandler              func(order WSGridOrder)
+	gridOrdersContractHandler          func(order WSGridOrder)
+	gridPositionsHandler               func(position WSGridPosition)
+	gridSubOrdersHandler               func(order WSGridSubOrder)
+	algoRecurringBuyHandler            func(order WSRecurringBuyOrder)
+	copyTradingLeadNotificationHandler func(note WSCopyTradingLeadNotification)
+	depositInfoHandler                 func(info WSDepositInfo)
+	withdrawalInfoHandler              func(info WSWithdrawalInfo)
+	sprdOrdersHandler                  func(order SprdOrder)
+	sprdTradesHandler                  func(trade WSSprdTrade)
+	tickersHandler                     func(ticker MarketTicker)
+	tradesHandler                      func(trade MarketTrade)
+	tradesAllHandler                   func(trade MarketTrade)
+	orderBookHandler                   func(data WSData[WSOrderBook])
+	statusHandler                      func(status SystemStatus)
+	openInterestHandler                func(oi OpenInterest)
+	fundingRateHandler                 func(rate FundingRate)
+	markPriceHandler                   func(price MarkPrice)
+	indexTickersHandler                func(ticker IndexTicker)
+	priceLimitHandler                  func(limit PriceLimit)
+	optSummaryHandler                  func(summary OptSummary)
+	liquidationOrdersHandler           func(order LiquidationOrder)
+	optionTradesHandler                func(trade WSOptionTrade)
+	callAuctionDetailsHandler          func(detail WSCallAuctionDetails)
+	candlesHandler                     func(candle WSCandle)
+	priceCandlesHandler                func(candle WSPriceCandle)
+	sprdPublicTradesHandler            func(trade WSSprdPublicTrade)
+	sprdTickersHandler                 func(ticker MarketSprdTicker)
+	opReplyHandler                     func(reply WSOpReply, raw []byte)
 
 	typedAsync  bool
 	typedBuffer int
@@ -753,6 +754,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 	gridPositionsH := w.gridPositionsHandler
 	gridSubOrdersH := w.gridSubOrdersHandler
 	algoRecurringBuyH := w.algoRecurringBuyHandler
+	copyTradingLeadNotificationH := w.copyTradingLeadNotificationHandler
 	depInfoH := w.depositInfoHandler
 	wdInfoH := w.withdrawalInfoHandler
 	sprdOrdersH := w.sprdOrdersHandler
@@ -791,6 +793,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		gridPositionsH == nil &&
 		gridSubOrdersH == nil &&
 		algoRecurringBuyH == nil &&
+		copyTradingLeadNotificationH == nil &&
 		depInfoH == nil &&
 		wdInfoH == nil &&
 		sprdOrdersH == nil &&
@@ -953,6 +956,15 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAlgoRecurringBuy, algoRecurringBuy: dm.Data})
+	case WSChannelCopytradingLeadNotification:
+		if copyTradingLeadNotificationH == nil {
+			return
+		}
+		dm, ok, err := WSParseCopytradingLeadNotification(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindCopyTradingLeadNotification, copyTradingLeadNotification: dm.Data})
 	case WSChannelDepositInfo:
 		if depInfoH == nil {
 			return

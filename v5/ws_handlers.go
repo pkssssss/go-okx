@@ -112,6 +112,14 @@ func WithWSAlgoRecurringBuyHandler(handler func(order WSRecurringBuyOrder)) WSOp
 	}
 }
 
+// WithWSCopyTradingLeadNotificationHandler 设置 copytrading-lead-notification 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSCopyTradingLeadNotificationHandler(handler func(note WSCopyTradingLeadNotification)) WSOption {
+	return func(c *WSClient) {
+		c.OnCopyTradingLeadNotification(handler)
+	}
+}
+
 // WithWSDepositInfoHandler 设置 deposit-info 推送的逐条回调（business WS，需要登录）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
@@ -434,6 +442,16 @@ func (w *WSClient) OnAlgoRecurringBuy(handler func(order WSRecurringBuyOrder)) {
 	}
 	w.typedMu.Lock()
 	w.algoRecurringBuyHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnCopyTradingLeadNotification 设置 copytrading-lead-notification 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnCopyTradingLeadNotification(handler func(note WSCopyTradingLeadNotification)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.copyTradingLeadNotificationHandler = handler
 	w.typedMu.Unlock()
 }
 

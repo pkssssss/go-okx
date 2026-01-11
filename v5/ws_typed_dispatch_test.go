@@ -671,3 +671,34 @@ func TestWSClient_onDataMessage_AlgoRecurringBuy_TypedAsync_Dispatches(t *testin
 		t.Fatalf("timeout waiting algo-recurring-buy")
 	}
 }
+
+func TestWSClient_onDataMessage_CopyTradingLeadNotification_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSCopyTradingLeadNotification, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnCopyTradingLeadNotification(func(note WSCopyTradingLeadNotification) {
+		select {
+		case gotCh <- note:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"copytrading-lead-notification","instType":"SWAP"},"data":[{"infoType":"2","instId":"","instType":"SWAP","maxLeadTraderNum":"3","minLeadEq":"","posSide":"","side":"","subPosId":"667695035433385984","uniqueCode":"3AF72F63E3EAD701"}]}`))
+
+	select {
+	case note := <-gotCh:
+		if note.InfoType != "2" || note.InstType != "SWAP" || note.SubPosId != "667695035433385984" || note.UniqueCode != "3AF72F63E3EAD701" {
+			t.Fatalf("note = %#v", note)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting copytrading-lead-notification")
+	}
+}

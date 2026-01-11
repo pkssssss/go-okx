@@ -22,6 +22,7 @@ const (
 	wsTypedKindGridPositions
 	wsTypedKindGridSubOrders
 	wsTypedKindAlgoRecurringBuy
+	wsTypedKindCopyTradingLeadNotification
 	wsTypedKindDepositInfo
 	wsTypedKindWithdrawalInfo
 	wsTypedKindSprdOrders
@@ -77,6 +78,8 @@ func (k wsTypedKind) String() string {
 		return "grid_sub_orders"
 	case wsTypedKindAlgoRecurringBuy:
 		return "algo_recurring_buy"
+	case wsTypedKindCopyTradingLeadNotification:
+		return "copytrading_lead_notification"
 	case wsTypedKindDepositInfo:
 		return "deposit_info"
 	case wsTypedKindWithdrawalInfo:
@@ -131,35 +134,36 @@ func (k wsTypedKind) String() string {
 type wsTypedTask struct {
 	kind wsTypedKind
 
-	orders              []TradeOrder
-	fills               []WSFill
-	balances            []AccountBalance
-	positions           []AccountPosition
-	balPos              []WSBalanceAndPosition
-	liquidationWarnings []WSLiquidationWarning
-	accountGreeks       []AccountGreeks
-	ordersAlgo          []TradeAlgoOrder
-	algoAdvance         []TradeAlgoOrder
-	gridOrdersSpot      []WSGridOrder
-	gridOrdersContract  []WSGridOrder
-	gridPositions       []WSGridPosition
-	gridSubOrders       []WSGridSubOrder
-	algoRecurringBuy    []WSRecurringBuyOrder
-	depositInfo         []WSDepositInfo
-	withdrawalInfo      []WSWithdrawalInfo
-	sprdOrders          []SprdOrder
-	sprdTrades          []WSSprdTrade
-	tickers             []MarketTicker
-	trades              []MarketTrade
-	tradesAll           []MarketTrade
-	statuses            []SystemStatus
-	orderBooks          []WSData[WSOrderBook]
-	openInterests       []OpenInterest
-	fundingRates        []FundingRate
-	markPrices          []MarkPrice
-	indexTickers        []IndexTicker
-	priceLimits         []PriceLimit
-	optSummaries        []OptSummary
+	orders                      []TradeOrder
+	fills                       []WSFill
+	balances                    []AccountBalance
+	positions                   []AccountPosition
+	balPos                      []WSBalanceAndPosition
+	liquidationWarnings         []WSLiquidationWarning
+	accountGreeks               []AccountGreeks
+	ordersAlgo                  []TradeAlgoOrder
+	algoAdvance                 []TradeAlgoOrder
+	gridOrdersSpot              []WSGridOrder
+	gridOrdersContract          []WSGridOrder
+	gridPositions               []WSGridPosition
+	gridSubOrders               []WSGridSubOrder
+	algoRecurringBuy            []WSRecurringBuyOrder
+	copyTradingLeadNotification []WSCopyTradingLeadNotification
+	depositInfo                 []WSDepositInfo
+	withdrawalInfo              []WSWithdrawalInfo
+	sprdOrders                  []SprdOrder
+	sprdTrades                  []WSSprdTrade
+	tickers                     []MarketTicker
+	trades                      []MarketTrade
+	tradesAll                   []MarketTrade
+	statuses                    []SystemStatus
+	orderBooks                  []WSData[WSOrderBook]
+	openInterests               []OpenInterest
+	fundingRates                []FundingRate
+	markPrices                  []MarkPrice
+	indexTickers                []IndexTicker
+	priceLimits                 []PriceLimit
+	optSummaries                []OptSummary
 
 	liquidationOrders  []LiquidationOrder
 	optionTrades       []WSOptionTrade
@@ -362,6 +366,17 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, order := range task.algoRecurringBuy {
 			o := order
 			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindCopyTradingLeadNotification:
+		w.typedMu.RLock()
+		h := w.copyTradingLeadNotificationHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.copyTradingLeadNotification) == 0 {
+			return
+		}
+		for _, note := range task.copyTradingLeadNotification {
+			n := note
+			w.safeTypedCall(task.kind, func() { h(n) })
 		}
 	case wsTypedKindDepositInfo:
 		w.typedMu.RLock()

@@ -15,13 +15,14 @@ const (
 	WSChannelLiquidationWarning = "liquidation-warning"
 	WSChannelAccountGreeks      = "account-greeks"
 
-	WSChannelOrdersAlgo         = "orders-algo"
-	WSChannelAlgoAdvance        = "algo-advance"
-	WSChannelGridOrdersSpot     = "grid-orders-spot"
-	WSChannelGridOrdersContract = "grid-orders-contract"
-	WSChannelGridPositions      = "grid-positions"
-	WSChannelGridSubOrders      = "grid-sub-orders"
-	WSChannelAlgoRecurringBuy   = "algo-recurring-buy"
+	WSChannelOrdersAlgo                  = "orders-algo"
+	WSChannelAlgoAdvance                 = "algo-advance"
+	WSChannelGridOrdersSpot              = "grid-orders-spot"
+	WSChannelGridOrdersContract          = "grid-orders-contract"
+	WSChannelGridPositions               = "grid-positions"
+	WSChannelGridSubOrders               = "grid-sub-orders"
+	WSChannelAlgoRecurringBuy            = "algo-recurring-buy"
+	WSChannelCopytradingLeadNotification = "copytrading-lead-notification"
 
 	WSChannelDepositInfo    = "deposit-info"
 	WSChannelWithdrawalInfo = "withdrawal-info"
@@ -214,6 +215,11 @@ func WSParseGridSubOrders(message []byte) (*WSData[WSGridSubOrder], bool, error)
 // WSParseAlgoRecurringBuy 解析 algo-recurring-buy 频道推送消息（business WS，需要登录）。
 func WSParseAlgoRecurringBuy(message []byte) (*WSData[WSRecurringBuyOrder], bool, error) {
 	return WSParseChannelData[WSRecurringBuyOrder](message, WSChannelAlgoRecurringBuy)
+}
+
+// WSParseCopytradingLeadNotification 解析 copytrading-lead-notification 频道推送消息（business WS，需要登录）。
+func WSParseCopytradingLeadNotification(message []byte) (*WSData[WSCopyTradingLeadNotification], bool, error) {
+	return WSParseChannelData[WSCopyTradingLeadNotification](message, WSChannelCopytradingLeadNotification)
 }
 
 // WSParseDepositInfo 解析 deposit-info 频道推送消息（business WS，需要登录）。
@@ -717,6 +723,20 @@ type WSGridPosition struct {
 	CTime int64 `json:"cTime,string"`
 	UTime int64 `json:"uTime,string"`
 	PTime int64 `json:"pTime,string"`
+}
+
+// WSCopyTradingLeadNotification 表示带单失败通知推送（copytrading-lead-notification）的数据项（精简版）。
+type WSCopyTradingLeadNotification struct {
+	InfoType string `json:"infoType"`
+
+	SubPosId         string `json:"subPosId"`
+	UniqueCode       string `json:"uniqueCode"`
+	InstType         string `json:"instType"`
+	InstId           string `json:"instId"`
+	Side             string `json:"side"`
+	PosSide          string `json:"posSide"`
+	MaxLeadTraderNum string `json:"maxLeadTraderNum"`
+	MinLeadEq        string `json:"minLeadEq"`
 }
 
 // WSGridSubOrder 表示网格策略子订单推送（grid-sub-orders）的数据项（精简版）。
