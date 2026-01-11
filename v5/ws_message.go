@@ -15,6 +15,9 @@ const (
 	WSChannelLiquidationWarning = "liquidation-warning"
 	WSChannelAccountGreeks      = "account-greeks"
 
+	WSChannelOrdersAlgo  = "orders-algo"
+	WSChannelAlgoAdvance = "algo-advance"
+
 	WSChannelDepositInfo    = "deposit-info"
 	WSChannelWithdrawalInfo = "withdrawal-info"
 
@@ -171,6 +174,16 @@ func WSParseLiquidationWarning(message []byte) (*WSData[WSLiquidationWarning], b
 // WSParseAccountGreeks 解析 account-greeks 频道推送消息（private WS，需要登录）。
 func WSParseAccountGreeks(message []byte) (*WSData[AccountGreeks], bool, error) {
 	return WSParseChannelData[AccountGreeks](message, WSChannelAccountGreeks)
+}
+
+// WSParseOrdersAlgo 解析 orders-algo 频道推送消息（business WS，需要登录）。
+func WSParseOrdersAlgo(message []byte) (*WSData[TradeAlgoOrder], bool, error) {
+	return WSParseChannelData[TradeAlgoOrder](message, WSChannelOrdersAlgo)
+}
+
+// WSParseAlgoAdvance 解析 algo-advance 频道推送消息（business WS，需要登录）。
+func WSParseAlgoAdvance(message []byte) (*WSData[TradeAlgoOrder], bool, error) {
+	return WSParseChannelData[TradeAlgoOrder](message, WSChannelAlgoAdvance)
 }
 
 // WSParseDepositInfo 解析 deposit-info 频道推送消息（business WS，需要登录）。

@@ -8,7 +8,7 @@
 - `client.NewWSPublic()`：`/ws/v5/public`，无需登录，适合行情/深度等公共数据。
 - `client.NewWSPrivate()`：`/ws/v5/private`，需要登录，适合账户/订单/仓位等私有频道，且可用于 WS 交易 op（下单/撤单/改单）。
 - `client.NewWSBusiness()`：`/ws/v5/business`，是否需要登录取决于频道（如 K 线无需登录；资金推送需要登录）。
-- `client.NewWSBusinessPrivate()`：`/ws/v5/business` + 强制登录（如 `deposit-info` / `withdrawal-info` 等）。
+- `client.NewWSBusinessPrivate()`：`/ws/v5/business` + 强制登录（如 `deposit-info` / `withdrawal-info` / `orders-algo` / `algo-advance` 等）。
 
 > 建议：凡是需要登录的 WS，都先调用一次 `client.SyncTime(ctx)`，减少时间偏移导致的登录失败。
 
@@ -98,4 +98,3 @@ OKX 的 K 线数据本身不带 `instId/sprdId`，需要通过订阅参数 `arg`
 - err handler：运行时错误回调（断线、心跳超时、队列满、回调 panic 等）
 
 SDK 会对 raw/event/err handler 的 panic 做保护（不会让 WS 主循环崩溃）。
-

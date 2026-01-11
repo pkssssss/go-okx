@@ -156,6 +156,8 @@ type WSClient struct {
 	balanceAndPositionHandler func(data WSBalanceAndPosition)
 	liquidationWarningHandler func(warning WSLiquidationWarning)
 	accountGreeksHandler      func(greeks AccountGreeks)
+	ordersAlgoHandler         func(order TradeAlgoOrder)
+	algoAdvanceHandler        func(order TradeAlgoOrder)
 	depositInfoHandler        func(info WSDepositInfo)
 	withdrawalInfoHandler     func(info WSWithdrawalInfo)
 	sprdOrdersHandler         func(order SprdOrder)
@@ -738,6 +740,8 @@ func (w *WSClient) onDataMessage(message []byte) {
 	balPosH := w.balanceAndPositionHandler
 	liqWarningH := w.liquidationWarningHandler
 	accountGreeksH := w.accountGreeksHandler
+	ordersAlgoH := w.ordersAlgoHandler
+	algoAdvanceH := w.algoAdvanceHandler
 	depInfoH := w.depositInfoHandler
 	wdInfoH := w.withdrawalInfoHandler
 	sprdOrdersH := w.sprdOrdersHandler
@@ -769,6 +773,8 @@ func (w *WSClient) onDataMessage(message []byte) {
 		balPosH == nil &&
 		liqWarningH == nil &&
 		accountGreeksH == nil &&
+		ordersAlgoH == nil &&
+		algoAdvanceH == nil &&
 		depInfoH == nil &&
 		wdInfoH == nil &&
 		sprdOrdersH == nil &&
@@ -868,6 +874,24 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAccountGreeks, accountGreeks: dm.Data})
+	case WSChannelOrdersAlgo:
+		if ordersAlgoH == nil {
+			return
+		}
+		dm, ok, err := WSParseOrdersAlgo(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrdersAlgo, ordersAlgo: dm.Data})
+	case WSChannelAlgoAdvance:
+		if algoAdvanceH == nil {
+			return
+		}
+		dm, ok, err := WSParseAlgoAdvance(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAlgoAdvance, algoAdvance: dm.Data})
 	case WSChannelDepositInfo:
 		if depInfoH == nil {
 			return

@@ -451,3 +451,65 @@ func TestWSClient_onDataMessage_Status_TypedAsync_Dispatches(t *testing.T) {
 		t.Fatalf("timeout waiting status")
 	}
 }
+
+func TestWSClient_onDataMessage_OrdersAlgo_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan TradeAlgoOrder, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnOrdersAlgo(func(order TradeAlgoOrder) {
+		select {
+		case gotCh <- order:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"orders-algo","instType":"SPOT","instId":"BTC-USDC"},"data":[{"instType":"SPOT","instId":"BTC-USDC","algoId":"581878926302093312","cTime":"1685002746818","uTime":"1708679675245"}]}`))
+
+	select {
+	case order := <-gotCh:
+		if order.AlgoId != "581878926302093312" || order.InstId != "BTC-USDC" || order.CTime != 1685002746818 {
+			t.Fatalf("order = %#v", order)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting orders-algo")
+	}
+}
+
+func TestWSClient_onDataMessage_AlgoAdvance_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan TradeAlgoOrder, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnAlgoAdvance(func(order TradeAlgoOrder) {
+		select {
+		case gotCh <- order:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"algo-advance","instType":"SPOT","instId":"BTC-USDT"},"data":[{"instType":"SPOT","instId":"BTC-USDT","algoId":"a1","cTime":"1685002746818","uTime":"1708679675245"}]}`))
+
+	select {
+	case order := <-gotCh:
+		if order.AlgoId != "a1" || order.InstId != "BTC-USDT" || order.CTime != 1685002746818 {
+			t.Fatalf("order = %#v", order)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting algo-advance")
+	}
+}

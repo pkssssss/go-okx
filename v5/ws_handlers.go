@@ -56,6 +56,22 @@ func WithWSAccountGreeksHandler(handler func(greeks AccountGreeks)) WSOption {
 	}
 }
 
+// WithWSOrdersAlgoHandler 设置 orders-algo 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSOrdersAlgoHandler(handler func(order TradeAlgoOrder)) WSOption {
+	return func(c *WSClient) {
+		c.OnOrdersAlgo(handler)
+	}
+}
+
+// WithWSAlgoAdvanceHandler 设置 algo-advance 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSAlgoAdvanceHandler(handler func(order TradeAlgoOrder)) WSOption {
+	return func(c *WSClient) {
+		c.OnAlgoAdvance(handler)
+	}
+}
+
 // WithWSDepositInfoHandler 设置 deposit-info 推送的逐条回调（business WS，需要登录）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
@@ -308,6 +324,26 @@ func (w *WSClient) OnAccountGreeks(handler func(greeks AccountGreeks)) {
 	}
 	w.typedMu.Lock()
 	w.accountGreeksHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnOrdersAlgo 设置 orders-algo 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnOrdersAlgo(handler func(order TradeAlgoOrder)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.ordersAlgoHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnAlgoAdvance 设置 algo-advance 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnAlgoAdvance(handler func(order TradeAlgoOrder)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.algoAdvanceHandler = handler
 	w.typedMu.Unlock()
 }
 

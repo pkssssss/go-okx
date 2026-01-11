@@ -15,6 +15,8 @@ const (
 	wsTypedKindBalanceAndPosition
 	wsTypedKindLiquidationWarning
 	wsTypedKindAccountGreeks
+	wsTypedKindOrdersAlgo
+	wsTypedKindAlgoAdvance
 	wsTypedKindDepositInfo
 	wsTypedKindWithdrawalInfo
 	wsTypedKindSprdOrders
@@ -56,6 +58,10 @@ func (k wsTypedKind) String() string {
 		return "liquidation_warning"
 	case wsTypedKindAccountGreeks:
 		return "account_greeks"
+	case wsTypedKindOrdersAlgo:
+		return "orders_algo"
+	case wsTypedKindAlgoAdvance:
+		return "algo_advance"
 	case wsTypedKindDepositInfo:
 		return "deposit_info"
 	case wsTypedKindWithdrawalInfo:
@@ -117,6 +123,8 @@ type wsTypedTask struct {
 	balPos              []WSBalanceAndPosition
 	liquidationWarnings []WSLiquidationWarning
 	accountGreeks       []AccountGreeks
+	ordersAlgo          []TradeAlgoOrder
+	algoAdvance         []TradeAlgoOrder
 	depositInfo         []WSDepositInfo
 	withdrawalInfo      []WSWithdrawalInfo
 	sprdOrders          []SprdOrder
@@ -257,6 +265,28 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, greeks := range task.accountGreeks {
 			g := greeks
 			w.safeTypedCall(task.kind, func() { h(g) })
+		}
+	case wsTypedKindOrdersAlgo:
+		w.typedMu.RLock()
+		h := w.ordersAlgoHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.ordersAlgo) == 0 {
+			return
+		}
+		for _, order := range task.ordersAlgo {
+			o := order
+			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindAlgoAdvance:
+		w.typedMu.RLock()
+		h := w.algoAdvanceHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.algoAdvance) == 0 {
+			return
+		}
+		for _, order := range task.algoAdvance {
+			o := order
+			w.safeTypedCall(task.kind, func() { h(o) })
 		}
 	case wsTypedKindDepositInfo:
 		w.typedMu.RLock()
