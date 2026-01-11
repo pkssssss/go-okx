@@ -242,6 +242,132 @@ func TestWSOrderBookStore_Books5_Replace(t *testing.T) {
 	}
 }
 
+func TestWSOrderBookStore_SprdBooksL2Tbt_SnapshotAndUpdate(t *testing.T) {
+	store := NewWSSprdOrderBookStore(WSChannelSprdBooksL2Tbt, "BTC-USDT_BTC-USDT-SWAP")
+
+	snapshot := &WSData[WSOrderBook]{
+		Arg:    WSArg{Channel: WSChannelSprdBooksL2Tbt, SprdId: "BTC-USDT_BTC-USDT-SWAP"},
+		Action: "snapshot",
+		Data: []WSOrderBook{{
+			Asks: []OrderBookLevel{
+				{Px: "101", Sz: "1", NumOrders: "1"},
+				{Px: "101.5", Sz: "2", NumOrders: "1"},
+				{Px: "102", Sz: "3", NumOrders: "1"},
+			},
+			Bids: []OrderBookLevel{
+				{Px: "100", Sz: "1", NumOrders: "1"},
+				{Px: "99.5", Sz: "2", NumOrders: "1"},
+				{Px: "99", Sz: "3", NumOrders: "1"},
+			},
+			TS:        1,
+			Checksum:  wsOrderBookChecksum([]OrderBookLevel{{Px: "100", Sz: "1"}, {Px: "99.5", Sz: "2"}, {Px: "99", Sz: "3"}}, []OrderBookLevel{{Px: "101", Sz: "1"}, {Px: "101.5", Sz: "2"}, {Px: "102", Sz: "3"}}),
+			PrevSeqId: -1,
+			SeqId:     10,
+		}},
+	}
+
+	if err := store.Apply(snapshot); err != nil {
+		t.Fatalf("Apply(snapshot) error = %v", err)
+	}
+	if !store.Ready() {
+		t.Fatalf("expected ready")
+	}
+	got := store.Snapshot()
+	if got.SprdId != "BTC-USDT_BTC-USDT-SWAP" || got.Channel != WSChannelSprdBooksL2Tbt {
+		t.Fatalf("snapshot meta = %#v", got)
+	}
+	if got.SeqId != 10 || got.TS != 1 {
+		t.Fatalf("snapshot meta = %#v, want seqId=10 ts=1", got)
+	}
+
+	update := &WSData[WSOrderBook]{
+		Arg:    WSArg{Channel: WSChannelSprdBooksL2Tbt, SprdId: "BTC-USDT_BTC-USDT-SWAP"},
+		Action: "update",
+		Data: []WSOrderBook{{
+			Asks: []OrderBookLevel{
+				{Px: "101.5", Sz: "7", NumOrders: "1"},
+				{Px: "102", Sz: "0", NumOrders: "0"},
+			},
+			Bids: []OrderBookLevel{
+				{Px: "99.8", Sz: "5", NumOrders: "1"},
+				{Px: "99.5", Sz: "0", NumOrders: "0"},
+			},
+			TS:        2,
+			Checksum:  wsOrderBookChecksum([]OrderBookLevel{{Px: "100", Sz: "1"}, {Px: "99.8", Sz: "5"}, {Px: "99", Sz: "3"}}, []OrderBookLevel{{Px: "101", Sz: "1"}, {Px: "101.5", Sz: "7"}}),
+			PrevSeqId: 10,
+			SeqId:     15,
+		}},
+	}
+
+	if err := store.Apply(update); err != nil {
+		t.Fatalf("Apply(update) error = %v", err)
+	}
+
+	got = store.Snapshot()
+	if got.SeqId != 15 || got.TS != 2 {
+		t.Fatalf("snapshot meta = %#v, want seqId=15 ts=2", got)
+	}
+	if len(got.Bids) != 3 || got.Bids[0].Px != "100" || got.Bids[1].Px != "99.8" || got.Bids[2].Px != "99" {
+		t.Fatalf("bids = %#v, want 100,99.8,99", got.Bids)
+	}
+	if len(got.Asks) != 2 || got.Asks[0].Px != "101" || got.Asks[1].Px != "101.5" || got.Asks[1].Sz != "7" {
+		t.Fatalf("asks = %#v, want 101,101.5(sz=7)", got.Asks)
+	}
+}
+
+func TestWSOrderBookStore_SprdBooks5_Replace(t *testing.T) {
+	store := NewWSSprdOrderBookStore(WSChannelSprdBooks5, "BTC-USDT_BTC-USDT-SWAP")
+
+	first := &WSData[WSOrderBook]{
+		Arg:    WSArg{Channel: WSChannelSprdBooks5, SprdId: "BTC-USDT_BTC-USDT-SWAP"},
+		Action: "snapshot",
+		Data: []WSOrderBook{{
+			Asks: []OrderBookLevel{
+				{Px: "11", Sz: "1", NumOrders: "1"},
+				{Px: "12", Sz: "1", NumOrders: "1"},
+			},
+			Bids: []OrderBookLevel{
+				{Px: "10", Sz: "1", NumOrders: "1"},
+				{Px: "9", Sz: "1", NumOrders: "1"},
+			},
+			TS:       1,
+			Checksum: wsOrderBookChecksum([]OrderBookLevel{{Px: "10", Sz: "1"}, {Px: "9", Sz: "1"}}, []OrderBookLevel{{Px: "11", Sz: "1"}, {Px: "12", Sz: "1"}}),
+		}},
+	}
+	if err := store.Apply(first); err != nil {
+		t.Fatalf("Apply(first) error = %v", err)
+	}
+
+	second := &WSData[WSOrderBook]{
+		Arg:    WSArg{Channel: WSChannelSprdBooks5, SprdId: "BTC-USDT_BTC-USDT-SWAP"},
+		Action: "update",
+		Data: []WSOrderBook{{
+			Asks: []OrderBookLevel{
+				{Px: "11", Sz: "3", NumOrders: "1"},
+			},
+			Bids: []OrderBookLevel{
+				{Px: "10", Sz: "2", NumOrders: "1"},
+			},
+			TS:       2,
+			Checksum: wsOrderBookChecksum([]OrderBookLevel{{Px: "10", Sz: "2"}}, []OrderBookLevel{{Px: "11", Sz: "3"}}),
+		}},
+	}
+	if err := store.Apply(second); err != nil {
+		t.Fatalf("Apply(second) error = %v", err)
+	}
+
+	got := store.Snapshot()
+	if got.SprdId != "BTC-USDT_BTC-USDT-SWAP" || got.Channel != WSChannelSprdBooks5 {
+		t.Fatalf("snapshot meta = %#v", got)
+	}
+	if len(got.Bids) != 1 || got.Bids[0].Px != "10" || got.Bids[0].Sz != "2" {
+		t.Fatalf("bids = %#v, want only 10(sz=2)", got.Bids)
+	}
+	if len(got.Asks) != 1 || got.Asks[0].Px != "11" || got.Asks[0].Sz != "3" {
+		t.Fatalf("asks = %#v, want only 11(sz=3)", got.Asks)
+	}
+}
+
 func TestWSOrderBookStore_ApplyMessage_Filter(t *testing.T) {
 	store := NewWSOrderBookStore(WSChannelBooks, "BTC-USDT")
 
@@ -269,6 +395,32 @@ func TestWSOrderBookStore_ApplyMessage_Filter(t *testing.T) {
 
 	t.Run("instId_mismatch", func(t *testing.T) {
 		msg := []byte(`{"arg":{"channel":"books","instId":"ETH-USDT"},"action":"snapshot","data":[{"asks":[["11","1","0","1"]],"bids":[["10","1","0","1"]],"instId":"ETH-USDT","ts":"1","checksum":66699475,"prevSeqId":-1,"seqId":1}]}`)
+		ok, err := store.ApplyMessage(msg)
+		if err != nil {
+			t.Fatalf("ApplyMessage() error = %v", err)
+		}
+		if ok {
+			t.Fatalf("expected ok=false")
+		}
+	})
+}
+
+func TestWSOrderBookStore_ApplyMessage_Filter_Sprd(t *testing.T) {
+	store := NewWSSprdOrderBookStore(WSChannelSprdBooks5, "BTC-USDT_BTC-USDT-SWAP")
+
+	t.Run("channel_mismatch", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"books5","instId":"BTC-USDT"},"action":"snapshot","data":[{"asks":[["11","1","0","1"]],"bids":[["10","1","0","1"]],"instId":"BTC-USDT","ts":"1","checksum":66699475}]}`)
+		ok, err := store.ApplyMessage(msg)
+		if err != nil {
+			t.Fatalf("ApplyMessage() error = %v", err)
+		}
+		if ok {
+			t.Fatalf("expected ok=false")
+		}
+	})
+
+	t.Run("sprdId_mismatch", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"sprd-books5","sprdId":"ETH-USDT_ETH-USDT-SWAP"},"action":"snapshot","data":[{"asks":[["11","1","1"]],"bids":[["10","1","1"]],"ts":"1","checksum":66699475}]}`)
 		ok, err := store.ApplyMessage(msg)
 		if err != nil {
 			t.Fatalf("ApplyMessage() error = %v", err)

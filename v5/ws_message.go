@@ -35,6 +35,10 @@ const (
 	WSChannelBooksL2Tbt   = "books-l2-tbt"
 	WSChannelBooks50L2Tbt = "books50-l2-tbt"
 
+	WSChannelSprdBboTbt     = "sprd-bbo-tbt"
+	WSChannelSprdBooks5     = "sprd-books5"
+	WSChannelSprdBooksL2Tbt = "sprd-books-l2-tbt"
+
 	WSChannelOptionTrades       = "option-trades"
 	WSChannelCallAuctionDetails = "call-auction-details"
 
@@ -405,7 +409,8 @@ type WSOrderBook struct {
 
 func isOrderBookChannel(channel string) bool {
 	switch channel {
-	case WSChannelBooks, WSChannelBooksELP, WSChannelBooks5, WSChannelBboTbt, WSChannelBooksL2Tbt, WSChannelBooks50L2Tbt:
+	case WSChannelBooks, WSChannelBooksELP, WSChannelBooks5, WSChannelBboTbt, WSChannelBooksL2Tbt, WSChannelBooks50L2Tbt,
+		WSChannelSprdBboTbt, WSChannelSprdBooks5, WSChannelSprdBooksL2Tbt:
 		return true
 	default:
 		return false

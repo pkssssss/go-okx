@@ -246,6 +246,29 @@ func TestWSParsePublicTickersTradesAndOrderBook(t *testing.T) {
 		}
 	})
 
+	t.Run("order_book_sprd_books5", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"sprd-books5","sprdId":"BTC-USDT_BTC-USDT-SWAP"},"action":"snapshot","data":[{"asks":[["1.9","1.1","3"]],"bids":[["1.8","0.165","1"]],"ts":"1724391380926","checksum":-1285595583,"prevSeqId":-1,"seqId":1724294007352168320}]}`)
+		dm, ok, err := WSParseOrderBook(msg)
+		if err != nil {
+			t.Fatalf("WSParseOrderBook() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelSprdBooks5 || dm.Arg.SprdId != "BTC-USDT_BTC-USDT-SWAP" || dm.Action != "snapshot" {
+			t.Fatalf("meta = %#v", dm)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].TS != 1724391380926 || dm.Data[0].Checksum != -1285595583 || dm.Data[0].PrevSeqId != -1 || dm.Data[0].SeqId != 1724294007352168320 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+		if len(dm.Data[0].Asks) != 1 || dm.Data[0].Asks[0].Px != "1.9" || dm.Data[0].Asks[0].Sz != "1.1" || dm.Data[0].Asks[0].NumOrders != "3" {
+			t.Fatalf("asks = %#v", dm.Data[0].Asks)
+		}
+		if len(dm.Data[0].Bids) != 1 || dm.Data[0].Bids[0].Px != "1.8" || dm.Data[0].Bids[0].Sz != "0.165" || dm.Data[0].Bids[0].NumOrders != "1" {
+			t.Fatalf("bids = %#v", dm.Data[0].Bids)
+		}
+	})
+
 	t.Run("order_book_channel_mismatch", func(t *testing.T) {
 		msg := []byte(`{"arg":{"channel":"tickers","instId":"BTC-USDT"},"action":"snapshot","data":[{"asks":[["1","2","0","1"]],"bids":[["1","2","0","1"]],"instId":"BTC-USDT","ts":"1597026383085","checksum":1,"prevSeqId":-1,"seqId":10}]}`)
 		_, ok, err := WSParseOrderBook(msg)

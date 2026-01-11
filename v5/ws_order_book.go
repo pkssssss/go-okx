@@ -16,6 +16,7 @@ import (
 type WSOrderBookStore struct {
 	channel string
 	instId  string
+	sprdId  string
 
 	verifySequence bool
 	verifyChecksum bool
@@ -60,10 +61,25 @@ func NewWSOrderBookStore(channel, instId string, opts ...WSOrderBookStoreOption)
 	return s
 }
 
+// NewWSSprdOrderBookStore 创建一个用于指定频道/Spread 的本地深度合并器。
+func NewWSSprdOrderBookStore(channel, sprdId string, opts ...WSOrderBookStoreOption) *WSOrderBookStore {
+	s := &WSOrderBookStore{
+		channel:        channel,
+		sprdId:         sprdId,
+		verifySequence: true,
+		verifyChecksum: true,
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
 // WSOrderBookSnapshot 是本地维护的深度快照（用于读取当前状态）。
 type WSOrderBookSnapshot struct {
 	Channel  string
 	InstId   string
+	SprdId   string
 	TS       int64
 	SeqId    int64
 	Checksum int64
@@ -102,6 +118,7 @@ func (s *WSOrderBookStore) Snapshot() WSOrderBookSnapshot {
 	out := WSOrderBookSnapshot{
 		Channel:  s.channel,
 		InstId:   s.instId,
+		SprdId:   s.sprdId,
 		TS:       s.ts,
 		SeqId:    s.seqId,
 		Checksum: s.checksum,
@@ -130,6 +147,9 @@ func (s *WSOrderBookStore) ApplyMessage(message []byte) (ok bool, err error) {
 	if s.instId != "" && dm.Arg.InstId != "" && dm.Arg.InstId != s.instId {
 		return false, nil
 	}
+	if s.sprdId != "" && dm.Arg.SprdId != "" && dm.Arg.SprdId != s.sprdId {
+		return false, nil
+	}
 	return true, s.Apply(dm)
 }
 
@@ -155,6 +175,12 @@ func (s *WSOrderBookStore) Apply(dm *WSData[WSOrderBook]) error {
 	}
 	if s.instId == "" {
 		s.instId = dm.Arg.InstId
+	}
+	if s.sprdId != "" && dm.Arg.SprdId != "" && dm.Arg.SprdId != s.sprdId {
+		return &WSOrderBookSprdIdMismatchError{Channel: dm.Arg.Channel, Got: dm.Arg.SprdId, Want: s.sprdId}
+	}
+	if s.sprdId == "" {
+		s.sprdId = dm.Arg.SprdId
 	}
 	if !isOrderBookChannel(dm.Arg.Channel) {
 		return fmt.Errorf("okx: ws order book invalid channel %q", dm.Arg.Channel)
@@ -195,7 +221,7 @@ func (s *WSOrderBookStore) Apply(dm *WSData[WSOrderBook]) error {
 		return nil
 	case "update":
 		if !s.ready {
-			return &WSOrderBookNotReadyError{Channel: dm.Arg.Channel, InstId: s.instId}
+			return &WSOrderBookNotReadyError{Channel: dm.Arg.Channel, InstId: s.instId, SprdId: s.sprdId}
 		}
 		if err := s.applyUpdate(dm.Arg.Channel, upd); err != nil {
 			s.Reset()
@@ -223,6 +249,7 @@ func (s *WSOrderBookStore) applySnapshot(upd WSOrderBook) error {
 			return &WSOrderBookChecksumError{
 				Channel:   s.channel,
 				InstId:    s.instId,
+				SprdId:    s.sprdId,
 				Expected:  expected,
 				Got:       upd.Checksum,
 				SeqId:     upd.SeqId,
@@ -243,6 +270,7 @@ func (s *WSOrderBookStore) applyUpdate(channel string, upd WSOrderBook) error {
 			return &WSOrderBookSequenceError{
 				Channel:           channel,
 				InstId:            s.instId,
+				SprdId:            s.sprdId,
 				ExpectedPrevSeqId: s.seqId,
 				GotPrevSeqId:      upd.PrevSeqId,
 				SeqId:             upd.SeqId,
@@ -262,6 +290,7 @@ func (s *WSOrderBookStore) applyUpdate(channel string, upd WSOrderBook) error {
 			return &WSOrderBookChecksumError{
 				Channel:   channel,
 				InstId:    s.instId,
+				SprdId:    s.sprdId,
 				Expected:  expected,
 				Got:       upd.Checksum,
 				SeqId:     upd.SeqId,
@@ -279,10 +308,20 @@ func (s *WSOrderBookStore) applyUpdate(channel string, upd WSOrderBook) error {
 type WSOrderBookNotReadyError struct {
 	Channel string
 	InstId  string
+	SprdId  string
 }
 
 func (e *WSOrderBookNotReadyError) Error() string {
-	return fmt.Sprintf("okx: ws order book not ready channel=%s instId=%s", e.Channel, e.InstId)
+	idName := "instId"
+	id := e.InstId
+	if e.SprdId != "" {
+		idName = "sprdId"
+		id = e.SprdId
+	}
+	if id == "" {
+		return fmt.Sprintf("okx: ws order book not ready channel=%s", e.Channel)
+	}
+	return fmt.Sprintf("okx: ws order book not ready channel=%s %s=%s", e.Channel, idName, id)
 }
 
 type WSOrderBookChannelMismatchError struct {
@@ -304,23 +343,41 @@ func (e *WSOrderBookInstIdMismatchError) Error() string {
 	return fmt.Sprintf("okx: ws order book instId mismatch channel=%s got=%s want=%s", e.Channel, e.Got, e.Want)
 }
 
+type WSOrderBookSprdIdMismatchError struct {
+	Channel string
+	Got     string
+	Want    string
+}
+
+func (e *WSOrderBookSprdIdMismatchError) Error() string {
+	return fmt.Sprintf("okx: ws order book sprdId mismatch channel=%s got=%s want=%s", e.Channel, e.Got, e.Want)
+}
+
 // WSOrderBookSequenceError 表示 prevSeqId 与本地 seqId 不连续（通常需要重新订阅获取 snapshot）。
 type WSOrderBookSequenceError struct {
 	Channel           string
 	InstId            string
+	SprdId            string
 	ExpectedPrevSeqId int64
 	GotPrevSeqId      int64
 	SeqId             int64
 }
 
 func (e *WSOrderBookSequenceError) Error() string {
-	return fmt.Sprintf("okx: ws order book sequence mismatch channel=%s instId=%s prevSeqId=%d want=%d seqId=%d", e.Channel, e.InstId, e.GotPrevSeqId, e.ExpectedPrevSeqId, e.SeqId)
+	idName := "instId"
+	id := e.InstId
+	if e.SprdId != "" {
+		idName = "sprdId"
+		id = e.SprdId
+	}
+	return fmt.Sprintf("okx: ws order book sequence mismatch channel=%s %s=%s prevSeqId=%d want=%d seqId=%d", e.Channel, idName, id, e.GotPrevSeqId, e.ExpectedPrevSeqId, e.SeqId)
 }
 
 // WSOrderBookChecksumError 表示 checksum 校验失败（深度可能已不同步）。
 type WSOrderBookChecksumError struct {
 	Channel  string
 	InstId   string
+	SprdId   string
 	Expected int64
 	Got      int64
 	SeqId    int64
@@ -330,12 +387,18 @@ type WSOrderBookChecksumError struct {
 }
 
 func (e *WSOrderBookChecksumError) Error() string {
-	return fmt.Sprintf("okx: ws order book checksum mismatch channel=%s instId=%s expected=%d got=%d seqId=%d", e.Channel, e.InstId, e.Expected, e.Got, e.SeqId)
+	idName := "instId"
+	id := e.InstId
+	if e.SprdId != "" {
+		idName = "sprdId"
+		id = e.SprdId
+	}
+	return fmt.Sprintf("okx: ws order book checksum mismatch channel=%s %s=%s expected=%d got=%d seqId=%d", e.Channel, idName, id, e.Expected, e.Got, e.SeqId)
 }
 
 func isOrderBookFullRefreshChannel(channel string) bool {
 	switch channel {
-	case WSChannelBooks5, WSChannelBboTbt:
+	case WSChannelBooks5, WSChannelBboTbt, WSChannelSprdBooks5, WSChannelSprdBboTbt:
 		return true
 	default:
 		return false
@@ -344,7 +407,7 @@ func isOrderBookFullRefreshChannel(channel string) bool {
 
 func isOrderBookSequencedChannel(channel string) bool {
 	switch channel {
-	case WSChannelBooks, WSChannelBooksL2Tbt, WSChannelBooks50L2Tbt:
+	case WSChannelBooks, WSChannelBooksL2Tbt, WSChannelBooks50L2Tbt, WSChannelSprdBooksL2Tbt:
 		return true
 	default:
 		return false

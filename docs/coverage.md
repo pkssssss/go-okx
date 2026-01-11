@@ -233,9 +233,9 @@
 
 ### Business（按频道决定是否需要登录）
 
-- 频道（已解析）：K 线 `candle*`、标记价格 K 线 `mark-price-candle*`、指数 K 线 `index-candle*`、`trades-all`、`sprd-public-trades`
+- 频道（已解析）：K 线 `candle*`、标记价格 K 线 `mark-price-candle*`、指数 K 线 `index-candle*`、`trades-all`、`sprd-public-trades`、SPRD 深度 `sprd-bbo-tbt/sprd-books5/sprd-books-l2-tbt`
 - 资金推送（需要登录）：`deposit-info`、`withdrawal-info`
-- Examples：[examples/ws_business_candles](../examples/ws_business_candles)、[examples/ws_business_mark_price_candles](../examples/ws_business_mark_price_candles)、[examples/ws_business_index_candles](../examples/ws_business_index_candles)、[examples/ws_business_trades_all](../examples/ws_business_trades_all)、[examples/ws_business_sprd_public_trades](../examples/ws_business_sprd_public_trades)、[examples/ws_business_deposit_info](../examples/ws_business_deposit_info)、[examples/ws_business_withdrawal_info](../examples/ws_business_withdrawal_info)
+- Examples：[examples/ws_business_candles](../examples/ws_business_candles)、[examples/ws_business_mark_price_candles](../examples/ws_business_mark_price_candles)、[examples/ws_business_index_candles](../examples/ws_business_index_candles)、[examples/ws_business_trades_all](../examples/ws_business_trades_all)、[examples/ws_business_sprd_public_trades](../examples/ws_business_sprd_public_trades)、[examples/ws_business_sprd_books](../examples/ws_business_sprd_books)、[examples/ws_business_deposit_info](../examples/ws_business_deposit_info)、[examples/ws_business_withdrawal_info](../examples/ws_business_withdrawal_info)
 
 ## 场景索引（标签）
 
