@@ -513,3 +513,130 @@ func TestWSClient_onDataMessage_AlgoAdvance_TypedAsync_Dispatches(t *testing.T) 
 		t.Fatalf("timeout waiting algo-advance")
 	}
 }
+
+func TestWSClient_onDataMessage_GridOrdersSpot_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSGridOrder, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnGridOrdersSpot(func(order WSGridOrder) {
+		select {
+		case gotCh <- order:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"grid-orders-spot","instType":"SPOT"},"data":[{"algoId":"a1","algoOrdType":"grid","instType":"SPOT","instId":"BTC-USDT","state":"running","cTime":"1681700496249","uTime":"1681700496250"}]}`))
+
+	select {
+	case order := <-gotCh:
+		if order.AlgoId != "a1" || order.InstId != "BTC-USDT" || order.AlgoOrdType != "grid" || order.CTime != 1681700496249 {
+			t.Fatalf("order = %#v", order)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting grid-orders-spot")
+	}
+}
+
+func TestWSClient_onDataMessage_GridOrdersContract_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSGridOrder, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnGridOrdersContract(func(order WSGridOrder) {
+		select {
+		case gotCh <- order:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"grid-orders-contract","instType":"ANY"},"data":[{"algoId":"a1","algoOrdType":"contract_grid","instType":"SWAP","instId":"BTC-USDT-SWAP","state":"running","cTime":"1682418514204","uTime":"1682418514205"}]}`))
+
+	select {
+	case order := <-gotCh:
+		if order.AlgoId != "a1" || order.InstId != "BTC-USDT-SWAP" || order.AlgoOrdType != "contract_grid" || order.CTime != 1682418514204 {
+			t.Fatalf("order = %#v", order)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting grid-orders-contract")
+	}
+}
+
+func TestWSClient_onDataMessage_GridSubOrders_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSGridSubOrder, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnGridSubOrders(func(order WSGridSubOrder) {
+		select {
+		case gotCh <- order:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"grid-sub-orders","algoId":"449327675342323712"},"data":[{"algoId":"449327675342323712","algoOrdType":"contract_grid","instType":"SWAP","instId":"BTC-USDT-SWAP","ordId":"449518234142904321","side":"buy","ordType":"limit","state":"live","cTime":"1653445498664","uTime":"1653445498674","pTime":"1653486524502"}]}`))
+
+	select {
+	case order := <-gotCh:
+		if order.AlgoId != "449327675342323712" || order.OrdId != "449518234142904321" || order.InstId != "BTC-USDT-SWAP" || order.PTime != 1653486524502 {
+			t.Fatalf("order = %#v", order)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting grid-sub-orders")
+	}
+}
+
+func TestWSClient_onDataMessage_AlgoRecurringBuy_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSRecurringBuyOrder, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnAlgoRecurringBuy(func(order WSRecurringBuyOrder) {
+		select {
+		case gotCh <- order:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"algo-recurring-buy","instType":"SPOT"},"data":[{"algoId":"a1","algoOrdType":"recurring","instType":"SPOT","investmentCcy":"USDC","period":"hourly","state":"running","recurringList":[{"ccy":"BTC","ratio":"0.2","px":"36482","avgPx":"0","profit":"0","totalAmt":"0"}],"cTime":"1699932133373","uTime":"1699932136249"}]}`))
+
+	select {
+	case order := <-gotCh:
+		if order.AlgoId != "a1" || order.InvestmentCcy != "USDC" || order.Period != "hourly" || order.CTime != 1699932133373 {
+			t.Fatalf("order = %#v", order)
+		}
+		if len(order.RecurringList) != 1 || order.RecurringList[0].Ccy != "BTC" {
+			t.Fatalf("recurringList = %#v", order.RecurringList)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting algo-recurring-buy")
+	}
+}

@@ -22,6 +22,9 @@
 
 ### 2.2 SubscribeAndWait / UnsubscribeAndWait
 
+订阅参数以 `WSArg` 为核心，不同频道的必填字段以 OKX 文档为准（常见：`InstType`/`InstId`/`InstFamily`/`AlgoId` 等）。  
+例如：`grid-sub-orders` 频道订阅时必须提供 `AlgoId`。
+
 推荐使用 `SubscribeAndWait(ctx, args...)`：
 
 - 会等待 OKX 的 `event=subscribe` / `event=error`，用于判定订阅成功/失败；

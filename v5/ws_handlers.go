@@ -72,6 +72,38 @@ func WithWSAlgoAdvanceHandler(handler func(order TradeAlgoOrder)) WSOption {
 	}
 }
 
+// WithWSGridOrdersSpotHandler 设置 grid-orders-spot 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSGridOrdersSpotHandler(handler func(order WSGridOrder)) WSOption {
+	return func(c *WSClient) {
+		c.OnGridOrdersSpot(handler)
+	}
+}
+
+// WithWSGridOrdersContractHandler 设置 grid-orders-contract 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSGridOrdersContractHandler(handler func(order WSGridOrder)) WSOption {
+	return func(c *WSClient) {
+		c.OnGridOrdersContract(handler)
+	}
+}
+
+// WithWSGridSubOrdersHandler 设置 grid-sub-orders 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSGridSubOrdersHandler(handler func(order WSGridSubOrder)) WSOption {
+	return func(c *WSClient) {
+		c.OnGridSubOrders(handler)
+	}
+}
+
+// WithWSAlgoRecurringBuyHandler 设置 algo-recurring-buy 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSAlgoRecurringBuyHandler(handler func(order WSRecurringBuyOrder)) WSOption {
+	return func(c *WSClient) {
+		c.OnAlgoRecurringBuy(handler)
+	}
+}
+
 // WithWSDepositInfoHandler 设置 deposit-info 推送的逐条回调（business WS，需要登录）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
@@ -344,6 +376,46 @@ func (w *WSClient) OnAlgoAdvance(handler func(order TradeAlgoOrder)) {
 	}
 	w.typedMu.Lock()
 	w.algoAdvanceHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnGridOrdersSpot 设置 grid-orders-spot 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnGridOrdersSpot(handler func(order WSGridOrder)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.gridOrdersSpotHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnGridOrdersContract 设置 grid-orders-contract 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnGridOrdersContract(handler func(order WSGridOrder)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.gridOrdersContractHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnGridSubOrders 设置 grid-sub-orders 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnGridSubOrders(handler func(order WSGridSubOrder)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.gridSubOrdersHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnAlgoRecurringBuy 设置 algo-recurring-buy 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnAlgoRecurringBuy(handler func(order WSRecurringBuyOrder)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.algoRecurringBuyHandler = handler
 	w.typedMu.Unlock()
 }
 

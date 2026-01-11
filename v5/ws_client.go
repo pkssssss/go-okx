@@ -43,13 +43,14 @@ type WSArg struct {
 	InstFamily  string `json:"instFamily,omitempty"`
 	SprdId      string `json:"sprdId,omitempty"`
 	Uly         string `json:"uly,omitempty"`
+	AlgoId      string `json:"algoId,omitempty"`
 	UID         string `json:"uid,omitempty"`
 	Ccy         string `json:"ccy,omitempty"`
 	ExtraParams string `json:"extraParams,omitempty"`
 }
 
 func (a WSArg) key() string {
-	return a.Channel + "|" + a.InstId + "|" + a.InstType + "|" + a.InstFamily + "|" + a.SprdId + "|" + a.Uly + "|" + a.Ccy
+	return a.Channel + "|" + a.InstId + "|" + a.InstType + "|" + a.InstFamily + "|" + a.SprdId + "|" + a.Uly + "|" + a.AlgoId + "|" + a.Ccy
 }
 
 type wsOpRequest struct {
@@ -92,7 +93,7 @@ func WithWSHeartbeat(interval time.Duration) WSOption {
 	}
 }
 
-// WithWSTypedHandlerAsync 启用 typed handler 的异步分发（orders/fills/account/positions/balance_and_position/deposit-info/withdrawal-info/sprd-orders/sprd-trades/op reply）。
+// WithWSTypedHandlerAsync 启用 typed handler 的异步分发（所有 On* typed handler 回调）。
 //
 // 默认情况下，typed handler 会在 WS read goroutine 中执行；若 handler 逻辑较重可能阻塞读取导致断线/重连。
 // 启用该选项后，SDK 会将 typed handler 的执行移动到独立 worker goroutine，并通过有界队列解耦。
@@ -158,6 +159,10 @@ type WSClient struct {
 	accountGreeksHandler      func(greeks AccountGreeks)
 	ordersAlgoHandler         func(order TradeAlgoOrder)
 	algoAdvanceHandler        func(order TradeAlgoOrder)
+	gridOrdersSpotHandler     func(order WSGridOrder)
+	gridOrdersContractHandler func(order WSGridOrder)
+	gridSubOrdersHandler      func(order WSGridSubOrder)
+	algoRecurringBuyHandler   func(order WSRecurringBuyOrder)
 	depositInfoHandler        func(info WSDepositInfo)
 	withdrawalInfoHandler     func(info WSWithdrawalInfo)
 	sprdOrdersHandler         func(order SprdOrder)
@@ -742,6 +747,10 @@ func (w *WSClient) onDataMessage(message []byte) {
 	accountGreeksH := w.accountGreeksHandler
 	ordersAlgoH := w.ordersAlgoHandler
 	algoAdvanceH := w.algoAdvanceHandler
+	gridOrdersSpotH := w.gridOrdersSpotHandler
+	gridOrdersContractH := w.gridOrdersContractHandler
+	gridSubOrdersH := w.gridSubOrdersHandler
+	algoRecurringBuyH := w.algoRecurringBuyHandler
 	depInfoH := w.depositInfoHandler
 	wdInfoH := w.withdrawalInfoHandler
 	sprdOrdersH := w.sprdOrdersHandler
@@ -775,6 +784,10 @@ func (w *WSClient) onDataMessage(message []byte) {
 		accountGreeksH == nil &&
 		ordersAlgoH == nil &&
 		algoAdvanceH == nil &&
+		gridOrdersSpotH == nil &&
+		gridOrdersContractH == nil &&
+		gridSubOrdersH == nil &&
+		algoRecurringBuyH == nil &&
 		depInfoH == nil &&
 		wdInfoH == nil &&
 		sprdOrdersH == nil &&
@@ -892,6 +905,42 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAlgoAdvance, algoAdvance: dm.Data})
+	case WSChannelGridOrdersSpot:
+		if gridOrdersSpotH == nil {
+			return
+		}
+		dm, ok, err := WSParseGridOrdersSpot(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridOrdersSpot, gridOrdersSpot: dm.Data})
+	case WSChannelGridOrdersContract:
+		if gridOrdersContractH == nil {
+			return
+		}
+		dm, ok, err := WSParseGridOrdersContract(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridOrdersContract, gridOrdersContract: dm.Data})
+	case WSChannelGridSubOrders:
+		if gridSubOrdersH == nil {
+			return
+		}
+		dm, ok, err := WSParseGridSubOrders(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridSubOrders, gridSubOrders: dm.Data})
+	case WSChannelAlgoRecurringBuy:
+		if algoRecurringBuyH == nil {
+			return
+		}
+		dm, ok, err := WSParseAlgoRecurringBuy(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAlgoRecurringBuy, algoRecurringBuy: dm.Data})
 	case WSChannelDepositInfo:
 		if depInfoH == nil {
 			return

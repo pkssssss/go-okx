@@ -17,6 +17,10 @@ const (
 	wsTypedKindAccountGreeks
 	wsTypedKindOrdersAlgo
 	wsTypedKindAlgoAdvance
+	wsTypedKindGridOrdersSpot
+	wsTypedKindGridOrdersContract
+	wsTypedKindGridSubOrders
+	wsTypedKindAlgoRecurringBuy
 	wsTypedKindDepositInfo
 	wsTypedKindWithdrawalInfo
 	wsTypedKindSprdOrders
@@ -62,6 +66,14 @@ func (k wsTypedKind) String() string {
 		return "orders_algo"
 	case wsTypedKindAlgoAdvance:
 		return "algo_advance"
+	case wsTypedKindGridOrdersSpot:
+		return "grid_orders_spot"
+	case wsTypedKindGridOrdersContract:
+		return "grid_orders_contract"
+	case wsTypedKindGridSubOrders:
+		return "grid_sub_orders"
+	case wsTypedKindAlgoRecurringBuy:
+		return "algo_recurring_buy"
 	case wsTypedKindDepositInfo:
 		return "deposit_info"
 	case wsTypedKindWithdrawalInfo:
@@ -125,6 +137,10 @@ type wsTypedTask struct {
 	accountGreeks       []AccountGreeks
 	ordersAlgo          []TradeAlgoOrder
 	algoAdvance         []TradeAlgoOrder
+	gridOrdersSpot      []WSGridOrder
+	gridOrdersContract  []WSGridOrder
+	gridSubOrders       []WSGridSubOrder
+	algoRecurringBuy    []WSRecurringBuyOrder
 	depositInfo         []WSDepositInfo
 	withdrawalInfo      []WSWithdrawalInfo
 	sprdOrders          []SprdOrder
@@ -285,6 +301,50 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 			return
 		}
 		for _, order := range task.algoAdvance {
+			o := order
+			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindGridOrdersSpot:
+		w.typedMu.RLock()
+		h := w.gridOrdersSpotHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.gridOrdersSpot) == 0 {
+			return
+		}
+		for _, order := range task.gridOrdersSpot {
+			o := order
+			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindGridOrdersContract:
+		w.typedMu.RLock()
+		h := w.gridOrdersContractHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.gridOrdersContract) == 0 {
+			return
+		}
+		for _, order := range task.gridOrdersContract {
+			o := order
+			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindGridSubOrders:
+		w.typedMu.RLock()
+		h := w.gridSubOrdersHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.gridSubOrders) == 0 {
+			return
+		}
+		for _, order := range task.gridSubOrders {
+			o := order
+			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindAlgoRecurringBuy:
+		w.typedMu.RLock()
+		h := w.algoRecurringBuyHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.algoRecurringBuy) == 0 {
+			return
+		}
+		for _, order := range task.algoRecurringBuy {
 			o := order
 			w.safeTypedCall(task.kind, func() { h(o) })
 		}

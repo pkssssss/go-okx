@@ -15,8 +15,12 @@ const (
 	WSChannelLiquidationWarning = "liquidation-warning"
 	WSChannelAccountGreeks      = "account-greeks"
 
-	WSChannelOrdersAlgo  = "orders-algo"
-	WSChannelAlgoAdvance = "algo-advance"
+	WSChannelOrdersAlgo         = "orders-algo"
+	WSChannelAlgoAdvance        = "algo-advance"
+	WSChannelGridOrdersSpot     = "grid-orders-spot"
+	WSChannelGridOrdersContract = "grid-orders-contract"
+	WSChannelGridSubOrders      = "grid-sub-orders"
+	WSChannelAlgoRecurringBuy   = "algo-recurring-buy"
 
 	WSChannelDepositInfo    = "deposit-info"
 	WSChannelWithdrawalInfo = "withdrawal-info"
@@ -184,6 +188,26 @@ func WSParseOrdersAlgo(message []byte) (*WSData[TradeAlgoOrder], bool, error) {
 // WSParseAlgoAdvance 解析 algo-advance 频道推送消息（business WS，需要登录）。
 func WSParseAlgoAdvance(message []byte) (*WSData[TradeAlgoOrder], bool, error) {
 	return WSParseChannelData[TradeAlgoOrder](message, WSChannelAlgoAdvance)
+}
+
+// WSParseGridOrdersSpot 解析 grid-orders-spot 频道推送消息（business WS，需要登录）。
+func WSParseGridOrdersSpot(message []byte) (*WSData[WSGridOrder], bool, error) {
+	return WSParseChannelData[WSGridOrder](message, WSChannelGridOrdersSpot)
+}
+
+// WSParseGridOrdersContract 解析 grid-orders-contract 频道推送消息（business WS，需要登录）。
+func WSParseGridOrdersContract(message []byte) (*WSData[WSGridOrder], bool, error) {
+	return WSParseChannelData[WSGridOrder](message, WSChannelGridOrdersContract)
+}
+
+// WSParseGridSubOrders 解析 grid-sub-orders 频道推送消息（business WS，需要登录）。
+func WSParseGridSubOrders(message []byte) (*WSData[WSGridSubOrder], bool, error) {
+	return WSParseChannelData[WSGridSubOrder](message, WSChannelGridSubOrders)
+}
+
+// WSParseAlgoRecurringBuy 解析 algo-recurring-buy 频道推送消息（business WS，需要登录）。
+func WSParseAlgoRecurringBuy(message []byte) (*WSData[WSRecurringBuyOrder], bool, error) {
+	return WSParseChannelData[WSRecurringBuyOrder](message, WSChannelAlgoRecurringBuy)
 }
 
 // WSParseDepositInfo 解析 deposit-info 频道推送消息（business WS，需要登录）。
@@ -593,4 +617,154 @@ type WSWithdrawalInfo struct {
 	PTime   int64  `json:"pTime,string"`
 	SubAcct string `json:"subAcct"`
 	UID     string `json:"uid"`
+}
+
+// WSGridOrder 表示网格策略委托订单推送（grid-orders-spot / grid-orders-contract）的数据项（精简版）。
+//
+// 说明：数值字段保持为 string（无损），时间戳字段解析为 int64。
+type WSGridOrder struct {
+	AlgoClOrdId string `json:"algoClOrdId"`
+	AlgoId      string `json:"algoId"`
+	AlgoOrdType string `json:"algoOrdType"`
+
+	InstType string `json:"instType"`
+	InstId   string `json:"instId"`
+
+	State string `json:"state"`
+	Tag   string `json:"tag"`
+
+	CTime int64 `json:"cTime,string"`
+	UTime int64 `json:"uTime,string"`
+	PTime int64 `json:"pTime,string"`
+
+	GridNum      string `json:"gridNum"`
+	ActiveOrdNum string `json:"activeOrdNum"`
+
+	MinPx string `json:"minPx"`
+	MaxPx string `json:"maxPx"`
+	RunPx string `json:"runPx"`
+
+	RunType    string `json:"runType"`
+	CancelType string `json:"cancelType"`
+	StopType   string `json:"stopType"`
+
+	Investment string `json:"investment"`
+	Sz         string `json:"sz"`
+
+	Profit      string `json:"profit"`
+	FloatProfit string `json:"floatProfit"`
+	GridProfit  string `json:"gridProfit"`
+	TotalPnl    string `json:"totalPnl"`
+	PnlRatio    string `json:"pnlRatio"`
+
+	AnnualizedRate      string `json:"annualizedRate"`
+	TotalAnnualizedRate string `json:"totalAnnualizedRate"`
+
+	PerMaxProfitRate string `json:"perMaxProfitRate"`
+	PerMinProfitRate string `json:"perMinProfitRate"`
+
+	Lever       string `json:"lever"`
+	ActualLever string `json:"actualLever"`
+	Direction   string `json:"direction"`
+	BasePos     bool   `json:"basePos"`
+	AvailEq     string `json:"availEq"`
+	Eq          string `json:"eq"`
+	LiqPx       string `json:"liqPx"`
+
+	SingleAmt   string `json:"singleAmt"`
+	SlTriggerPx string `json:"slTriggerPx"`
+	TpTriggerPx string `json:"tpTriggerPx"`
+
+	TradeNum string `json:"tradeNum"`
+}
+
+// WSGridSubOrder 表示网格策略子订单推送（grid-sub-orders）的数据项（精简版）。
+//
+// 说明：该频道 subscribe 参数需要提供 arg.algoId。
+type WSGridSubOrder struct {
+	AlgoId      string `json:"algoId"`
+	AlgoClOrdId string `json:"algoClOrdId"`
+	AlgoOrdType string `json:"algoOrdType"`
+
+	InstType string `json:"instType"`
+	InstId   string `json:"instId"`
+
+	OrdId   string `json:"ordId"`
+	OrdType string `json:"ordType"`
+
+	Side    string `json:"side"`
+	PosSide string `json:"posSide"`
+	TdMode  string `json:"tdMode"`
+
+	State string `json:"state"`
+
+	Sz        string `json:"sz"`
+	Px        string `json:"px"`
+	AvgPx     string `json:"avgPx"`
+	AccFillSz string `json:"accFillSz"`
+
+	Fee    string `json:"fee"`
+	FeeCcy string `json:"feeCcy"`
+
+	Rebate    string `json:"rebate"`
+	RebateCcy string `json:"rebateCcy"`
+
+	Lever   string `json:"lever"`
+	GroupId string `json:"groupId"`
+	CtVal   string `json:"ctVal"`
+	Pnl     string `json:"pnl"`
+
+	Tag string `json:"tag"`
+
+	CTime int64 `json:"cTime,string"`
+	UTime int64 `json:"uTime,string"`
+	PTime int64 `json:"pTime,string"`
+}
+
+// WSRecurringBuyOrder 表示定投策略委托订单推送（algo-recurring-buy）的数据项（精简版）。
+type WSRecurringBuyOrder struct {
+	AlgoClOrdId string `json:"algoClOrdId"`
+	AlgoId      string `json:"algoId"`
+	AlgoOrdType string `json:"algoOrdType"`
+	Tag         string `json:"tag"`
+
+	InstType string `json:"instType"`
+
+	Amt           string `json:"amt"`
+	Cycles        string `json:"cycles"`
+	InvestmentAmt string `json:"investmentAmt"`
+	InvestmentCcy string `json:"investmentCcy"`
+	MktCap        string `json:"mktCap"`
+
+	NextInvestTime int64 `json:"nextInvestTime,string"`
+	PTime          int64 `json:"pTime,string"`
+
+	Period        string `json:"period"`
+	PnlRatio      string `json:"pnlRatio"`
+	RecurringDay  string `json:"recurringDay"`
+	RecurringHour string `json:"recurringHour"`
+	RecurringTime string `json:"recurringTime"`
+	TimeZone      string `json:"timeZone"`
+
+	State    string `json:"state"`
+	StgyName string `json:"stgyName"`
+
+	TotalAnnRate string `json:"totalAnnRate"`
+	TotalPnl     string `json:"totalPnl"`
+
+	TradeQuoteCcy string `json:"tradeQuoteCcy"`
+
+	RecurringList []WSRecurringBuyItem `json:"recurringList"`
+
+	CTime int64 `json:"cTime,string"`
+	UTime int64 `json:"uTime,string"`
+}
+
+type WSRecurringBuyItem struct {
+	Ccy      string `json:"ccy"`
+	Ratio    string `json:"ratio"`
+	Px       string `json:"px"`
+	AvgPx    string `json:"avgPx"`
+	Profit   string `json:"profit"`
+	TotalAmt string `json:"totalAmt"`
 }
