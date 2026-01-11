@@ -40,6 +40,7 @@ type WSArg struct {
 	InstId      string `json:"instId,omitempty"`
 	InstType    string `json:"instType,omitempty"`
 	InstFamily  string `json:"instFamily,omitempty"`
+	SprdId      string `json:"sprdId,omitempty"`
 	Uly         string `json:"uly,omitempty"`
 	UID         string `json:"uid,omitempty"`
 	Ccy         string `json:"ccy,omitempty"`
@@ -47,7 +48,7 @@ type WSArg struct {
 }
 
 func (a WSArg) key() string {
-	return a.Channel + "|" + a.InstId + "|" + a.InstType + "|" + a.InstFamily + "|" + a.Uly + "|" + a.Ccy
+	return a.Channel + "|" + a.InstId + "|" + a.InstType + "|" + a.InstFamily + "|" + a.SprdId + "|" + a.Uly + "|" + a.Ccy
 }
 
 type wsOpRequest struct {

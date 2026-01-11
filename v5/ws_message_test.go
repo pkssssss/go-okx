@@ -340,6 +340,26 @@ func TestWSParseBusinessCandlesAndTradesAll(t *testing.T) {
 			t.Fatalf("data = %#v, want tradeId=1 source=0", dm.Data)
 		}
 	})
+
+	t.Run("sprd_public_trades", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"sprd-public-trades","sprdId":"BTC-USDT_BTC-USDT-SWAP"},"data":[{"sprdId":"BTC-USDT_BTC-USDT-SWAP","side":"sell","sz":"0.1","px":"964.1","tradeId":"242720719","ts":"1654161641568"}]}`)
+		dm, ok, err := WSParseSprdPublicTrades(msg)
+		if err != nil {
+			t.Fatalf("WSParseSprdPublicTrades() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelSprdPublicTrades || dm.Arg.SprdId != "BTC-USDT_BTC-USDT-SWAP" {
+			t.Fatalf("arg = %#v, want sprd-public-trades sprdId=BTC-USDT_BTC-USDT-SWAP", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].SprdId != "BTC-USDT_BTC-USDT-SWAP" || dm.Data[0].TradeId != "242720719" || dm.Data[0].TS != 1654161641568 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+		if dm.Data[0].Px != "964.1" || dm.Data[0].Sz != "0.1" || dm.Data[0].Side != "sell" {
+			t.Fatalf("trade = %#v", dm.Data[0])
+		}
+	})
 }
 
 func TestWSParsePublicOptionTradesAndCallAuctionDetails(t *testing.T) {

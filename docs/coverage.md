@@ -205,6 +205,12 @@
 |---|---|---|---|---|---|
 | `GET /api/v5/rfq/public-trades` | `public` | [`rfq_public_trades`](../v5/rfq_public_trades_service.go) | ✅ [test](../v5/rfq_public_trades_service_test.go) | [ex](../examples/rfq_public_trades) | `rest, auth-public, rfq` |
 
+### SPRD（价差交易）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `GET /api/v5/sprd/public-trades` | `public` | [`sprd_public_trades`](../v5/sprd_public_trades_service.go) | ✅ [test](../v5/sprd_public_trades_service_test.go) | [ex](../examples/sprd_public_trades) | `rest, auth-public, sprd` |
+
 ## WebSocket
 
 > 说明：WS 的订阅以 `WSArg{Channel: ..., InstId/InstType/...}` 为核心；连接管理（自动重连/重订阅/心跳/notice）在 `WSClient` 内部处理。
@@ -222,9 +228,9 @@
 
 ### Business（按频道决定是否需要登录）
 
-- 频道（已解析）：K 线 `candle*`、标记价格 K 线 `mark-price-candle*`、指数 K 线 `index-candle*`、`trades-all`
+- 频道（已解析）：K 线 `candle*`、标记价格 K 线 `mark-price-candle*`、指数 K 线 `index-candle*`、`trades-all`、`sprd-public-trades`
 - 资金推送（需要登录）：`deposit-info`、`withdrawal-info`
-- Examples：[examples/ws_business_candles](../examples/ws_business_candles)、[examples/ws_business_mark_price_candles](../examples/ws_business_mark_price_candles)、[examples/ws_business_index_candles](../examples/ws_business_index_candles)、[examples/ws_business_trades_all](../examples/ws_business_trades_all)、[examples/ws_business_deposit_info](../examples/ws_business_deposit_info)、[examples/ws_business_withdrawal_info](../examples/ws_business_withdrawal_info)
+- Examples：[examples/ws_business_candles](../examples/ws_business_candles)、[examples/ws_business_mark_price_candles](../examples/ws_business_mark_price_candles)、[examples/ws_business_index_candles](../examples/ws_business_index_candles)、[examples/ws_business_trades_all](../examples/ws_business_trades_all)、[examples/ws_business_sprd_public_trades](../examples/ws_business_sprd_public_trades)、[examples/ws_business_deposit_info](../examples/ws_business_deposit_info)、[examples/ws_business_withdrawal_info](../examples/ws_business_withdrawal_info)
 
 ## 场景索引（标签）
 
@@ -239,6 +245,7 @@
 - 期权相关：`option`、`mmp`
 - 风控/限速：`risk`
 - 大宗交易：`rfq`
+- 价差交易：`sprd`
 
 ## 维护说明
 

@@ -37,6 +37,9 @@ const (
 
 	WSChannelOptionTrades       = "option-trades"
 	WSChannelCallAuctionDetails = "call-auction-details"
+
+	WSChannelSprdPublicTrades = "sprd-public-trades"
+	WSChannelSprdTickers      = "sprd-tickers"
 )
 
 // WSEvent 表示 OKX WebSocket 的 event 消息（subscribe/login/error/notice 等）。
@@ -316,6 +319,24 @@ type WSCallAuctionDetails struct {
 // WSParseCallAuctionDetails 解析 call-auction-details 频道推送消息。
 func WSParseCallAuctionDetails(message []byte) (*WSData[WSCallAuctionDetails], bool, error) {
 	return WSParseChannelData[WSCallAuctionDetails](message, WSChannelCallAuctionDetails)
+}
+
+// WSSprdPublicTrade 表示 sprd-public-trades 频道推送的数据项。
+//
+// 说明：价格/数量等字段保持为 string（无损）。
+type WSSprdPublicTrade struct {
+	SprdId  string `json:"sprdId"`
+	Side    string `json:"side"`
+	Sz      string `json:"sz"`
+	Px      string `json:"px"`
+	TradeId string `json:"tradeId"`
+
+	TS int64 `json:"ts,string"`
+}
+
+// WSParseSprdPublicTrades 解析 sprd-public-trades 频道推送消息（business WS）。
+func WSParseSprdPublicTrades(message []byte) (*WSData[WSSprdPublicTrade], bool, error) {
+	return WSParseChannelData[WSSprdPublicTrade](message, WSChannelSprdPublicTrades)
 }
 
 // PriceLimit 表示 WS price-limit 频道推送的数据项。
