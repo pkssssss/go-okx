@@ -15,6 +15,8 @@ const (
 	wsTypedKindBalanceAndPosition
 	wsTypedKindDepositInfo
 	wsTypedKindWithdrawalInfo
+	wsTypedKindSprdOrders
+	wsTypedKindSprdTrades
 	wsTypedKindOpReply
 )
 
@@ -34,6 +36,10 @@ func (k wsTypedKind) String() string {
 		return "deposit_info"
 	case wsTypedKindWithdrawalInfo:
 		return "withdrawal_info"
+	case wsTypedKindSprdOrders:
+		return "sprd_orders"
+	case wsTypedKindSprdTrades:
+		return "sprd_trades"
 	case wsTypedKindOpReply:
 		return "op_reply"
 	default:
@@ -51,6 +57,8 @@ type wsTypedTask struct {
 	balPos         []WSBalanceAndPosition
 	depositInfo    []WSDepositInfo
 	withdrawalInfo []WSWithdrawalInfo
+	sprdOrders     []SprdOrder
+	sprdTrades     []WSSprdTrade
 
 	op    WSOpReply
 	opRaw []byte
@@ -166,6 +174,28 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, info := range task.withdrawalInfo {
 			i := info
 			w.safeTypedCall(task.kind, func() { h(i) })
+		}
+	case wsTypedKindSprdOrders:
+		w.typedMu.RLock()
+		h := w.sprdOrdersHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.sprdOrders) == 0 {
+			return
+		}
+		for _, order := range task.sprdOrders {
+			o := order
+			w.safeTypedCall(task.kind, func() { h(o) })
+		}
+	case wsTypedKindSprdTrades:
+		w.typedMu.RLock()
+		h := w.sprdTradesHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.sprdTrades) == 0 {
+			return
+		}
+		for _, trade := range task.sprdTrades {
+			tr := trade
+			w.safeTypedCall(task.kind, func() { h(tr) })
 		}
 	case wsTypedKindOpReply:
 		w.typedMu.RLock()

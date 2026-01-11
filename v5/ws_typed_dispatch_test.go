@@ -129,3 +129,68 @@ func TestWSClient_onDataMessage_DepositInfo_TypedAsync_Dispatches(t *testing.T) 
 		t.Fatalf("timeout waiting deposit info")
 	}
 }
+
+func TestWSClient_onDataMessage_SprdOrders_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan SprdOrder, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnSprdOrders(func(order SprdOrder) {
+		select {
+		case gotCh <- order:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"sprd-orders"},"data":[{"sprdId":"BTC-USDT_BTC-USDT-SWAP","ordId":"o1","clOrdId":"c1","px":"1","sz":"1","side":"buy","ordType":"limit","state":"live","uTime":"1597026383085","cTime":"1597026383085"}]}`))
+
+	select {
+	case o := <-gotCh:
+		if o.OrdId != "o1" || o.ClOrdId != "c1" || o.SprdId != "BTC-USDT_BTC-USDT-SWAP" || o.UTime != 1597026383085 {
+			t.Fatalf("order = %#v", o)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting order")
+	}
+}
+
+func TestWSClient_onDataMessage_SprdTrades_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSSprdTrade, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnSprdTrades(func(trade WSSprdTrade) {
+		select {
+		case gotCh <- trade:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"sprd-trades"},"data":[{"sprdId":"s1","tradeId":"t1","ordId":"o1","clOrdId":"c1","fillPx":"999","fillSz":"3","state":"filled","side":"buy","execType":"M","ts":"1597026383085","legs":[{"instId":"BTC-USDT-SWAP","px":"20000","sz":"3","szCont":"0.03","side":"buy","fillPnl":"","fee":"","feeCcy":"","tradeId":"lt1"}],"code":"","msg":""}]}`))
+
+	select {
+	case tr := <-gotCh:
+		if tr.TradeId != "t1" || tr.OrdId != "o1" || tr.TS != 1597026383085 {
+			t.Fatalf("trade = %#v", tr)
+		}
+		if len(tr.Legs) != 1 || tr.Legs[0].InstId != "BTC-USDT-SWAP" {
+			t.Fatalf("legs = %#v", tr.Legs)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting trade")
+	}
+}

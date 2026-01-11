@@ -42,6 +42,9 @@ const (
 	WSChannelOptionTrades       = "option-trades"
 	WSChannelCallAuctionDetails = "call-auction-details"
 
+	WSChannelSprdOrders = "sprd-orders"
+	WSChannelSprdTrades = "sprd-trades"
+
 	WSChannelSprdPublicTrades = "sprd-public-trades"
 	WSChannelSprdTickers      = "sprd-tickers"
 )
@@ -144,6 +147,16 @@ func WSParseDepositInfo(message []byte) (*WSData[WSDepositInfo], bool, error) {
 // WSParseWithdrawalInfo 解析 withdrawal-info 频道推送消息（business WS，需要登录）。
 func WSParseWithdrawalInfo(message []byte) (*WSData[WSWithdrawalInfo], bool, error) {
 	return WSParseChannelData[WSWithdrawalInfo](message, WSChannelWithdrawalInfo)
+}
+
+// WSParseSprdOrders 解析 sprd-orders 频道推送消息（business WS，需要登录）。
+func WSParseSprdOrders(message []byte) (*WSData[SprdOrder], bool, error) {
+	return WSParseChannelData[SprdOrder](message, WSChannelSprdOrders)
+}
+
+// WSParseSprdTrades 解析 sprd-trades 频道推送消息（business WS，需要登录）。
+func WSParseSprdTrades(message []byte) (*WSData[WSSprdTrade], bool, error) {
+	return WSParseChannelData[WSSprdTrade](message, WSChannelSprdTrades)
 }
 
 // WSParseTickers 解析 tickers 频道推送消息。
@@ -341,6 +354,47 @@ type WSSprdPublicTrade struct {
 // WSParseSprdPublicTrades 解析 sprd-public-trades 频道推送消息（business WS）。
 func WSParseSprdPublicTrades(message []byte) (*WSData[WSSprdPublicTrade], bool, error) {
 	return WSParseChannelData[WSSprdPublicTrade](message, WSChannelSprdPublicTrades)
+}
+
+// WSSprdTrade 表示 sprd-trades 频道推送的数据项。
+//
+// 说明：价格/数量等字段保持为 string（无损）；时间戳字段解析为 int64（json string）。
+type WSSprdTrade struct {
+	SprdId string `json:"sprdId"`
+
+	TradeId string `json:"tradeId"`
+	OrdId   string `json:"ordId"`
+	ClOrdId string `json:"clOrdId"`
+	Tag     string `json:"tag"`
+
+	FillPx string `json:"fillPx"`
+	FillSz string `json:"fillSz"`
+
+	State    string `json:"state"`
+	Side     string `json:"side"`
+	ExecType string `json:"execType"`
+
+	TS int64 `json:"ts,string"`
+
+	Legs []WSSprdTradeLeg `json:"legs"`
+
+	Code string `json:"code,omitempty"`
+	Msg  string `json:"msg,omitempty"`
+}
+
+type WSSprdTradeLeg struct {
+	InstId string `json:"instId"`
+
+	Px     string `json:"px"`
+	Sz     string `json:"sz"`
+	SzCont string `json:"szCont"`
+	Side   string `json:"side"`
+
+	FillPnl string `json:"fillPnl"`
+	Fee     string `json:"fee"`
+	FeeCcy  string `json:"feeCcy"`
+
+	TradeId string `json:"tradeId"`
 }
 
 // PriceLimit 表示 WS price-limit 频道推送的数据项。

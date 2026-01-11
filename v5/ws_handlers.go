@@ -56,6 +56,22 @@ func WithWSWithdrawalInfoHandler(handler func(info WSWithdrawalInfo)) WSOption {
 	}
 }
 
+// WithWSSprdOrdersHandler 设置 sprd-orders 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSSprdOrdersHandler(handler func(order SprdOrder)) WSOption {
+	return func(c *WSClient) {
+		c.OnSprdOrders(handler)
+	}
+}
+
+// WithWSSprdTradesHandler 设置 sprd-trades 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSSprdTradesHandler(handler func(trade WSSprdTrade)) WSOption {
+	return func(c *WSClient) {
+		c.OnSprdTrades(handler)
+	}
+}
+
 // WithWSOpReplyHandler 设置 WS 业务 op 回包回调（order/cancel-order/amend-order 等）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSOpReplyHandler(handler func(reply WSOpReply, raw []byte)) WSOption {
@@ -131,6 +147,26 @@ func (w *WSClient) OnWithdrawalInfo(handler func(info WSWithdrawalInfo)) {
 	}
 	w.typedMu.Lock()
 	w.withdrawalInfoHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnSprdOrders 设置 sprd-orders 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnSprdOrders(handler func(order SprdOrder)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.sprdOrdersHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnSprdTrades 设置 sprd-trades 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnSprdTrades(handler func(trade WSSprdTrade)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.sprdTradesHandler = handler
 	w.typedMu.Unlock()
 }
 

@@ -215,6 +215,10 @@
 | `GET /api/v5/sprd/spreads` | `public` | [`sprd_spreads`](../v5/sprd_spreads_service.go) | ✅ [test](../v5/sprd_spreads_service_test.go) | [ex](../examples/sprd_spreads) | `rest, auth-public, sprd` |
 | `GET /api/v5/sprd/books` | `public` | [`sprd_books`](../v5/sprd_books_service.go) | ✅ [test](../v5/sprd_books_service_test.go) | [ex](../examples/sprd_books) | `rest, auth-public, sprd, orderbook` |
 | `GET /api/v5/sprd/public-trades` | `public` | [`sprd_public_trades`](../v5/sprd_public_trades_service.go) | ✅ [test](../v5/sprd_public_trades_service_test.go) | [ex](../examples/sprd_public_trades) | `rest, auth-public, sprd` |
+| `POST /api/v5/sprd/order` | `private` | [`sprd_place_order`](../v5/sprd_place_order_service.go) | ✅ [test](../v5/sprd_place_order_service_test.go) | [ex](../examples/sprd_place_order) | `rest, auth-private, sprd, orders` |
+| `POST /api/v5/sprd/cancel-order` | `private` | [`sprd_cancel_order`](../v5/sprd_cancel_order_service.go) | ✅ [test](../v5/sprd_cancel_order_service_test.go) | [ex](../examples/sprd_cancel_order) | `rest, auth-private, sprd, orders` |
+| `POST /api/v5/sprd/amend-order` | `private` | [`sprd_amend_order`](../v5/sprd_amend_order_service.go) | ✅ [test](../v5/sprd_amend_order_service_test.go) | [ex](../examples/sprd_amend_order) | `rest, auth-private, sprd, orders` |
+| `GET /api/v5/sprd/order` | `private` | [`sprd_get_order`](../v5/sprd_get_order_service.go) | ✅ [test](../v5/sprd_get_order_service_test.go) | [ex](../examples/sprd_get_order) | `rest, auth-private, sprd, orders` |
 
 ## WebSocket
 
@@ -234,8 +238,8 @@
 ### Business（按频道决定是否需要登录）
 
 - 频道（已解析）：K 线 `candle*`、标记价格 K 线 `mark-price-candle*`、指数 K 线 `index-candle*`、`trades-all`、`sprd-public-trades`、SPRD 深度 `sprd-bbo-tbt/sprd-books5/sprd-books-l2-tbt`
-- 资金推送（需要登录）：`deposit-info`、`withdrawal-info`
-- Examples：[examples/ws_business_candles](../examples/ws_business_candles)、[examples/ws_business_mark_price_candles](../examples/ws_business_mark_price_candles)、[examples/ws_business_index_candles](../examples/ws_business_index_candles)、[examples/ws_business_trades_all](../examples/ws_business_trades_all)、[examples/ws_business_sprd_public_trades](../examples/ws_business_sprd_public_trades)、[examples/ws_business_sprd_books](../examples/ws_business_sprd_books)、[examples/ws_business_deposit_info](../examples/ws_business_deposit_info)、[examples/ws_business_withdrawal_info](../examples/ws_business_withdrawal_info)
+- 需要登录的频道（已解析 + typed handler）：`deposit-info`、`withdrawal-info`、`sprd-orders`、`sprd-trades`
+- Examples：[examples/ws_business_candles](../examples/ws_business_candles)、[examples/ws_business_mark_price_candles](../examples/ws_business_mark_price_candles)、[examples/ws_business_index_candles](../examples/ws_business_index_candles)、[examples/ws_business_trades_all](../examples/ws_business_trades_all)、[examples/ws_business_sprd_public_trades](../examples/ws_business_sprd_public_trades)、[examples/ws_business_sprd_books](../examples/ws_business_sprd_books)、[examples/ws_business_sprd_orders](../examples/ws_business_sprd_orders)、[examples/ws_business_sprd_trades](../examples/ws_business_sprd_trades)、[examples/ws_business_deposit_info](../examples/ws_business_deposit_info)、[examples/ws_business_withdrawal_info](../examples/ws_business_withdrawal_info)
 
 ## 场景索引（标签）
 

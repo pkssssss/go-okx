@@ -385,6 +385,45 @@ func TestWSParseBusinessCandlesAndTradesAll(t *testing.T) {
 	})
 }
 
+func TestWSParseBusinessSprdOrdersAndTrades(t *testing.T) {
+	t.Run("sprd_orders", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"sprd-orders","sprdId":"BTC-USDT_BTC-USDT-SWAP","uid":"614488474791936"},"data":[{"sprdId":"BTC-USDT_BTC-UST-SWAP","ordId":"312269865356374016","clOrdId":"b1","tag":"","px":"999","sz":"3","ordType":"limit","side":"buy","fillSz":"0","fillPx":"","tradeId":"","accFillSz":"0","pendingFillSz":"2","pendingSettleSz":"1","canceledSz":"1","state":"live","avgPx":"0","cancelSource":"","uTime":"1597026383085","cTime":"1597026383085","code":"0","msg":"","reqId":"","amendResult":""}]}`)
+		dm, ok, err := WSParseSprdOrders(msg)
+		if err != nil {
+			t.Fatalf("WSParseSprdOrders() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelSprdOrders || dm.Arg.SprdId != "BTC-USDT_BTC-USDT-SWAP" || dm.Arg.UID != "614488474791936" {
+			t.Fatalf("arg = %#v", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].OrdId != "312269865356374016" || dm.Data[0].State != "live" || dm.Data[0].UTime != 1597026383085 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+	})
+
+	t.Run("sprd_trades", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"sprd-trades","sprdId":"BTC-USDT_BTC-USDT-SWAP","uid":"614488474791936"},"data":[{"sprdId":"BTC-USDT-SWAP_BTC-USDT-200329","tradeId":"123","ordId":"123445","clOrdId":"b16","tag":"","fillPx":"999","fillSz":"3","state":"filled","side":"buy","execType":"M","ts":"1597026383085","legs":[{"instId":"BTC-USDT-SWAP","px":"20000","sz":"3","szCont":"0.03","side":"buy","fillPnl":"","fee":"","feeCcy":"","tradeId":"1232342342"},{"instId":"BTC-USDT-200329","px":"21000","sz":"3","szCont":"0.03","side":"sell","fillPnl":"","fee":"","feeCcy":"","tradeId":"5345646634"}],"code":"","msg":""}]}`)
+		dm, ok, err := WSParseSprdTrades(msg)
+		if err != nil {
+			t.Fatalf("WSParseSprdTrades() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelSprdTrades || dm.Arg.SprdId != "BTC-USDT_BTC-USDT-SWAP" || dm.Arg.UID != "614488474791936" {
+			t.Fatalf("arg = %#v", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].TradeId != "123" || dm.Data[0].TS != 1597026383085 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+		if len(dm.Data[0].Legs) != 2 || dm.Data[0].Legs[1].InstId != "BTC-USDT-200329" || dm.Data[0].Legs[1].Side != "sell" {
+			t.Fatalf("legs = %#v", dm.Data[0].Legs)
+		}
+	})
+}
+
 func TestWSParsePublicOptionTradesAndCallAuctionDetails(t *testing.T) {
 	t.Run("option_trades", func(t *testing.T) {
 		msg := []byte(`{"arg":{"channel":"option-trades","instType":"OPTION","instFamily":"BTC-USD"},"data":[{"instFamily":"BTC-USD","instId":"BTC-USD-230224-18000-C","markPx":"0.04690107010619562","optType":"C","px":"0.045","side":"sell","sz":"2","tradeId":"38","fillVol":"0.1","fwdPx":"17000","idxPx":"16537.2","ts":"1672286551080"}]}`)

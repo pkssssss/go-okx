@@ -79,7 +79,7 @@ func WithWSURL(url string) WSOption {
 	}
 }
 
-// WithWSTypedHandlerAsync 启用 typed handler 的异步分发（orders/fills/account/positions/balance_and_position/op reply）。
+// WithWSTypedHandlerAsync 启用 typed handler 的异步分发（orders/fills/account/positions/balance_and_position/deposit-info/withdrawal-info/sprd-orders/sprd-trades/op reply）。
 //
 // 默认情况下，typed handler 会在 WS read goroutine 中执行；若 handler 逻辑较重可能阻塞读取导致断线/重连。
 // 启用该选项后，SDK 会将 typed handler 的执行移动到独立 worker goroutine，并通过有界队列解耦。
@@ -139,6 +139,8 @@ type WSClient struct {
 	balanceAndPositionHandler func(data WSBalanceAndPosition)
 	depositInfoHandler        func(info WSDepositInfo)
 	withdrawalInfoHandler     func(info WSWithdrawalInfo)
+	sprdOrdersHandler         func(order SprdOrder)
+	sprdTradesHandler         func(trade WSSprdTrade)
 	opReplyHandler            func(reply WSOpReply, raw []byte)
 
 	typedAsync  bool
@@ -680,9 +682,11 @@ func (w *WSClient) onDataMessage(message []byte) {
 	balPosH := w.balanceAndPositionHandler
 	depInfoH := w.depositInfoHandler
 	wdInfoH := w.withdrawalInfoHandler
+	sprdOrdersH := w.sprdOrdersHandler
+	sprdTradesH := w.sprdTradesHandler
 	w.typedMu.RUnlock()
 
-	if ordersH == nil && fillsH == nil && accountH == nil && positionsH == nil && balPosH == nil && depInfoH == nil && wdInfoH == nil {
+	if ordersH == nil && fillsH == nil && accountH == nil && positionsH == nil && balPosH == nil && depInfoH == nil && wdInfoH == nil && sprdOrdersH == nil && sprdTradesH == nil {
 		return
 	}
 
@@ -760,6 +764,24 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindWithdrawalInfo, withdrawalInfo: dm.Data})
+	case WSChannelSprdOrders:
+		if sprdOrdersH == nil {
+			return
+		}
+		dm, ok, err := WSParseSprdOrders(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdOrders, sprdOrders: dm.Data})
+	case WSChannelSprdTrades:
+		if sprdTradesH == nil {
+			return
+		}
+		dm, ok, err := WSParseSprdTrades(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdTrades, sprdTrades: dm.Data})
 	default:
 		return
 	}
