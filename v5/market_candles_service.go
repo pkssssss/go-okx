@@ -11,7 +11,9 @@ import (
 
 // Candle 表示 K 线数据。
 //
-// OKX 返回为数组：["ts","o","h","l","c","vol","volCcy","volCcyQuote","confirm"]
+// OKX 返回为数组：
+// - 常规 candles/history-candles：["ts","o","h","l","c","vol","volCcy","volCcyQuote","confirm"]
+// - sprd-candles/sprd-history-candles：["ts","o","h","l","c","vol","confirm"]
 // 不同市场/接口可能字段个数不同；这里采用“最小必需字段 + 兼容可选字段”的解析策略。
 type Candle struct {
 	TS int64
@@ -49,14 +51,24 @@ func (c *Candle) UnmarshalJSON(data []byte) error {
 	c.Low = arr[3]
 	c.Close = arr[4]
 	c.Vol = arr[5]
-	if len(arr) > 6 {
+	switch len(arr) {
+	case 7:
+		// sprd-candles/sprd-history-candles: [ts,o,h,l,c,vol,confirm]
+		c.Confirm = arr[6]
+	case 8:
+		// 部分接口可能返回 [ts,o,h,l,c,vol,volCcy,confirm]
 		c.VolCcy = arr[6]
-	}
-	if len(arr) > 7 {
-		c.VolCcyQuote = arr[7]
-	}
-	if len(arr) > 8 {
-		c.Confirm = arr[8]
+		c.Confirm = arr[7]
+	default:
+		if len(arr) > 6 {
+			c.VolCcy = arr[6]
+		}
+		if len(arr) > 7 {
+			c.VolCcyQuote = arr[7]
+		}
+		if len(arr) > 8 {
+			c.Confirm = arr[8]
+		}
 	}
 	return nil
 }
