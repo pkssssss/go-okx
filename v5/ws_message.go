@@ -24,9 +24,12 @@ const (
 	WSChannelAlgoRecurringBuy            = "algo-recurring-buy"
 	WSChannelCopytradingLeadNotification = "copytrading-lead-notification"
 
-	WSChannelRFQs             = "rfqs"
-	WSChannelQuotes           = "quotes"
-	WSChannelStrucBlockTrades = "struc-block-trades"
+	WSChannelRFQs                   = "rfqs"
+	WSChannelQuotes                 = "quotes"
+	WSChannelStrucBlockTrades       = "struc-block-trades"
+	WSChannelPublicStrucBlockTrades = "public-struc-block-trades"
+	WSChannelPublicBlockTrades      = "public-block-trades"
+	WSChannelBlockTickers           = "block-tickers"
 
 	WSChannelDepositInfo    = "deposit-info"
 	WSChannelWithdrawalInfo = "withdrawal-info"
@@ -239,6 +242,21 @@ func WSParseQuotes(message []byte) (*WSData[WSQuote], bool, error) {
 // WSParseStrucBlockTrades 解析 struc-block-trades 频道推送消息（business WS，需要登录）。
 func WSParseStrucBlockTrades(message []byte) (*WSData[WSStrucBlockTrade], bool, error) {
 	return WSParseChannelData[WSStrucBlockTrade](message, WSChannelStrucBlockTrades)
+}
+
+// WSParsePublicStrucBlockTrades 解析 public-struc-block-trades 频道推送消息（business WS，无需登录）。
+func WSParsePublicStrucBlockTrades(message []byte) (*WSData[WSPublicStrucBlockTrade], bool, error) {
+	return WSParseChannelData[WSPublicStrucBlockTrade](message, WSChannelPublicStrucBlockTrades)
+}
+
+// WSParsePublicBlockTrades 解析 public-block-trades 频道推送消息（business WS，无需登录）。
+func WSParsePublicBlockTrades(message []byte) (*WSData[BlockTrade], bool, error) {
+	return WSParseChannelData[BlockTrade](message, WSChannelPublicBlockTrades)
+}
+
+// WSParseBlockTickers 解析 block-tickers 频道推送消息（business WS，无需登录）。
+func WSParseBlockTickers(message []byte) (*WSData[WSBlockTicker], bool, error) {
+	return WSParseChannelData[WSBlockTicker](message, WSChannelBlockTickers)
 }
 
 // WSParseDepositInfo 解析 deposit-info 频道推送消息（business WS，需要登录）。
@@ -942,6 +960,7 @@ type WSStrucBlockTrade struct {
 	QuoteId   string `json:"quoteId"`
 	ClQuoteId string `json:"clQuoteId"`
 	BlockTdId string `json:"blockTdId"`
+	GroupId   string `json:"groupId"`
 	Tag       string `json:"tag"`
 
 	TTraderCode string `json:"tTraderCode"`
@@ -953,6 +972,28 @@ type WSStrucBlockTrade struct {
 	Legs      []WSStrucBlockTradeLeg       `json:"legs"`
 	AcctAlloc []WSStrucBlockTradeAcctAlloc `json:"acctAlloc,omitempty"`
 }
+
+// WSPublicStrucBlockTrade 表示公共大宗结构化成交推送（public-struc-block-trades）的数据项。
+type WSPublicStrucBlockTrade struct {
+	CTime int64 `json:"cTime,string"`
+
+	BlockTdId string `json:"blockTdId"`
+	GroupId   string `json:"groupId"`
+
+	Legs []WSPublicStrucBlockTradeLeg `json:"legs"`
+}
+
+type WSPublicStrucBlockTradeLeg struct {
+	Px     string `json:"px"`
+	Sz     string `json:"sz"`
+	InstId string `json:"instId"`
+	Side   string `json:"side"`
+
+	TradeId string `json:"tradeId"`
+}
+
+// WSBlockTicker 表示大宗交易行情推送（block-tickers）的数据项。
+type WSBlockTicker = MarketBlockTicker
 
 type WSStrucBlockTradeLeg struct {
 	Px     string `json:"px"`

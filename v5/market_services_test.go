@@ -143,6 +143,142 @@ func TestMarketTickersService_Do(t *testing.T) {
 	})
 }
 
+func TestMarketBlockTickerService_Do(t *testing.T) {
+	t.Run("missing_instId", func(t *testing.T) {
+		c := NewClient()
+		_, err := c.NewMarketBlockTickerService().Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errMarketBlockTickerMissingInstId {
+			t.Fatalf("error = %v, want %v", err, errMarketBlockTickerMissingInstId)
+		}
+	})
+
+	t.Run("ok", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodGet; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/market/block-ticker"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "instId=BTC-USD-SWAP"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+
+			if got := r.Header.Get("OK-ACCESS-KEY"); got != "" {
+				t.Fatalf("unexpected signed header OK-ACCESS-KEY = %q", got)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SWAP","instId":"BTC-USD-SWAP","volCcy24h":"2222","vol24h":"333","ts":"1597026383085"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+		)
+
+		tk, err := c.NewMarketBlockTickerService().InstId("BTC-USD-SWAP").Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if tk.InstId != "BTC-USD-SWAP" || tk.InstType != "SWAP" {
+			t.Fatalf("ticker = %#v", tk)
+		}
+		if tk.TS != 1597026383085 {
+			t.Fatalf("TS = %d, want %d", tk.TS, 1597026383085)
+		}
+	})
+
+	t.Run("empty_data", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+		)
+
+		_, err := c.NewMarketBlockTickerService().InstId("BTC-USD-SWAP").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errEmptyMarketBlockTickerResponse {
+			t.Fatalf("error = %v, want %v", err, errEmptyMarketBlockTickerResponse)
+		}
+	})
+}
+
+func TestMarketBlockTickersService_Do(t *testing.T) {
+	t.Run("missing_instType", func(t *testing.T) {
+		c := NewClient()
+		_, err := c.NewMarketBlockTickersService().Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errMarketBlockTickersMissingInstType {
+			t.Fatalf("error = %v, want %v", err, errMarketBlockTickersMissingInstType)
+		}
+	})
+
+	t.Run("ok", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.URL.Path, "/api/v5/market/block-tickers"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "instType=SWAP"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SWAP","instId":"A","volCcy24h":"1","vol24h":"2","ts":"1"},{"instType":"SWAP","instId":"B","volCcy24h":"3","vol24h":"4","ts":"2"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+		)
+
+		got, err := c.NewMarketBlockTickersService().InstType("SWAP").Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+		if len(got) != 2 {
+			t.Fatalf("len = %d, want %d", len(got), 2)
+		}
+	})
+
+	t.Run("with_instFamily", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.URL.Path, "/api/v5/market/block-tickers"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			if got, want := r.URL.RawQuery, "instFamily=BTC-USD&instType=SWAP"; got != want {
+				t.Fatalf("query = %q, want %q", got, want)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+		)
+
+		_, err := c.NewMarketBlockTickersService().InstType("SWAP").InstFamily("BTC-USD").Do(context.Background())
+		if err != nil {
+			t.Fatalf("Do() error = %v", err)
+		}
+	})
+}
+
 func TestMarketBooksService_Do(t *testing.T) {
 	t.Run("missing_instId", func(t *testing.T) {
 		c := NewClient()

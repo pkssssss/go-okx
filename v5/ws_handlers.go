@@ -144,6 +144,30 @@ func WithWSStrucBlockTradesHandler(handler func(trade WSStrucBlockTrade)) WSOpti
 	}
 }
 
+// WithWSPublicStrucBlockTradesHandler 设置 public-struc-block-trades 推送的逐条回调（business WS，无需登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSPublicStrucBlockTradesHandler(handler func(trade WSPublicStrucBlockTrade)) WSOption {
+	return func(c *WSClient) {
+		c.OnPublicStrucBlockTrades(handler)
+	}
+}
+
+// WithWSPublicBlockTradesHandler 设置 public-block-trades 推送的逐条回调（business WS，无需登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSPublicBlockTradesHandler(handler func(trade BlockTrade)) WSOption {
+	return func(c *WSClient) {
+		c.OnPublicBlockTrades(handler)
+	}
+}
+
+// WithWSBlockTickersHandler 设置 block-tickers 推送的逐条回调（business WS，无需登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSBlockTickersHandler(handler func(ticker WSBlockTicker)) WSOption {
+	return func(c *WSClient) {
+		c.OnBlockTickers(handler)
+	}
+}
+
 // WithWSDepositInfoHandler 设置 deposit-info 推送的逐条回调（business WS，需要登录）。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
@@ -506,6 +530,36 @@ func (w *WSClient) OnStrucBlockTrades(handler func(trade WSStrucBlockTrade)) {
 	}
 	w.typedMu.Lock()
 	w.strucBlockTradesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnPublicStrucBlockTrades 设置 public-struc-block-trades 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnPublicStrucBlockTrades(handler func(trade WSPublicStrucBlockTrade)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.publicStrucBlockTradesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnPublicBlockTrades 设置 public-block-trades 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnPublicBlockTrades(handler func(trade BlockTrade)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.publicBlockTradesHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnBlockTickers 设置 block-tickers 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnBlockTickers(handler func(ticker WSBlockTicker)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.blockTickersHandler = handler
 	w.typedMu.Unlock()
 }
 

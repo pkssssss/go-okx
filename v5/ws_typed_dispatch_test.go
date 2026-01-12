@@ -804,3 +804,102 @@ func TestWSClient_onDataMessage_StrucBlockTrades_TypedAsync_Dispatches(t *testin
 		t.Fatalf("timeout waiting struc-block-trades")
 	}
 }
+
+func TestWSClient_onDataMessage_PublicStrucBlockTrades_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSPublicStrucBlockTrade, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnPublicStrucBlockTrades(func(trade WSPublicStrucBlockTrade) {
+		select {
+		case gotCh <- trade:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"public-struc-block-trades"},"data":[{"cTime":"1608267227834","blockTdId":"1802896","groupId":"","legs":[{"px":"0.323","sz":"25.0","instId":"BTC-USD-20220114-13250-C","side":"sell","tradeId":"15102"}]}]}`))
+
+	select {
+	case trade := <-gotCh:
+		if trade.BlockTdId != "1802896" || trade.CTime != 1608267227834 {
+			t.Fatalf("trade = %#v", trade)
+		}
+		if len(trade.Legs) != 1 || trade.Legs[0].TradeId != "15102" || trade.Legs[0].InstId != "BTC-USD-20220114-13250-C" {
+			t.Fatalf("legs = %#v", trade.Legs)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting public-struc-block-trades")
+	}
+}
+
+func TestWSClient_onDataMessage_PublicBlockTrades_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan BlockTrade, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnPublicBlockTrades(func(trade BlockTrade) {
+		select {
+		case gotCh <- trade:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"public-block-trades","instId":"BTC-USD-231020-5000-P"},"data":[{"fillVol":"5","fwdPx":"26808.16","groupId":"","idxPx":"27222.5","instId":"BTC-USD-231020-5000-P","markPx":"0.0022406326071111","px":"0.0048","side":"buy","sz":"1","tradeId":"633971452580106242","ts":"1697422572972"}]}`))
+
+	select {
+	case trade := <-gotCh:
+		if trade.InstId != "BTC-USD-231020-5000-P" || trade.TradeId != "633971452580106242" || trade.TS != 1697422572972 {
+			t.Fatalf("trade = %#v", trade)
+		}
+		if trade.Px != "0.0048" || trade.Sz != "1" || trade.Side != "buy" {
+			t.Fatalf("trade = %#v", trade)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting public-block-trades")
+	}
+}
+
+func TestWSClient_onDataMessage_BlockTickers_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSBlockTicker, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnBlockTickers(func(ticker WSBlockTicker) {
+		select {
+		case gotCh <- ticker:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"block-tickers"},"data":[{"instType":"SWAP","instId":"LTC-USD-SWAP","volCcy24h":"0","vol24h":"0","ts":"1597026383085"}]}`))
+
+	select {
+	case ticker := <-gotCh:
+		if ticker.InstId != "LTC-USD-SWAP" || ticker.Vol24h != "0" || ticker.TS != 1597026383085 {
+			t.Fatalf("ticker = %#v", ticker)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting block-tickers")
+	}
+}

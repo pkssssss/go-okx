@@ -168,6 +168,9 @@ type WSClient struct {
 	rfqsHandler                        func(rfq WSRFQ)
 	quotesHandler                      func(quote WSQuote)
 	strucBlockTradesHandler            func(trade WSStrucBlockTrade)
+	publicStrucBlockTradesHandler      func(trade WSPublicStrucBlockTrade)
+	publicBlockTradesHandler           func(trade BlockTrade)
+	blockTickersHandler                func(ticker WSBlockTicker)
 	depositInfoHandler                 func(info WSDepositInfo)
 	withdrawalInfoHandler              func(info WSWithdrawalInfo)
 	sprdOrdersHandler                  func(order SprdOrder)
@@ -761,6 +764,9 @@ func (w *WSClient) onDataMessage(message []byte) {
 	rfqsH := w.rfqsHandler
 	quotesH := w.quotesHandler
 	strucBlockTradesH := w.strucBlockTradesHandler
+	publicStrucBlockTradesH := w.publicStrucBlockTradesHandler
+	publicBlockTradesH := w.publicBlockTradesHandler
+	blockTickersH := w.blockTickersHandler
 	depInfoH := w.depositInfoHandler
 	wdInfoH := w.withdrawalInfoHandler
 	sprdOrdersH := w.sprdOrdersHandler
@@ -803,6 +809,9 @@ func (w *WSClient) onDataMessage(message []byte) {
 		rfqsH == nil &&
 		quotesH == nil &&
 		strucBlockTradesH == nil &&
+		publicStrucBlockTradesH == nil &&
+		publicBlockTradesH == nil &&
+		blockTickersH == nil &&
 		depInfoH == nil &&
 		wdInfoH == nil &&
 		sprdOrdersH == nil &&
@@ -1001,6 +1010,33 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindStrucBlockTrades, strucBlockTrades: dm.Data})
+	case WSChannelPublicStrucBlockTrades:
+		if publicStrucBlockTradesH == nil {
+			return
+		}
+		dm, ok, err := WSParsePublicStrucBlockTrades(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindPublicStrucBlockTrades, publicStrucBlockTrades: dm.Data})
+	case WSChannelPublicBlockTrades:
+		if publicBlockTradesH == nil {
+			return
+		}
+		dm, ok, err := WSParsePublicBlockTrades(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindPublicBlockTrades, publicBlockTrades: dm.Data})
+	case WSChannelBlockTickers:
+		if blockTickersH == nil {
+			return
+		}
+		dm, ok, err := WSParseBlockTickers(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindBlockTickers, blockTickers: dm.Data})
 	case WSChannelDepositInfo:
 		if depInfoH == nil {
 			return

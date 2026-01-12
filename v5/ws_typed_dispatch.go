@@ -26,6 +26,9 @@ const (
 	wsTypedKindRFQs
 	wsTypedKindQuotes
 	wsTypedKindStrucBlockTrades
+	wsTypedKindPublicStrucBlockTrades
+	wsTypedKindPublicBlockTrades
+	wsTypedKindBlockTickers
 	wsTypedKindDepositInfo
 	wsTypedKindWithdrawalInfo
 	wsTypedKindSprdOrders
@@ -89,6 +92,12 @@ func (k wsTypedKind) String() string {
 		return "quotes"
 	case wsTypedKindStrucBlockTrades:
 		return "struc_block_trades"
+	case wsTypedKindPublicStrucBlockTrades:
+		return "public_struc_block_trades"
+	case wsTypedKindPublicBlockTrades:
+		return "public_block_trades"
+	case wsTypedKindBlockTickers:
+		return "block_tickers"
 	case wsTypedKindDepositInfo:
 		return "deposit_info"
 	case wsTypedKindWithdrawalInfo:
@@ -161,6 +170,9 @@ type wsTypedTask struct {
 	rfqs                        []WSRFQ
 	quotes                      []WSQuote
 	strucBlockTrades            []WSStrucBlockTrade
+	publicStrucBlockTrades      []WSPublicStrucBlockTrade
+	publicBlockTrades           []BlockTrade
+	blockTickers                []WSBlockTicker
 	depositInfo                 []WSDepositInfo
 	withdrawalInfo              []WSWithdrawalInfo
 	sprdOrders                  []SprdOrder
@@ -422,6 +434,39 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, trade := range task.strucBlockTrades {
 			tr := trade
 			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindPublicStrucBlockTrades:
+		w.typedMu.RLock()
+		h := w.publicStrucBlockTradesHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.publicStrucBlockTrades) == 0 {
+			return
+		}
+		for _, trade := range task.publicStrucBlockTrades {
+			tr := trade
+			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindPublicBlockTrades:
+		w.typedMu.RLock()
+		h := w.publicBlockTradesHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.publicBlockTrades) == 0 {
+			return
+		}
+		for _, trade := range task.publicBlockTrades {
+			tr := trade
+			w.safeTypedCall(task.kind, func() { h(tr) })
+		}
+	case wsTypedKindBlockTickers:
+		w.typedMu.RLock()
+		h := w.blockTickersHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.blockTickers) == 0 {
+			return
+		}
+		for _, ticker := range task.blockTickers {
+			tk := ticker
+			w.safeTypedCall(task.kind, func() { h(tk) })
 		}
 	case wsTypedKindDepositInfo:
 		w.typedMu.RLock()

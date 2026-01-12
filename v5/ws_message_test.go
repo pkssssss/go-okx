@@ -428,6 +428,65 @@ func TestWSParseBusinessCandlesAndTradesAll(t *testing.T) {
 	})
 }
 
+func TestWSParseBusinessPublicBlockTradingChannels(t *testing.T) {
+	t.Run("public_struc_block_trades", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"public-struc-block-trades"},"data":[{"cTime":"1608267227834","blockTdId":"1802896","groupId":"","legs":[{"px":"0.323","sz":"25.0","instId":"BTC-USD-20220114-13250-C","side":"sell","tradeId":"15102"}]}]}`)
+		dm, ok, err := WSParsePublicStrucBlockTrades(msg)
+		if err != nil {
+			t.Fatalf("WSParsePublicStrucBlockTrades() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelPublicStrucBlockTrades {
+			t.Fatalf("arg = %#v, want channel public-struc-block-trades", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].BlockTdId != "1802896" || dm.Data[0].CTime != 1608267227834 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+		if len(dm.Data[0].Legs) != 1 || dm.Data[0].Legs[0].InstId != "BTC-USD-20220114-13250-C" || dm.Data[0].Legs[0].TradeId != "15102" {
+			t.Fatalf("legs = %#v", dm.Data[0].Legs)
+		}
+	})
+
+	t.Run("public_block_trades", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"public-block-trades","instId":"BTC-USD-231020-5000-P"},"data":[{"fillVol":"5","fwdPx":"26808.16","groupId":"","idxPx":"27222.5","instId":"BTC-USD-231020-5000-P","markPx":"0.0022406326071111","px":"0.0048","side":"buy","sz":"1","tradeId":"633971452580106242","ts":"1697422572972"}]}`)
+		dm, ok, err := WSParsePublicBlockTrades(msg)
+		if err != nil {
+			t.Fatalf("WSParsePublicBlockTrades() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelPublicBlockTrades || dm.Arg.InstId != "BTC-USD-231020-5000-P" {
+			t.Fatalf("arg = %#v, want public-block-trades BTC-USD-231020-5000-P", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "BTC-USD-231020-5000-P" || dm.Data[0].TradeId != "633971452580106242" || dm.Data[0].TS != 1697422572972 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+		if dm.Data[0].Px != "0.0048" || dm.Data[0].Sz != "1" || dm.Data[0].Side != "buy" {
+			t.Fatalf("trade = %#v", dm.Data[0])
+		}
+	})
+
+	t.Run("block_tickers", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"block-tickers"},"data":[{"instType":"SWAP","instId":"LTC-USD-SWAP","volCcy24h":"0","vol24h":"0","ts":"1597026383085"}]}`)
+		dm, ok, err := WSParseBlockTickers(msg)
+		if err != nil {
+			t.Fatalf("WSParseBlockTickers() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelBlockTickers {
+			t.Fatalf("arg = %#v, want channel block-tickers", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "LTC-USD-SWAP" || dm.Data[0].TS != 1597026383085 {
+			t.Fatalf("data = %#v", dm.Data)
+		}
+	})
+}
+
 func TestWSParseBusinessSprdOrdersAndTrades(t *testing.T) {
 	t.Run("sprd_orders", func(t *testing.T) {
 		msg := []byte(`{"arg":{"channel":"sprd-orders","sprdId":"BTC-USDT_BTC-USDT-SWAP","uid":"614488474791936"},"data":[{"sprdId":"BTC-USDT_BTC-UST-SWAP","ordId":"312269865356374016","clOrdId":"b1","tag":"","px":"999","sz":"3","ordType":"limit","side":"buy","fillSz":"0","fillPx":"","tradeId":"","accFillSz":"0","pendingFillSz":"2","pendingSettleSz":"1","canceledSz":"1","state":"live","avgPx":"0","cancelSource":"","uTime":"1597026383085","cTime":"1597026383085","code":"0","msg":"","reqId":"","amendResult":""}]}`)
