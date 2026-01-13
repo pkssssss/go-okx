@@ -196,6 +196,22 @@
 | `POST /api/v5/asset/withdrawal` | `private` | [`asset_withdrawal`](../v5/asset_withdrawal_service.go) | ✅ [test](../v5/asset_withdrawal_service_test.go) | [ex](../examples/asset_withdrawal) | `auth-private, withdrawal` |
 | `GET /api/v5/asset/withdrawal-history` | `private` | [`asset_withdrawal_history`](../v5/asset_withdrawal_history_service.go) | ✅ [test](../v5/asset_withdrawal_history_service_test.go) | [ex](../examples/asset_withdrawal_history) | `auth-private, withdrawal` |
 
+### Fiat（法币买卖）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `GET /api/v5/fiat/buy-sell/currencies` | `private` | [`fiat_buy_sell_currencies_service.go`](../v5/fiat_buy_sell_currencies_service.go) | ✅（聚合） [`fiat_buy_sell_services_test.go`](../v5/fiat_buy_sell_services_test.go) | [`examples/fiat_buy_sell_currencies`](../examples/fiat_buy_sell_currencies) | `rest, auth-private, fiat` |
+| `GET /api/v5/fiat/buy-sell/currency-pair` | `private` | [`fiat_buy_sell_currency_pair_service.go`](../v5/fiat_buy_sell_currency_pair_service.go) | ✅（聚合） [`fiat_buy_sell_services_test.go`](../v5/fiat_buy_sell_services_test.go) | [`examples/fiat_buy_sell_currency_pair`](../examples/fiat_buy_sell_currency_pair) | `rest, auth-private, fiat` |
+| `POST /api/v5/fiat/buy-sell/quote` | `private` | [`fiat_buy_sell_quote_service.go`](../v5/fiat_buy_sell_quote_service.go) | ✅（聚合） [`fiat_buy_sell_services_test.go`](../v5/fiat_buy_sell_services_test.go) | [`examples/fiat_buy_sell_quote`](../examples/fiat_buy_sell_quote) | `rest, auth-private, fiat, quote` |
+| `POST /api/v5/fiat/buy-sell/trade` | `private` | [`fiat_buy_sell_trade_service.go`](../v5/fiat_buy_sell_trade_service.go) | ✅（聚合） [`fiat_buy_sell_services_test.go`](../v5/fiat_buy_sell_services_test.go) | [`examples/fiat_buy_sell_trade`](../examples/fiat_buy_sell_trade) | `rest, auth-private, fiat, trade` |
+| `GET /api/v5/fiat/buy-sell/history` | `private` | [`fiat_buy_sell_history_service.go`](../v5/fiat_buy_sell_history_service.go) | ✅（聚合） [`fiat_buy_sell_services_test.go`](../v5/fiat_buy_sell_services_test.go) | [`examples/fiat_buy_sell_history`](../examples/fiat_buy_sell_history) | `rest, auth-private, fiat, history` |
+
+### Affiliate（节点）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `GET /api/v5/affiliate/invitee/detail` | `private` | [`affiliate_invitee_detail_service.go`](../v5/affiliate_invitee_detail_service.go) | ✅ [`affiliate_invitee_detail_service_test.go`](../v5/affiliate_invitee_detail_service_test.go) | [`examples/affiliate_invitee_detail`](../examples/affiliate_invitee_detail) | `rest, auth-private, affiliate` |
+
 ### Users（用户/子账户）
 
 | Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
@@ -216,8 +232,8 @@
 | `GET /api/v5/rfq/counterparties` | `private` | [`rfq_counterparties`](../v5/rfq_counterparties_service.go) | ✅ [test](../v5/rfq_counterparties_service_test.go) | [ex](../examples/rfq_counterparties) | `rest, auth-private, rfq` |
 | `POST /api/v5/rfq/create-rfq` | `private` | [`rfq_create_rfq`](../v5/rfq_create_rfq_service.go) | ✅ [test](../v5/rfq_create_rfq_service_test.go) | [ex](../examples/rfq_create_rfq) | `rest, auth-private, rfq, trade` |
 | `POST /api/v5/rfq/cancel-rfq` | `private` | [`rfq_cancel_rfq`](../v5/rfq_cancel_rfq_service.go) | ✅ [test](../v5/rfq_cancel_rfq_service_test.go) | [ex](../examples/rfq_cancel_rfq) | `rest, auth-private, rfq, trade` |
-| `POST /api/v5/rfq/cancel-batch-rfqs` | `private` | [`rfq_cancel_batch_rfqs`](../v5/rfq_cancel_batch_rfqs_service.go) | ✅ [test](../v5/rfq_cancel_batch_rfqs_service_test.go) | — | `rest, auth-private, rfq, trade` |
-| `POST /api/v5/rfq/cancel-all-rfqs` | `private` | [`rfq_cancel_all_rfqs`](../v5/rfq_cancel_all_rfqs_service.go) | ✅ [test](../v5/rfq_cancel_all_rfqs_service_test.go) | — | `rest, auth-private, rfq, trade` |
+| `POST /api/v5/rfq/cancel-batch-rfqs` | `private` | [`rfq_cancel_batch_rfqs`](../v5/rfq_cancel_batch_rfqs_service.go) | ✅ [test](../v5/rfq_cancel_batch_rfqs_service_test.go) | [ex](../examples/rfq_cancel_batch_rfqs) | `rest, auth-private, rfq, trade` |
+| `POST /api/v5/rfq/cancel-all-rfqs` | `private` | [`rfq_cancel_all_rfqs`](../v5/rfq_cancel_all_rfqs_service.go) | ✅ [test](../v5/rfq_cancel_all_rfqs_service_test.go) | [ex](../examples/rfq_cancel_all_rfqs) | `rest, auth-private, rfq, trade` |
 | `POST /api/v5/rfq/execute-quote` | `private` | [`rfq_execute_quote`](../v5/rfq_execute_quote_service.go) | ✅ [test](../v5/rfq_execute_quote_service_test.go) | [ex](../examples/rfq_execute_quote) | `rest, auth-private, rfq, trade` |
 | `GET /api/v5/rfq/maker-instrument-settings` | `private` | [`rfq_maker_instrument_settings`](../v5/rfq_maker_instrument_settings_service.go) | ✅ [test](../v5/rfq_maker_instrument_settings_service_test.go) | [ex](../examples/rfq_maker_instrument_settings) | `rest, auth-private, rfq, maker` |
 | `POST /api/v5/rfq/maker-instrument-settings` | `private` | [`rfq_set_maker_instrument_settings`](../v5/rfq_set_maker_instrument_settings_service.go) | ✅ [test](../v5/rfq_set_maker_instrument_settings_service_test.go) | [ex](../examples/rfq_set_maker_instrument_settings) | `rest, auth-private, rfq, maker` |
@@ -226,8 +242,8 @@
 | `GET /api/v5/rfq/mmp-config` | `private` | [`rfq_mmp_config`](../v5/rfq_mmp_config_service.go) | ✅ [test](../v5/rfq_mmp_config_service_test.go) | [ex](../examples/rfq_mmp_config) | `rest, auth-private, rfq, maker, mmp` |
 | `POST /api/v5/rfq/create-quote` | `private` | [`rfq_create_quote`](../v5/rfq_create_quote_service.go) | ✅ [test](../v5/rfq_create_quote_service_test.go) | [ex](../examples/rfq_create_quote) | `rest, auth-private, rfq, maker, trade` |
 | `POST /api/v5/rfq/cancel-quote` | `private` | [`rfq_cancel_quote`](../v5/rfq_cancel_quote_service.go) | ✅ [test](../v5/rfq_cancel_quote_service_test.go) | [ex](../examples/rfq_cancel_quote) | `rest, auth-private, rfq, maker, trade` |
-| `POST /api/v5/rfq/cancel-batch-quotes` | `private` | [`rfq_cancel_batch_quotes`](../v5/rfq_cancel_batch_quotes_service.go) | ✅ [test](../v5/rfq_cancel_batch_quotes_service_test.go) | — | `rest, auth-private, rfq, maker, trade` |
-| `POST /api/v5/rfq/cancel-all-quotes` | `private` | [`rfq_cancel_all_quotes`](../v5/rfq_cancel_all_quotes_service.go) | ✅ [test](../v5/rfq_cancel_all_quotes_service_test.go) | — | `rest, auth-private, rfq, maker, trade` |
+| `POST /api/v5/rfq/cancel-batch-quotes` | `private` | [`rfq_cancel_batch_quotes`](../v5/rfq_cancel_batch_quotes_service.go) | ✅ [test](../v5/rfq_cancel_batch_quotes_service_test.go) | [ex](../examples/rfq_cancel_batch_quotes) | `rest, auth-private, rfq, maker, trade` |
+| `POST /api/v5/rfq/cancel-all-quotes` | `private` | [`rfq_cancel_all_quotes`](../v5/rfq_cancel_all_quotes_service.go) | ✅ [test](../v5/rfq_cancel_all_quotes_service_test.go) | [ex](../examples/rfq_cancel_all_quotes) | `rest, auth-private, rfq, maker, trade` |
 | `POST /api/v5/rfq/cancel-all-after` | `private` | [`rfq_cancel_all_after`](../v5/rfq_cancel_all_after_service.go) | ✅ [test](../v5/rfq_cancel_all_after_service_test.go) | [ex](../examples/rfq_cancel_all_after) | `rest, auth-private, rfq, risk` |
 | `GET /api/v5/rfq/rfqs` | `private` | [`rfq_rfqs`](../v5/rfq_rfqs_service.go) | ✅ [test](../v5/rfq_rfqs_service_test.go) | [ex](../examples/rfq_rfqs) | `rest, auth-private, rfq` |
 | `GET /api/v5/rfq/quotes` | `private` | [`rfq_quotes`](../v5/rfq_quotes_service.go) | ✅ [test](../v5/rfq_quotes_service_test.go) | [ex](../examples/rfq_quotes) | `rest, auth-private, rfq` |
@@ -295,12 +311,14 @@
 - 下单链路：`orders`、`fills`、`algo`
 - 鉴权：`auth-public`、`auth-private`
 - 资产：`transfer`、`bills`、`deposit`、`withdrawal`、`convert`、`statement`
+- 法币：`fiat`
 - 账户/仓位：`balance`、`positions`、`leverage`、`loan`、`margin`、`spot`
 - 子账户：`subaccount`、`apikey`
 - 期权相关：`option`、`mmp`
 - 风控/限速：`risk`
 - 大宗交易：`rfq`、`block`
 - 价差交易：`sprd`
+- 节点：`affiliate`
 
 ## 维护说明
 
