@@ -347,10 +347,10 @@
 
 | Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
 |---|---|---|---|---|---|
-| `GET /api/v5/tradingBot/grid/ai-param` | `public` | [`trading_bot_grid_ai_param`](../v5/trading_bot_grid_ai_param_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-public, tradingbot, grid` |
-| `GET /api/v5/tradingBot/grid/grid-quantity` | `public` | [`trading_bot_grid_grid_quantity`](../v5/trading_bot_grid_grid_quantity_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-public, tradingbot, grid` |
-| `POST /api/v5/tradingBot/grid/min-investment` | `public` | [`trading_bot_grid_min_investment`](../v5/trading_bot_grid_min_investment_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-public, tradingbot, grid` |
-| `GET /api/v5/tradingBot/public/rsi-back-testing` | `public` | [`trading_bot_public_rsi_back_testing`](../v5/trading_bot_public_rsi_back_testing_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-public, tradingbot` |
+| `GET /api/v5/tradingBot/grid/ai-param` | `public` | [`trading_bot_grid_ai_param`](../v5/trading_bot_grid_ai_param_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | [ex](../examples/trading_bot_grid_ai_param) | `rest, auth-public, tradingbot, grid` |
+| `GET /api/v5/tradingBot/grid/grid-quantity` | `public` | [`trading_bot_grid_grid_quantity`](../v5/trading_bot_grid_grid_quantity_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | [ex](../examples/trading_bot_grid_grid_quantity) | `rest, auth-public, tradingbot, grid` |
+| `POST /api/v5/tradingBot/grid/min-investment` | `public` | [`trading_bot_grid_min_investment`](../v5/trading_bot_grid_min_investment_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | [ex](../examples/trading_bot_grid_min_investment) | `rest, auth-public, tradingbot, grid` |
+| `GET /api/v5/tradingBot/public/rsi-back-testing` | `public` | [`trading_bot_public_rsi_back_testing`](../v5/trading_bot_public_rsi_back_testing_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | [ex](../examples/trading_bot_public_rsi_back_testing) | `rest, auth-public, tradingbot` |
 
 #### Grid（网格）
 
