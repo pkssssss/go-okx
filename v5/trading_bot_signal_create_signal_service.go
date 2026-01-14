@@ -1,0 +1,54 @@
+package okx
+
+import (
+	"context"
+	"errors"
+	"net/http"
+)
+
+type tradingBotSignalCreateSignalRequest struct {
+	SignalChanName string `json:"signalChanName"`
+	SignalChanDesc string `json:"signalChanDesc,omitempty"`
+}
+
+// TradingBotSignalCreateSignalService 创建信号。
+type TradingBotSignalCreateSignalService struct {
+	c *Client
+	r tradingBotSignalCreateSignalRequest
+}
+
+// NewTradingBotSignalCreateSignalService 创建 TradingBotSignalCreateSignalService。
+func (c *Client) NewTradingBotSignalCreateSignalService() *TradingBotSignalCreateSignalService {
+	return &TradingBotSignalCreateSignalService{c: c}
+}
+
+func (s *TradingBotSignalCreateSignalService) SignalChanName(name string) *TradingBotSignalCreateSignalService {
+	s.r.SignalChanName = name
+	return s
+}
+
+func (s *TradingBotSignalCreateSignalService) SignalChanDesc(desc string) *TradingBotSignalCreateSignalService {
+	s.r.SignalChanDesc = desc
+	return s
+}
+
+var (
+	errTradingBotSignalCreateSignalMissingName   = errors.New("okx: tradingBot signal create-signal requires signalChanName")
+	errEmptyTradingBotSignalCreateSignalResponse = errors.New("okx: empty tradingBot signal create-signal response")
+)
+
+// Do 创建信号（POST /api/v5/tradingBot/signal/create-signal）。
+func (s *TradingBotSignalCreateSignalService) Do(ctx context.Context) (*TradingBotSignalCreateAck, error) {
+	if s.r.SignalChanName == "" {
+		return nil, errTradingBotSignalCreateSignalMissingName
+	}
+
+	var data []TradingBotSignalCreateAck
+	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/create-signal", nil, s.r, true, &data); err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, errEmptyTradingBotSignalCreateSignalResponse
+	}
+	return &data[0], nil
+}

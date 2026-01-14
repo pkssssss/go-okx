@@ -339,6 +339,74 @@
 | `GET /api/v5/rfq/trades` | `private` | [`rfq_trades`](../v5/rfq_trades_service.go) | ✅ [test](../v5/rfq_trades_service_test.go) | [ex](../examples/rfq_trades) | `rest, auth-private, rfq` |
 | `GET /api/v5/rfq/public-trades` | `public` | [`rfq_public_trades`](../v5/rfq_public_trades_service.go) | ✅ [test](../v5/rfq_public_trades_service_test.go) | [ex](../examples/rfq_public_trades) | `rest, auth-public, rfq` |
 
+### TradingBot（交易机器人）
+
+> 单测采用聚合用例：[`trading_bot_services_test.go`](../v5/trading_bot_services_test.go)
+
+#### Public（公共）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `GET /api/v5/tradingBot/grid/ai-param` | `public` | [`trading_bot_grid_ai_param`](../v5/trading_bot_grid_ai_param_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-public, tradingbot, grid` |
+| `GET /api/v5/tradingBot/grid/grid-quantity` | `public` | [`trading_bot_grid_grid_quantity`](../v5/trading_bot_grid_grid_quantity_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-public, tradingbot, grid` |
+| `POST /api/v5/tradingBot/grid/min-investment` | `public` | [`trading_bot_grid_min_investment`](../v5/trading_bot_grid_min_investment_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-public, tradingbot, grid` |
+| `GET /api/v5/tradingBot/public/rsi-back-testing` | `public` | [`trading_bot_public_rsi_back_testing`](../v5/trading_bot_public_rsi_back_testing_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-public, tradingbot` |
+
+#### Grid（网格）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `POST /api/v5/tradingBot/grid/order-algo` | `private` | [`trading_bot_grid_order_algo`](../v5/trading_bot_grid_order_algo_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, trade` |
+| `POST /api/v5/tradingBot/grid/amend-algo-basic-param` | `private` | [`trading_bot_grid_amend_algo_basic_param`](../v5/trading_bot_grid_amend_algo_basic_param_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid` |
+| `POST /api/v5/tradingBot/grid/amend-order-algo` | `private` | [`trading_bot_grid_amend_order_algo`](../v5/trading_bot_grid_amend_order_algo_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid` |
+| `POST /api/v5/tradingBot/grid/stop-order-algo` | `private` | [`trading_bot_grid_stop_order_algo`](../v5/trading_bot_grid_stop_order_algo_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid` |
+| `GET /api/v5/tradingBot/grid/orders-algo-details` | `private` | [`trading_bot_grid_orders_algo_details`](../v5/trading_bot_grid_orders_algo_details_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, algo` |
+| `GET /api/v5/tradingBot/grid/orders-algo-pending` | `private` | [`trading_bot_grid_orders_algo_pending`](../v5/trading_bot_grid_orders_algo_pending_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, algo` |
+| `GET /api/v5/tradingBot/grid/orders-algo-history` | `private` | [`trading_bot_grid_orders_algo_history`](../v5/trading_bot_grid_orders_algo_history_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, algo` |
+| `GET /api/v5/tradingBot/grid/positions` | `private` | [`trading_bot_grid_positions`](../v5/trading_bot_grid_positions_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, positions` |
+| `GET /api/v5/tradingBot/grid/sub-orders` | `private` | [`trading_bot_grid_sub_orders`](../v5/trading_bot_grid_sub_orders_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, orders` |
+| `POST /api/v5/tradingBot/grid/margin-balance` | `private` | [`trading_bot_grid_margin_balance`](../v5/trading_bot_grid_margin_balance_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, margin` |
+| `POST /api/v5/tradingBot/grid/compute-margin-balance` | `private` | [`trading_bot_grid_compute_margin_balance`](../v5/trading_bot_grid_compute_margin_balance_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, margin` |
+| `POST /api/v5/tradingBot/grid/order-instant-trigger` | `private` | [`trading_bot_grid_order_instant_trigger`](../v5/trading_bot_grid_order_instant_trigger_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid` |
+| `POST /api/v5/tradingBot/grid/close-position` | `private` | [`trading_bot_grid_close_position`](../v5/trading_bot_grid_close_position_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, positions` |
+| `POST /api/v5/tradingBot/grid/cancel-close-order` | `private` | [`trading_bot_grid_cancel_close_order`](../v5/trading_bot_grid_cancel_close_order_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid, positions` |
+| `POST /api/v5/tradingBot/grid/withdraw-income` | `private` | [`trading_bot_grid_withdraw_income`](../v5/trading_bot_grid_withdraw_income_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid` |
+| `POST /api/v5/tradingBot/grid/adjust-investment` | `private` | [`trading_bot_grid_adjust_investment`](../v5/trading_bot_grid_adjust_investment_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, grid` |
+
+#### Recurring（定投）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `POST /api/v5/tradingBot/recurring/order-algo` | `private` | [`trading_bot_recurring_order_algo`](../v5/trading_bot_recurring_order_algo_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, recurring, trade` |
+| `POST /api/v5/tradingBot/recurring/amend-order-algo` | `private` | [`trading_bot_recurring_amend_order_algo`](../v5/trading_bot_recurring_amend_order_algo_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, recurring` |
+| `POST /api/v5/tradingBot/recurring/stop-order-algo` | `private` | [`trading_bot_recurring_stop_order_algo`](../v5/trading_bot_recurring_stop_order_algo_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, recurring` |
+| `GET /api/v5/tradingBot/recurring/orders-algo-pending` | `private` | [`trading_bot_recurring_orders_algo_pending`](../v5/trading_bot_recurring_orders_algo_pending_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, recurring, algo` |
+| `GET /api/v5/tradingBot/recurring/orders-algo-history` | `private` | [`trading_bot_recurring_orders_algo_history`](../v5/trading_bot_recurring_orders_algo_history_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, recurring, algo` |
+| `GET /api/v5/tradingBot/recurring/orders-algo-details` | `private` | [`trading_bot_recurring_orders_algo_details`](../v5/trading_bot_recurring_orders_algo_details_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, recurring, algo` |
+| `GET /api/v5/tradingBot/recurring/sub-orders` | `private` | [`trading_bot_recurring_sub_orders`](../v5/trading_bot_recurring_sub_orders_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, recurring, orders` |
+
+#### Signal（信号）
+
+| Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
+|---|---|---|---|---|---|
+| `POST /api/v5/tradingBot/signal/create-signal` | `private` | [`trading_bot_signal_create_signal`](../v5/trading_bot_signal_create_signal_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal` |
+| `GET /api/v5/tradingBot/signal/signals` | `private` | [`trading_bot_signal_signals`](../v5/trading_bot_signal_signals_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal` |
+| `POST /api/v5/tradingBot/signal/order-algo` | `private` | [`trading_bot_signal_order_algo`](../v5/trading_bot_signal_order_algo_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, trade` |
+| `POST /api/v5/tradingBot/signal/stop-order-algo` | `private` | [`trading_bot_signal_stop_order_algo`](../v5/trading_bot_signal_stop_order_algo_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal` |
+| `POST /api/v5/tradingBot/signal/margin-balance` | `private` | [`trading_bot_signal_margin_balance`](../v5/trading_bot_signal_margin_balance_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, margin` |
+| `POST /api/v5/tradingBot/signal/set-instruments` | `private` | [`trading_bot_signal_set_instruments`](../v5/trading_bot_signal_set_instruments_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal` |
+| `POST /api/v5/tradingBot/signal/amendTPSL` | `private` | [`trading_bot_signal_amend_tpsl`](../v5/trading_bot_signal_amend_tpsl_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal` |
+| `GET /api/v5/tradingBot/signal/orders-algo-details` | `private` | [`trading_bot_signal_orders_algo_details`](../v5/trading_bot_signal_orders_algo_details_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, algo` |
+| `GET /api/v5/tradingBot/signal/orders-algo-pending` | `private` | [`trading_bot_signal_orders_algo_pending`](../v5/trading_bot_signal_orders_algo_pending_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, algo` |
+| `GET /api/v5/tradingBot/signal/orders-algo-history` | `private` | [`trading_bot_signal_orders_algo_history`](../v5/trading_bot_signal_orders_algo_history_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, algo` |
+| `GET /api/v5/tradingBot/signal/positions` | `private` | [`trading_bot_signal_positions`](../v5/trading_bot_signal_positions_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, positions` |
+| `GET /api/v5/tradingBot/signal/positions-history` | `private` | [`trading_bot_signal_positions_history`](../v5/trading_bot_signal_positions_history_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, positions` |
+| `GET /api/v5/tradingBot/signal/sub-orders` | `private` | [`trading_bot_signal_sub_orders`](../v5/trading_bot_signal_sub_orders_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, orders` |
+| `GET /api/v5/tradingBot/signal/event-history` | `private` | [`trading_bot_signal_event_history`](../v5/trading_bot_signal_event_history_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal` |
+| `POST /api/v5/tradingBot/signal/close-position` | `private` | [`trading_bot_signal_close_position`](../v5/trading_bot_signal_close_position_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, positions` |
+| `POST /api/v5/tradingBot/signal/sub-order` | `private` | [`trading_bot_signal_sub_order`](../v5/trading_bot_signal_sub_order_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, orders` |
+| `POST /api/v5/tradingBot/signal/cancel-sub-order` | `private` | [`trading_bot_signal_cancel_sub_order`](../v5/trading_bot_signal_cancel_sub_order_service.go) | ✅ [test](../v5/trading_bot_services_test.go) | ❌ | `rest, auth-private, tradingbot, signal, orders` |
+
 ### SPRD（价差交易）
 
 | Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
@@ -399,6 +467,7 @@
 - 行情：`tickers`、`trades`、`orderbook`、`candles`、`index`、`volume`、`auction`、`fx`
 - 交易大数据：`rubik`
 - 下单链路：`orders`、`fills`、`algo`
+- 交易机器人：`tradingbot`、`grid`、`recurring`、`signal`
 - 鉴权：`auth-public`、`auth-private`
 - 资产：`transfer`、`bills`、`deposit`、`withdrawal`、`convert`、`statement`
 - 金融产品：`finance`、`savings`、`staking`

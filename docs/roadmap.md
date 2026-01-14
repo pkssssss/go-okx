@@ -51,3 +51,9 @@
   - ✅ 错误分类：`IsAuthError` / `IsRateLimitError` / `IsTimeSkewError`
   - ✅ 可控重试（仅幂等 GET）：`WithRetry(RetryConfig{...})`
   - ✅ README/docs：补齐高频行情 examples 运行指引
+
+## P4（TradingBot 交易机器人）🟡
+
+- ✅ REST：Grid / Recurring / Signal（含 public 端点）
+- ✅ 单测：聚合用例 `v5/trading_bot_services_test.go`
+- ❌ Examples：后续按需补齐（交易/变更类示例将强制 `OKX_CONFIRM=YES` 防误触）
