@@ -94,15 +94,15 @@
 | Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
 |---|---|---|---|---|---|
 | `GET /api/v5/trade/account-rate-limit` | `private` | [`trade_account_rate_limit`](../v5/trade_account_rate_limit_service.go) | ✅ [test](../v5/trade_account_rate_limit_service_test.go) | [ex](../examples/trade_account_rate_limit) | `auth-private, risk` |
-| `POST /api/v5/trade/amend-algos` | `private` | [`trade_amend_algo_order`](../v5/trade_amend_algo_order_service.go) | ✅ [test](../v5/trade_amend_algo_order_service_test.go) | — | `auth-private, algo` |
-| `POST /api/v5/trade/amend-batch-orders` | `private` | [`trade_batch_amend_orders`](../v5/trade_batch_amend_orders_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | — | `auth-private, orders` |
-| `POST /api/v5/trade/amend-order` | `private` | [`trade_amend_order`](../v5/trade_amend_order_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | — | `auth-private, orders` |
-| `POST /api/v5/trade/batch-orders` | `private` | [`trade_batch_place_orders`](../v5/trade_batch_place_orders_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | — | `auth-private, orders` |
-| `POST /api/v5/trade/cancel-algos` | `private` | [`trade_cancel_algo_orders`](../v5/trade_cancel_algo_orders_service.go) | ✅ [test](../v5/trade_cancel_algo_orders_service_test.go) | — | `auth-private, algo` |
+| `POST /api/v5/trade/amend-algos` | `private` | [`trade_amend_algo_order`](../v5/trade_amend_algo_order_service.go) | ✅ [test](../v5/trade_amend_algo_order_service_test.go) | [ex](../examples/trade_amend_algos) | `auth-private, algo` |
+| `POST /api/v5/trade/amend-batch-orders` | `private` | [`trade_batch_amend_orders`](../v5/trade_batch_amend_orders_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | [ex](../examples/trade_amend_batch_orders) | `auth-private, orders` |
+| `POST /api/v5/trade/amend-order` | `private` | [`trade_amend_order`](../v5/trade_amend_order_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | [ex](../examples/trade_amend_order) | `auth-private, orders` |
+| `POST /api/v5/trade/batch-orders` | `private` | [`trade_batch_place_orders`](../v5/trade_batch_place_orders_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | [ex](../examples/trade_batch_orders) | `auth-private, orders` |
+| `POST /api/v5/trade/cancel-algos` | `private` | [`trade_cancel_algo_orders`](../v5/trade_cancel_algo_orders_service.go) | ✅ [test](../v5/trade_cancel_algo_orders_service_test.go) | [ex](../examples/trade_cancel_algos) | `auth-private, algo` |
 | `POST /api/v5/trade/cancel-all-after` | `private` | [`trade_cancel_all_after`](../v5/trade_cancel_all_after_service.go) | ✅ [test](../v5/trade_cancel_all_after_service_test.go) | [ex](../examples/trade_cancel_all_after) | `auth-private, risk` |
-| `POST /api/v5/trade/cancel-batch-orders` | `private` | [`trade_batch_cancel_orders`](../v5/trade_batch_cancel_orders_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | — | `auth-private, orders` |
-| `POST /api/v5/trade/cancel-order` | `private` | [`trade_cancel_order`](../v5/trade_cancel_order_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | — | `auth-private, orders` |
-| `POST /api/v5/trade/close-position` | `private` | [`trade_close_positions`](../v5/trade_close_positions_service.go) | ✅ [test](../v5/trade_close_positions_service_test.go) | — | `auth-private` |
+| `POST /api/v5/trade/cancel-batch-orders` | `private` | [`trade_batch_cancel_orders`](../v5/trade_batch_cancel_orders_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | [ex](../examples/trade_cancel_batch_orders) | `auth-private, orders` |
+| `POST /api/v5/trade/cancel-order` | `private` | [`trade_cancel_order`](../v5/trade_cancel_order_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | [ex](../examples/trade_cancel_order) | `auth-private, orders` |
+| `POST /api/v5/trade/close-position` | `private` | [`trade_close_positions`](../v5/trade_close_positions_service.go) | ✅ [test](../v5/trade_close_positions_service_test.go) | [ex](../examples/trade_close_position) | `auth-private` |
 | `POST /api/v5/trade/easy-convert` | `private` | [`trade_easy_convert`](../v5/trade_easy_convert_service.go) | ✅ [test](../v5/trade_easy_convert_service_test.go) | [ex](../examples/trade_easy_convert) | `auth-private, convert` |
 | `GET /api/v5/trade/easy-convert-currency-list` | `private` | [`trade_easy_convert_currency_list`](../v5/trade_easy_convert_currency_list_service.go) | ✅ [test](../v5/trade_easy_convert_currency_list_service_test.go) | [ex](../examples/trade_easy_convert_currency_list) | `auth-private, convert` |
 | `GET /api/v5/trade/easy-convert-history` | `private` | [`trade_easy_convert_history`](../v5/trade_easy_convert_history_service.go) | ✅ [test](../v5/trade_easy_convert_history_service_test.go) | [ex](../examples/trade_easy_convert_history) | `auth-private, convert` |
@@ -116,7 +116,7 @@
 | `GET /api/v5/trade/one-click-repay-history-v2` | `private` | [`trade_one_click_repay_history_v2`](../v5/trade_one_click_repay_history_v2_service.go) | ✅ [test](../v5/trade_one_click_repay_history_v2_service_test.go) | [ex](../examples/trade_one_click_repay_history_v2) | `auth-private, loan` |
 | `POST /api/v5/trade/one-click-repay-v2` | `private` | [`trade_one_click_repay_v2`](../v5/trade_one_click_repay_v2_service.go) | ✅ [test](../v5/trade_one_click_repay_v2_service_test.go) | [ex](../examples/trade_one_click_repay_v2) | `auth-private, loan` |
 | `GET /api/v5/trade/order` | `private` | [`trade_get_order`](../v5/trade_get_order_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | [ex](../examples/trade_get_order) | `auth-private, orders` |
-| `POST /api/v5/trade/order` | `private` | [`trade_place_order`](../v5/trade_place_order_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | — | `auth-private, orders` |
+| `POST /api/v5/trade/order` | `private` | [`trade_place_order`](../v5/trade_place_order_service.go) | ✅聚合 [test](../v5/trade_services_test.go) | [ex](../examples/trade_place_order) | `auth-private, orders` |
 | `GET /api/v5/trade/order-algo` | `private` | [`trade_get_algo_order`](../v5/trade_get_algo_order_service.go) | ✅ [test](../v5/trade_get_algo_order_service_test.go) | [ex](../examples/trade_get_algo_order) | `auth-private, orders, algo` |
 | `POST /api/v5/trade/order-algo` | `private` | [`trade_place_algo_order`](../v5/trade_place_algo_order_service.go) | ✅ [test](../v5/trade_place_algo_order_service_test.go) | [ex](../examples/trade_place_algo_order) | `auth-private, orders, algo` |
 | `POST /api/v5/trade/order-precheck` | `private` | [`trade_order_precheck`](../v5/trade_order_precheck_service.go) | ✅ [test](../v5/trade_order_precheck_service_test.go) | [ex](../examples/trade_order_precheck) | `auth-private, orders` |
@@ -166,8 +166,8 @@
 | `POST /api/v5/account/activate-option` | `private` | [`account_activate_option`](../v5/account_activate_option_service.go) | ✅ [test](../v5/account_activate_option_service_test.go) | [ex](../examples/account_activate_option) | `auth-private, option` |
 | `GET /api/v5/account/adjust-leverage-info` | `private` | [`account_adjust_leverage_info`](../v5/account_adjust_leverage_info_service.go) | ✅ [test](../v5/account_adjust_leverage_info_service_test.go) | [ex](../examples/account_adjust_leverage_info) | `auth-private, leverage` |
 | `GET /api/v5/account/balance` | `private` | [`account_balance`](../v5/account_balance_service.go) | ✅ [test](../v5/account_balance_service_test.go) | [ex](../examples/account_balance) | `auth-private, balance` |
-| `GET /api/v5/account/bills` | `private` | [`account_bills`](../v5/account_bills_service.go) | ✅ [test](../v5/account_bills_service_test.go) | — | `auth-private, bills` |
-| `GET /api/v5/account/bills-archive` | `private` | [`account_bills_archive`](../v5/account_bills_archive_service.go) | ✅ [test](../v5/account_bills_archive_service_test.go) | — | `auth-private, bills` |
+| `GET /api/v5/account/bills` | `private` | [`account_bills`](../v5/account_bills_service.go) | ✅ [test](../v5/account_bills_service_test.go) | [ex](../examples/account_bills) | `auth-private, bills` |
+| `GET /api/v5/account/bills-archive` | `private` | [`account_bills_archive`](../v5/account_bills_archive_service.go) | ✅ [test](../v5/account_bills_archive_service_test.go) | [ex](../examples/account_bills_archive) | `auth-private, bills` |
 | `GET /api/v5/account/bills-history-archive` | `private` | [`account_bills_history_archive`](../v5/account_bills_history_archive_service.go) | ✅ [test](../v5/account_bills_history_archive_service_test.go) | [ex](../examples/account_bills_history_archive) | `auth-private, bills` |
 | `POST /api/v5/account/bills-history-archive` | `private` | [`account_bills_history_archive_apply`](../v5/account_bills_history_archive_apply_service.go) | ✅ [test](../v5/account_bills_history_archive_apply_service_test.go) | [ex](../examples/account_bills_history_archive_apply) | `auth-private, bills` |
 | `GET /api/v5/account/collateral-assets` | `private` | [`account_collateral_assets`](../v5/account_collateral_assets_service.go) | ✅ [test](../v5/account_collateral_assets_service_test.go) | [ex](../examples/account_collateral_assets) | `auth-private` |
@@ -221,7 +221,7 @@
 | Endpoint | 鉴权 | Service | 测试 | 示例 | 标签 |
 |---|---|---|---|---|---|
 | `GET /api/v5/asset/asset-valuation` | `private` | [`asset_valuation`](../v5/asset_valuation_service.go) | ✅ [test](../v5/asset_valuation_service_test.go) | [ex](../examples/asset_valuation) | `auth-private` |
-| `GET /api/v5/asset/balances` | `private` | [`asset_balances`](../v5/asset_balances_service.go) | ✅ [test](../v5/asset_balances_service_test.go) | — | `auth-private` |
+| `GET /api/v5/asset/balances` | `private` | [`asset_balances`](../v5/asset_balances_service.go) | ✅ [test](../v5/asset_balances_service_test.go) | [ex](../examples/asset_balances) | `auth-private` |
 | `GET /api/v5/asset/bills` | `private` | [`asset_bills`](../v5/asset_bills_service.go) | ✅ [test](../v5/asset_bills_service_test.go) | [ex](../examples/asset_bills) | `auth-private, bills` |
 | `GET /api/v5/asset/bills-history` | `private` | [`asset_bills_history`](../v5/asset_bills_history_service.go) | ✅ [test](../v5/asset_bills_history_service_test.go) | [ex](../examples/asset_bills_history) | `auth-private, bills` |
 | `POST /api/v5/asset/cancel-withdrawal` | `private` | [`asset_cancel_withdrawal`](../v5/asset_cancel_withdrawal_service.go) | ✅ [test](../v5/asset_cancel_withdrawal_service_test.go) | [ex](../examples/asset_cancel_withdrawal) | `auth-private, withdrawal` |
@@ -242,8 +242,8 @@
 | `GET /api/v5/asset/subaccount/bills` | `private` | [`asset_subaccount_bills`](../v5/asset_subaccount_bills_service.go) | ✅ [test](../v5/asset_subaccount_bills_service_test.go) | [ex](../examples/asset_subaccount_bills) | `auth-private, subaccount, bills` |
 | `GET /api/v5/asset/subaccount/managed-subaccount-bills` | `private` | [`asset_subaccount_managed_subaccount_bills`](../v5/asset_subaccount_managed_subaccount_bills_service.go) | ✅ [test](../v5/asset_subaccount_managed_subaccount_bills_service_test.go) | [ex](../examples/asset_subaccount_managed_subaccount_bills) | `auth-private, subaccount, bills` |
 | `POST /api/v5/asset/subaccount/transfer` | `private` | [`asset_subaccount_transfer`](../v5/asset_subaccount_transfer_service.go) | ✅ [test](../v5/asset_subaccount_transfer_service_test.go) | [ex](../examples/asset_subaccount_transfer) | `auth-private, subaccount, transfer` |
-| `POST /api/v5/asset/transfer` | `private` | [`asset_transfer`](../v5/asset_transfer_service.go) | ✅ [test](../v5/asset_transfer_service_test.go) | — | `auth-private, transfer` |
-| `GET /api/v5/asset/transfer-state` | `private` | [`asset_transfer_state`](../v5/asset_transfer_state_service.go) | ✅ [test](../v5/asset_transfer_state_service_test.go) | — | `auth-private, transfer` |
+| `POST /api/v5/asset/transfer` | `private` | [`asset_transfer`](../v5/asset_transfer_service.go) | ✅ [test](../v5/asset_transfer_service_test.go) | [ex](../examples/asset_transfer) | `auth-private, transfer` |
+| `GET /api/v5/asset/transfer-state` | `private` | [`asset_transfer_state`](../v5/asset_transfer_state_service.go) | ✅ [test](../v5/asset_transfer_state_service_test.go) | [ex](../examples/asset_transfer_state) | `auth-private, transfer` |
 | `POST /api/v5/asset/withdrawal` | `private` | [`asset_withdrawal`](../v5/asset_withdrawal_service.go) | ✅ [test](../v5/asset_withdrawal_service_test.go) | [ex](../examples/asset_withdrawal) | `auth-private, withdrawal` |
 | `GET /api/v5/asset/withdrawal-history` | `private` | [`asset_withdrawal_history`](../v5/asset_withdrawal_history_service.go) | ✅ [test](../v5/asset_withdrawal_history_service_test.go) | [ex](../examples/asset_withdrawal_history) | `auth-private, withdrawal` |
 
