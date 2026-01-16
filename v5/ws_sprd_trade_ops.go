@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 )
 
 const (
@@ -18,13 +17,13 @@ const (
 var errWSBusinessRequired = errors.New("okx: ws business client required")
 
 func (w *WSClient) requireBusinessPrivate() error {
-	if err := w.requirePrivate(); err != nil {
-		return err
+	if w == nil {
+		return errors.New("okx: nil ws client")
 	}
-	if w.endpoint == "" {
-		return errors.New("okx: ws client endpoint empty")
+	if !w.needLogin {
+		return errWSPrivateRequired
 	}
-	if !strings.Contains(w.endpoint, "/ws/v5/business") {
+	if w.kind != wsKindBusiness {
 		return errWSBusinessRequired
 	}
 	return nil

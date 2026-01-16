@@ -143,7 +143,7 @@ func (w *WSClient) requirePrivate() error {
 	if w == nil {
 		return errors.New("okx: nil ws client")
 	}
-	if !w.needLogin {
+	if w.kind != wsKindPrivate || !w.needLogin {
 		return errWSPrivateRequired
 	}
 	return nil

@@ -13,6 +13,9 @@ import (
 // 说明：
 // - books/books-elp/books-l2-tbt/books50-l2-tbt：首次为 snapshot，之后为增量 update（需要合并）
 // - books5/bbo-tbt：定量推送（推荐按“全量替换”处理，以避免残留旧档位）
+//
+// 并发：该结构体非并发安全；请在单一 goroutine 中串行调用 Apply/ApplyMessage/Reset。
+// 若跨 goroutine 读取 Snapshot/Ready，请由调用方自行加锁或做串行化。
 type WSOrderBookStore struct {
 	channel string
 	instId  string

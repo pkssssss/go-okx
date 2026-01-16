@@ -77,6 +77,8 @@ SDK 默认启用（25s），可配置：
 
 SDK 提供 `WSOrderBookStore` 来做这件事。
 
+> 并发说明：`WSOrderBookStore` 非并发安全；请在单一 goroutine 中串行调用 `Apply/ApplyMessage/Reset`。若跨 goroutine 读取 `Snapshot/Ready`，请由调用方自行加锁或做串行化。
+
 ### 5.2 典型模式
 
 1) 订阅 `books/books5/bbo-tbt/books-l2-tbt/...`（以及对应的 `sprd-*` 频道）  

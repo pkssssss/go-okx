@@ -40,6 +40,15 @@ c := okx.NewClient(
 _, _ = c.SyncTime(ctx)
 ```
 
+### 2.3 生产环境建议：设置 HTTP 超时
+
+SDK 默认使用 `http.DefaultClient`（无超时）。生产环境强烈建议显式配置超时，避免网络异常导致请求悬挂：
+
+```go
+hc := &http.Client{Timeout: 10 * time.Second}
+c := okx.NewClient(okx.WithHTTPClient(hc))
+```
+
 ## 3. 常用入口（你大概率只需要这些）
 
 常用示例清单见：[`docs/README.md`](README.md)。
@@ -49,6 +58,7 @@ _, _ = c.SyncTime(ctx)
 - `okx.NewClient(...)`
 - `okx.WithCredentials(...)`：私有 REST/WS
 - `okx.WithDemoTrading(true)`：模拟盘
+- `okx.WithHTTPClient(...)`：建议设置超时（生产环境必配）
 - `(*Client).SyncTime(ctx)`：建议 WS 登录前调用
 
 ### 3.2 REST
@@ -94,6 +104,7 @@ ws := c.NewWSPrivate(okx.WithWSTypedHandlerAsync(1024))
 ```
 
 深度（books 系列）建议配合 `WSOrderBookStore` 做 snapshot/update 合并与 seq/checksum 校验，见示例 `examples/ws_public_books_store_typed`。
+（`WSOrderBookStore` 非并发安全，建议单 goroutine 串行应用。）
 
 ## 6. 类型/精度约定（字段策略）
 

@@ -25,6 +25,15 @@ const (
 	wsBusinessDemoURL = "wss://wspap.okx.com:8443/ws/v5/business"
 )
 
+type wsKind uint8
+
+const (
+	wsKindUnknown wsKind = iota
+	wsKindPublic
+	wsKindPrivate
+	wsKindBusiness
+)
+
 // WSMessageHandler 处理 WS 原始消息（text/binary 的 payload）。
 type WSMessageHandler func(message []byte)
 
@@ -137,6 +146,7 @@ func WithWSEventHandler(handler WSEventHandler) WSOption {
 type WSClient struct {
 	c         *Client
 	endpoint  string
+	kind      wsKind
 	header    http.Header
 	dialer    *websocket.Dialer
 	needLogin bool
@@ -232,6 +242,7 @@ func (c *Client) NewWSPublic(opts ...WSOption) *WSClient {
 	w := &WSClient{
 		c:         c,
 		endpoint:  endpoint,
+		kind:      wsKindPublic,
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
 		backoff:   250 * time.Millisecond,
@@ -254,6 +265,7 @@ func (c *Client) NewWSPrivate(opts ...WSOption) *WSClient {
 	w := &WSClient{
 		c:         c,
 		endpoint:  endpoint,
+		kind:      wsKindPrivate,
 		needLogin: true,
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
@@ -277,6 +289,7 @@ func (c *Client) NewWSBusiness(opts ...WSOption) *WSClient {
 	w := &WSClient{
 		c:         c,
 		endpoint:  endpoint,
+		kind:      wsKindBusiness,
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
 		backoff:   250 * time.Millisecond,
@@ -301,6 +314,7 @@ func (c *Client) NewWSBusinessPrivate(opts ...WSOption) *WSClient {
 	w := &WSClient{
 		c:         c,
 		endpoint:  endpoint,
+		kind:      wsKindBusiness,
 		needLogin: true,
 		connCh:    make(chan struct{}),
 		desired:   map[string]WSArg{},
@@ -328,6 +342,11 @@ func (w *WSClient) Start(ctx context.Context, handler WSMessageHandler, errHandl
 
 	runCtx, cancel := context.WithCancel(ctx)
 	w.cancel = cancel
+	// 仅取消 ctx 不会中断 ReadMessage；这里主动关闭连接以确保 Done() 可判定地退出。
+	go func() {
+		<-runCtx.Done()
+		w.closeConn()
+	}()
 
 	if w.typedAsync && w.typedQueue == nil {
 		buf := w.typedBuffer
