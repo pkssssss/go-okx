@@ -42,6 +42,8 @@ _, _ = c.SyncTime(ctx)
 
 ## 3. 常用入口（你大概率只需要这些）
 
+常用示例清单见：[`docs/README.md`](README.md)。
+
 ### 3.1 构造与配置
 
 - `okx.NewClient(...)`
@@ -74,7 +76,7 @@ ticker, err := c.NewMarketTickerService().InstId("BTC-USDT").Do(ctx)
 
 ## 5. WebSocket 使用建议
 
-### 4.1 选择 WS 端点
+### 5.1 选择 WS 端点
 
 - `c.NewWSPublic()`：公共数据，无需登录
 - `c.NewWSPrivate()`：私有数据，需要登录（订单/成交/账户/仓位等）
@@ -83,7 +85,7 @@ ticker, err := c.NewMarketTickerService().InstId("BTC-USDT").Do(ctx)
 
 详细说明见 [`ws.md`](ws.md)。
 
-### 4.2 typed handler（推荐）
+### 5.2 typed handler（推荐）
 
 默认 typed handler 在 WS read goroutine 中执行；若 handler 较重，建议启用异步队列：
 

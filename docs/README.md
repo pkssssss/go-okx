@@ -33,3 +33,26 @@
 
 - REST：`*okx.APIError`（支持 `errors.As`）
 - 常用判定：`okx.IsAuthError` / `okx.IsRateLimitError` / `okx.IsTimeSkewError`
+
+## 常用示例（Examples Quick Index）
+
+> 提示：需要鉴权的示例建议先使用模拟盘（`OKX_DEMO=1`）。
+
+### Public（无需鉴权）
+
+- [`examples/public_time`](../examples/public_time)：服务器时间（最小连通性检查）
+- [`examples/time_sync`](../examples/time_sync)：同步服务器时间并设置本地偏移（建议私有 REST/WS 之前先跑）
+- [`examples/market_ticker`](../examples/market_ticker)：单产品行情（默认 BTC-USDT）
+- [`examples/market_books`](../examples/market_books)：深度（默认 5 档）
+
+### Private（需要鉴权）
+
+- [`examples/account_balance`](../examples/account_balance)：账户余额
+- [`examples/account_positions`](../examples/account_positions)：持仓
+- [`examples/trade_orders_pending`](../examples/trade_orders_pending)：未成交订单（只读）
+
+### WebSocket
+
+- [`examples/ws_public_tickers`](../examples/ws_public_tickers)：公共行情订阅（tickers）
+- [`examples/ws_public_books_store_typed`](../examples/ws_public_books_store_typed)：深度合并（snapshot/update）+ seq/checksum 校验（推荐）
+- [`examples/ws_private_orders_stream`](../examples/ws_private_orders_stream)：私有订单推送（orders，需要鉴权）
