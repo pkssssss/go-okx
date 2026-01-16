@@ -40,7 +40,29 @@ c := okx.NewClient(
 _, _ = c.SyncTime(ctx)
 ```
 
-## 3. REST 调用风格
+## 3. 常用入口（你大概率只需要这些）
+
+### 3.1 构造与配置
+
+- `okx.NewClient(...)`
+- `okx.WithCredentials(...)`：私有 REST/WS
+- `okx.WithDemoTrading(true)`：模拟盘
+- `(*Client).SyncTime(ctx)`：建议 WS 登录前调用
+
+### 3.2 REST
+
+- 统一风格：`c.NewXXXService().<Setters...>().Do(ctx)`
+- 常用定位方式：直接在 [`coverage.md`](coverage.md) 搜 endpoint（每行都链接到 Service/Test/Example）
+
+### 3.3 WebSocket
+
+- 端点：`c.NewWSPublic()` / `c.NewWSPrivate()` / `c.NewWSBusiness()` / `c.NewWSBusinessPrivate()`
+- 订阅：`SubscribeAndWait`（推荐）/ `Subscribe`
+- typed handler：`ws.OnTickers/OnTrades/OnOrderBook/OnOrders/...`
+- handler 较重：`okx.WithWSTypedHandlerAsync(1024)`
+- 深度合并：`okx.NewWSOrderBookStore(channel, instId)`（配合 `OnOrderBook`）
+
+## 4. REST 调用风格
 
 端点以 `Service + Do(ctx)` 形式暴露（对标 `go-binance`）：
 
@@ -48,9 +70,9 @@ _, _ = c.SyncTime(ctx)
 ticker, err := c.NewMarketTickerService().InstId("BTC-USDT").Do(ctx)
 ```
 
-完整端点清单与对应 Service/Test/Example 以 `docs/coverage.md` 为准。
+完整端点清单与对应 Service/Test/Example 以 [`coverage.md`](coverage.md) 为准。
 
-## 4. WebSocket 使用建议
+## 5. WebSocket 使用建议
 
 ### 4.1 选择 WS 端点
 
@@ -59,7 +81,7 @@ ticker, err := c.NewMarketTickerService().InstId("BTC-USDT").Do(ctx)
 - `c.NewWSBusiness()`：business（是否需要登录取决于频道）
 - `c.NewWSBusinessPrivate()`：business + 强制登录
 
-详细说明见 `docs/ws.md`。
+详细说明见 [`ws.md`](ws.md)。
 
 ### 4.2 typed handler（推荐）
 
@@ -71,13 +93,13 @@ ws := c.NewWSPrivate(okx.WithWSTypedHandlerAsync(1024))
 
 深度（books 系列）建议配合 `WSOrderBookStore` 做 snapshot/update 合并与 seq/checksum 校验，见示例 `examples/ws_public_books_store_typed`。
 
-## 5. 类型/精度约定（字段策略）
+## 6. 类型/精度约定（字段策略）
 
 - 价格/数量/费率等小数：SDK 层优先用 `string`（无损），避免 `float64` 精度问题。
 - 时间戳：常见为 Unix 毫秒（string/number），部分字段使用 `UnixMilli` 兼容解析。
 - 枚举：多为 `string`（建议上层自行做常量约束/校验）。
 
-## 6. 错误处理
+## 7. 错误处理
 
 REST 失败会返回 `*okx.APIError`（HTTP 错误或业务 `code != "0"`），可用 `errors.As` 获取结构化信息：
 
@@ -94,17 +116,17 @@ if errors.As(err, &apiErr) {
 - `okx.IsRateLimitError(err)`
 - `okx.IsTimeSkewError(err)`
 
-## 7. 如何快速定位“某个接口怎么用”
+## 8. 如何快速定位“某个接口怎么用”
 
-优先使用覆盖矩阵：`docs/coverage.md`（每一行都链接到 Service/Test/Example）。
+优先使用覆盖矩阵：[`coverage.md`](coverage.md)（每一行都链接到 Service/Test/Example）。
 
 常用操作：
 
-1) 在 `docs/coverage.md` 搜索 endpoint（如 `GET /api/v5/market/ticker`）  
+1) 在 [`coverage.md`](coverage.md) 搜索 endpoint（如 `GET /api/v5/market/ticker`）  
 2) 打开对应 `v5/*_service.go` 看参数/返回类型  
 3) 直接运行对应 `examples/*`（通常可用默认参数跑通；私有接口再补齐环境变量）
 
-## 8. 示例运行的安全约束
+## 9. 示例运行的安全约束
 
 部分示例会触发真实交易/撤单/改单（尤其 trade/WS op 链路），通常要求显式设置：
 

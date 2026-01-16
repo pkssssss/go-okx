@@ -36,9 +36,9 @@ export OKX_DEMO=1
 
 ## 文档
 
-- 使用指南：`docs/guide.md`
-- 覆盖矩阵（端点 -> Service/Test/Example）：`docs/coverage.md`
-- WebSocket 指南：`docs/ws.md`
-- 设计记录：`docs/design.md`
-- Roadmap：`docs/roadmap.md`
-
+- 文档导航：[`docs/README.md`](docs/README.md)
+- 使用指南：[`docs/guide.md`](docs/guide.md)
+- 覆盖矩阵（端点 -> Service/Test/Example）：[`docs/coverage.md`](docs/coverage.md)
+- WebSocket 指南：[`docs/ws.md`](docs/ws.md)
+- 设计记录：[`docs/design.md`](docs/design.md)
+- Roadmap：[`docs/roadmap.md`](docs/roadmap.md)
