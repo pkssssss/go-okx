@@ -289,6 +289,38 @@ func WithWSOptSummaryHandler(handler func(summary OptSummary)) WSOption {
 	}
 }
 
+// WithWSInstrumentsHandler 设置 instruments 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSInstrumentsHandler(handler func(instrument Instrument)) WSOption {
+	return func(c *WSClient) {
+		c.OnInstruments(handler)
+	}
+}
+
+// WithWSEstimatedPriceHandler 设置 estimated-price 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSEstimatedPriceHandler(handler func(price EstimatedPrice)) WSOption {
+	return func(c *WSClient) {
+		c.OnEstimatedPrice(handler)
+	}
+}
+
+// WithWSADLWarningHandler 设置 adl-warning 推送的逐条回调。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSADLWarningHandler(handler func(warning WSADLWarning)) WSOption {
+	return func(c *WSClient) {
+		c.OnADLWarning(handler)
+	}
+}
+
+// WithWSEconomicCalendarHandler 设置 economic-calendar 推送的逐条回调（business WS，需要登录）。
+// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+func WithWSEconomicCalendarHandler(handler func(event EconomicCalendarEvent)) WSOption {
+	return func(c *WSClient) {
+		c.OnEconomicCalendar(handler)
+	}
+}
+
 // WithWSLiquidationOrdersHandler 设置 liquidation-orders 推送的逐条回调。
 // 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
 func WithWSLiquidationOrdersHandler(handler func(order LiquidationOrder)) WSOption {
@@ -710,6 +742,46 @@ func (w *WSClient) OnOptSummary(handler func(summary OptSummary)) {
 	}
 	w.typedMu.Lock()
 	w.optSummaryHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnInstruments 设置 instruments 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnInstruments(handler func(instrument Instrument)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.instrumentsHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnEstimatedPrice 设置 estimated-price 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnEstimatedPrice(handler func(price EstimatedPrice)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.estimatedPriceHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnADLWarning 设置 adl-warning 推送的逐条回调（可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnADLWarning(handler func(warning WSADLWarning)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.adlWarningHandler = handler
+	w.typedMu.Unlock()
+}
+
+// OnEconomicCalendar 设置 economic-calendar 推送的逐条回调（business WS，需要登录；可在 Start 前或运行中设置；传 nil 表示清空）。
+func (w *WSClient) OnEconomicCalendar(handler func(event EconomicCalendarEvent)) {
+	if w == nil {
+		return
+	}
+	w.typedMu.Lock()
+	w.economicCalendarHandler = handler
 	w.typedMu.Unlock()
 }
 

@@ -34,9 +34,12 @@ const (
 	WSChannelDepositInfo    = "deposit-info"
 	WSChannelWithdrawalInfo = "withdrawal-info"
 
-	WSChannelTickers   = "tickers"
-	WSChannelTrades    = "trades"
-	WSChannelTradesAll = "trades-all"
+	WSChannelEconomicCalendar = "economic-calendar"
+
+	WSChannelInstruments = "instruments"
+	WSChannelTickers     = "tickers"
+	WSChannelTrades      = "trades"
+	WSChannelTradesAll   = "trades-all"
 
 	WSChannelStatus = "status"
 
@@ -46,6 +49,9 @@ const (
 	WSChannelMarkPrice    = "mark-price"
 	WSChannelIndexTickers = "index-tickers"
 	WSChannelOptSummary   = "opt-summary"
+
+	WSChannelEstimatedPrice = "estimated-price"
+	WSChannelADLWarning     = "adl-warning"
 
 	WSChannelLiquidationOrders = "liquidation-orders"
 
@@ -140,6 +146,32 @@ type WSLiquidationWarning struct {
 	CTime UnixMilli `json:"cTime"`
 	UTime UnixMilli `json:"uTime"`
 	PTime UnixMilli `json:"pTime"`
+}
+
+// WSADLWarning 表示自动减仓预警推送（adl-warning）。
+//
+// 说明：时间戳字段可能为空字符串，使用 UnixMilli 兼容解析。
+type WSADLWarning struct {
+	InstType   string `json:"instType"`
+	InstFamily string `json:"instFamily"`
+	Ccy        string `json:"ccy"`
+
+	State string `json:"state"`
+	Bal   string `json:"bal"`
+
+	MaxBal   string    `json:"maxBal"`
+	MaxBalTS UnixMilli `json:"maxBalTs"`
+
+	ADLType string `json:"adlType"`
+	ADLBal  string `json:"adlBal"`
+
+	ADLRecBal string `json:"adlRecBal"`
+
+	DecRate    string `json:"decRate"`
+	ADLRate    string `json:"adlRate"`
+	ADLRecRate string `json:"adlRecRate"`
+
+	TS UnixMilli `json:"ts"`
 }
 
 // WSParseChannelData 解析指定 channel 的 data 推送消息。
@@ -332,6 +364,26 @@ func WSParseIndexTickers(message []byte) (*WSData[IndexTicker], bool, error) {
 // WSParseOptSummary 解析 opt-summary 频道推送消息。
 func WSParseOptSummary(message []byte) (*WSData[OptSummary], bool, error) {
 	return WSParseChannelData[OptSummary](message, WSChannelOptSummary)
+}
+
+// WSParseInstruments 解析 instruments 频道推送消息。
+func WSParseInstruments(message []byte) (*WSData[Instrument], bool, error) {
+	return WSParseChannelData[Instrument](message, WSChannelInstruments)
+}
+
+// WSParseEstimatedPrice 解析 estimated-price 频道推送消息。
+func WSParseEstimatedPrice(message []byte) (*WSData[EstimatedPrice], bool, error) {
+	return WSParseChannelData[EstimatedPrice](message, WSChannelEstimatedPrice)
+}
+
+// WSParseADLWarning 解析 adl-warning 频道推送消息。
+func WSParseADLWarning(message []byte) (*WSData[WSADLWarning], bool, error) {
+	return WSParseChannelData[WSADLWarning](message, WSChannelADLWarning)
+}
+
+// WSParseEconomicCalendar 解析 economic-calendar 频道推送消息（business WS，需要登录）。
+func WSParseEconomicCalendar(message []byte) (*WSData[EconomicCalendarEvent], bool, error) {
+	return WSParseChannelData[EconomicCalendarEvent](message, WSChannelEconomicCalendar)
 }
 
 // WSParseLiquidationOrders 解析 liquidation-orders 频道推送消息。

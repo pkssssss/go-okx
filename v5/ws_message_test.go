@@ -733,3 +733,73 @@ func TestWSParseMarkPriceAndIndexCandles(t *testing.T) {
 		}
 	})
 }
+
+func TestWSParseInstrumentsEstimatedPriceADLWarningAndEconomicCalendar(t *testing.T) {
+	t.Run("instruments", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"instruments","instType":"SPOT"},"data":[{"instType":"SPOT","instId":"BTC-USDT","baseCcy":"BTC","quoteCcy":"USDT","tickSz":"0.1","lotSz":"0.0001","minSz":"0.0001","state":"live"}]}`)
+		dm, ok, err := WSParseInstruments(msg)
+		if err != nil {
+			t.Fatalf("WSParseInstruments() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelInstruments || dm.Arg.InstType != "SPOT" {
+			t.Fatalf("arg = %#v, want instruments SPOT", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "BTC-USDT" || dm.Data[0].TickSz != "0.1" || dm.Data[0].State != "live" {
+			t.Fatalf("data = %#v, want instId BTC-USDT tickSz=0.1 state=live", dm.Data)
+		}
+	})
+
+	t.Run("estimated_price", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"estimated-price","instType":"FUTURES","instFamily":"XRP-USDT"},"data":[{"instId":"XRP-USDT-250307","instType":"FUTURES","settlePx":"2.4230631578947368","settleType":"settlement","ts":"1741244598708"}]}`)
+		dm, ok, err := WSParseEstimatedPrice(msg)
+		if err != nil {
+			t.Fatalf("WSParseEstimatedPrice() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelEstimatedPrice || dm.Arg.InstType != "FUTURES" {
+			t.Fatalf("arg = %#v, want estimated-price FUTURES", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].InstId != "XRP-USDT-250307" || dm.Data[0].SettleType != "settlement" || dm.Data[0].TS != 1741244598708 {
+			t.Fatalf("data = %#v, want instId XRP-USDT-250307 settleType=settlement ts=1741244598708", dm.Data)
+		}
+	})
+
+	t.Run("adl_warning", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"adl-warning","instType":"FUTURES","instFamily":"BTC-USDT"},"data":[{"maxBal":"","adlRecBal":"8000.0","bal":"280784384.9564228289548144","instType":"FUTURES","ccy":"USDT","instFamily":"BTC-USDT","maxBalTs":"","adlType":"","state":"normal","adlBal":"0","ts":"1700210763001","decRate":"","adlRate":"","adlRecRate":""}]}`)
+		dm, ok, err := WSParseADLWarning(msg)
+		if err != nil {
+			t.Fatalf("WSParseADLWarning() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelADLWarning || dm.Arg.InstFamily != "BTC-USDT" {
+			t.Fatalf("arg = %#v, want adl-warning BTC-USDT", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].State != "normal" || dm.Data[0].MaxBalTS != 0 || dm.Data[0].TS != UnixMilli(1700210763001) {
+			t.Fatalf("data = %#v, want state=normal maxBalTs=0 ts=1700210763001", dm.Data)
+		}
+	})
+
+	t.Run("economic_calendar", func(t *testing.T) {
+		msg := []byte(`{"arg":{"channel":"economic-calendar"},"data":[{"calendarId":"319275","date":"1597026383085","region":"United States","category":"Manufacturing PMI","event":"S&P Global Manufacturing PMI Final","refDate":"1597026383085","actual":"49.2","previous":"47.3","forecast":"49.3","importance":"2","prevInitial":"","ccy":"","unit":"","ts":"1698648096590"}]}`)
+		dm, ok, err := WSParseEconomicCalendar(msg)
+		if err != nil {
+			t.Fatalf("WSParseEconomicCalendar() error = %v", err)
+		}
+		if !ok || dm == nil {
+			t.Fatalf("expected ok")
+		}
+		if dm.Arg.Channel != WSChannelEconomicCalendar {
+			t.Fatalf("arg = %#v, want economic-calendar", dm.Arg)
+		}
+		if len(dm.Data) != 1 || dm.Data[0].CalendarId != "319275" || dm.Data[0].TS != UnixMilli(1698648096590) {
+			t.Fatalf("data = %#v, want calendarId=319275 ts=1698648096590", dm.Data)
+		}
+	})
+}

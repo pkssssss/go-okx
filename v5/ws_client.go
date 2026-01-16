@@ -186,6 +186,10 @@ type WSClient struct {
 	indexTickersHandler                func(ticker IndexTicker)
 	priceLimitHandler                  func(limit PriceLimit)
 	optSummaryHandler                  func(summary OptSummary)
+	instrumentsHandler                 func(instrument Instrument)
+	estimatedPriceHandler              func(price EstimatedPrice)
+	adlWarningHandler                  func(warning WSADLWarning)
+	economicCalendarHandler            func(event EconomicCalendarEvent)
 	liquidationOrdersHandler           func(order LiquidationOrder)
 	optionTradesHandler                func(trade WSOptionTrade)
 	callAuctionDetailsHandler          func(detail WSCallAuctionDetails)
@@ -782,6 +786,10 @@ func (w *WSClient) onDataMessage(message []byte) {
 	indexTickersH := w.indexTickersHandler
 	priceLimitH := w.priceLimitHandler
 	optSummaryH := w.optSummaryHandler
+	instrumentsH := w.instrumentsHandler
+	estimatedPriceH := w.estimatedPriceHandler
+	adlWarningH := w.adlWarningHandler
+	economicCalendarH := w.economicCalendarHandler
 	liquidationOrdersH := w.liquidationOrdersHandler
 	optionTradesH := w.optionTradesHandler
 	callAuctionDetailsH := w.callAuctionDetailsHandler
@@ -827,6 +835,10 @@ func (w *WSClient) onDataMessage(message []byte) {
 		indexTickersH == nil &&
 		priceLimitH == nil &&
 		optSummaryH == nil &&
+		instrumentsH == nil &&
+		estimatedPriceH == nil &&
+		adlWarningH == nil &&
+		economicCalendarH == nil &&
 		liquidationOrdersH == nil &&
 		optionTradesH == nil &&
 		callAuctionDetailsH == nil &&
@@ -1163,6 +1175,42 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOptSummary, optSummaries: dm.Data})
+	case WSChannelInstruments:
+		if instrumentsH == nil {
+			return
+		}
+		dm, ok, err := WSParseInstruments(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindInstruments, instruments: dm.Data})
+	case WSChannelEstimatedPrice:
+		if estimatedPriceH == nil {
+			return
+		}
+		dm, ok, err := WSParseEstimatedPrice(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindEstimatedPrice, estimatedPrices: dm.Data})
+	case WSChannelADLWarning:
+		if adlWarningH == nil {
+			return
+		}
+		dm, ok, err := WSParseADLWarning(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindADLWarning, adlWarnings: dm.Data})
+	case WSChannelEconomicCalendar:
+		if economicCalendarH == nil {
+			return
+		}
+		dm, ok, err := WSParseEconomicCalendar(message)
+		if err != nil || !ok || len(dm.Data) == 0 {
+			return
+		}
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindEconomicCalendar, economicCalendarEvents: dm.Data})
 	case WSChannelLiquidationOrders:
 		if liquidationOrdersH == nil {
 			return

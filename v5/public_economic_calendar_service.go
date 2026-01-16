@@ -25,9 +25,10 @@ type EconomicCalendarEvent struct {
 	Unit        string `json:"unit"`
 	Ccy         string `json:"ccy"`
 
-	DateSpan   string `json:"dateSpan"`
-	Importance string `json:"importance"`
-	UTime      int64  `json:"uTime,string"`
+	DateSpan   string    `json:"dateSpan"`
+	Importance string    `json:"importance"`
+	UTime      int64     `json:"uTime,string"`
+	TS         UnixMilli `json:"ts"`
 }
 
 // PublicEconomicCalendarService 获取经济日历数据。

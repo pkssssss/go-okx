@@ -52,6 +52,10 @@ const (
 	wsTypedKindSprdPublicTrades
 	wsTypedKindSprdTickers
 	wsTypedKindOpReply
+	wsTypedKindInstruments
+	wsTypedKindEstimatedPrice
+	wsTypedKindADLWarning
+	wsTypedKindEconomicCalendar
 )
 
 func (k wsTypedKind) String() string {
@@ -144,6 +148,14 @@ func (k wsTypedKind) String() string {
 		return "sprd_tickers"
 	case wsTypedKindOpReply:
 		return "op_reply"
+	case wsTypedKindInstruments:
+		return "instruments"
+	case wsTypedKindEstimatedPrice:
+		return "estimated_price"
+	case wsTypedKindADLWarning:
+		return "adl_warning"
+	case wsTypedKindEconomicCalendar:
+		return "economic_calendar"
 	default:
 		return "unknown"
 	}
@@ -188,6 +200,10 @@ type wsTypedTask struct {
 	indexTickers                []IndexTicker
 	priceLimits                 []PriceLimit
 	optSummaries                []OptSummary
+	instruments                 []Instrument
+	estimatedPrices             []EstimatedPrice
+	adlWarnings                 []WSADLWarning
+	economicCalendarEvents      []EconomicCalendarEvent
 
 	liquidationOrders  []LiquidationOrder
 	optionTrades       []WSOptionTrade
@@ -632,6 +648,50 @@ func (w *WSClient) handleTyped(task wsTypedTask) {
 		for _, summary := range task.optSummaries {
 			s := summary
 			w.safeTypedCall(task.kind, func() { h(s) })
+		}
+	case wsTypedKindInstruments:
+		w.typedMu.RLock()
+		h := w.instrumentsHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.instruments) == 0 {
+			return
+		}
+		for _, instrument := range task.instruments {
+			ins := instrument
+			w.safeTypedCall(task.kind, func() { h(ins) })
+		}
+	case wsTypedKindEstimatedPrice:
+		w.typedMu.RLock()
+		h := w.estimatedPriceHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.estimatedPrices) == 0 {
+			return
+		}
+		for _, price := range task.estimatedPrices {
+			p := price
+			w.safeTypedCall(task.kind, func() { h(p) })
+		}
+	case wsTypedKindADLWarning:
+		w.typedMu.RLock()
+		h := w.adlWarningHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.adlWarnings) == 0 {
+			return
+		}
+		for _, warning := range task.adlWarnings {
+			warn := warning
+			w.safeTypedCall(task.kind, func() { h(warn) })
+		}
+	case wsTypedKindEconomicCalendar:
+		w.typedMu.RLock()
+		h := w.economicCalendarHandler
+		w.typedMu.RUnlock()
+		if h == nil || len(task.economicCalendarEvents) == 0 {
+			return
+		}
+		for _, event := range task.economicCalendarEvents {
+			e := event
+			w.safeTypedCall(task.kind, func() { h(e) })
 		}
 	case wsTypedKindLiquidationOrders:
 		w.typedMu.RLock()

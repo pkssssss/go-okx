@@ -903,3 +903,127 @@ func TestWSClient_onDataMessage_BlockTickers_TypedAsync_Dispatches(t *testing.T)
 		t.Fatalf("timeout waiting block-tickers")
 	}
 }
+
+func TestWSClient_onDataMessage_Instruments_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan Instrument, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnInstruments(func(instrument Instrument) {
+		select {
+		case gotCh <- instrument:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"instruments","instType":"SPOT"},"data":[{"instType":"SPOT","instId":"BTC-USDT","tickSz":"0.1","lotSz":"0.0001","minSz":"0.0001","state":"live"}]}`))
+
+	select {
+	case inst := <-gotCh:
+		if inst.InstId != "BTC-USDT" || inst.InstType != "SPOT" || inst.TickSz != "0.1" || inst.State != "live" {
+			t.Fatalf("inst = %#v", inst)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting instruments")
+	}
+}
+
+func TestWSClient_onDataMessage_EstimatedPrice_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan EstimatedPrice, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnEstimatedPrice(func(price EstimatedPrice) {
+		select {
+		case gotCh <- price:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"estimated-price","instType":"FUTURES","instFamily":"XRP-USDT"},"data":[{"instId":"XRP-USDT-250307","instType":"FUTURES","settlePx":"2.42","settleType":"settlement","ts":"1741244598708"}]}`))
+
+	select {
+	case p := <-gotCh:
+		if p.InstId != "XRP-USDT-250307" || p.InstType != "FUTURES" || p.SettleType != "settlement" || p.TS != 1741244598708 {
+			t.Fatalf("price = %#v", p)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting estimated-price")
+	}
+}
+
+func TestWSClient_onDataMessage_ADLWarning_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan WSADLWarning, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnADLWarning(func(warning WSADLWarning) {
+		select {
+		case gotCh <- warning:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"adl-warning","instType":"FUTURES","instFamily":"BTC-USDT"},"data":[{"maxBal":"","adlRecBal":"8000.0","bal":"280784384.9564228289548144","instType":"FUTURES","ccy":"USDT","instFamily":"BTC-USDT","maxBalTs":"","adlType":"","state":"normal","adlBal":"0","ts":"1700210763001"}]}`))
+
+	select {
+	case warning := <-gotCh:
+		if warning.State != "normal" || warning.InstFamily != "BTC-USDT" || warning.MaxBalTS != 0 || warning.TS != UnixMilli(1700210763001) {
+			t.Fatalf("warning = %#v", warning)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting adl-warning")
+	}
+}
+
+func TestWSClient_onDataMessage_EconomicCalendar_TypedAsync_Dispatches(t *testing.T) {
+	gotCh := make(chan EconomicCalendarEvent, 1)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+	}
+
+	w.OnEconomicCalendar(func(event EconomicCalendarEvent) {
+		select {
+		case gotCh <- event:
+		default:
+		}
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go w.typedDispatchLoop(ctx)
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"economic-calendar"},"data":[{"calendarId":"319275","date":"1597026383085","region":"United States","category":"Manufacturing PMI","event":"S&P Global Manufacturing PMI Final","refDate":"1597026383085","importance":"2","ts":"1698648096590"}]}`))
+
+	select {
+	case e := <-gotCh:
+		if e.CalendarId != "319275" || e.Date != 1597026383085 || e.Importance != "2" || e.TS != UnixMilli(1698648096590) {
+			t.Fatalf("event = %#v", e)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting economic-calendar")
+	}
+}

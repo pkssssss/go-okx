@@ -11,10 +11,11 @@ import (
 //
 // 说明：settlePx 保持为 string（无损）。
 type EstimatedPrice struct {
-	InstType string `json:"instType"`
-	InstId   string `json:"instId"`
-	SettlePx string `json:"settlePx"`
-	TS       int64  `json:"ts,string"`
+	InstType   string `json:"instType"`
+	InstId     string `json:"instId"`
+	SettlePx   string `json:"settlePx"`
+	SettleType string `json:"settleType"`
+	TS         int64  `json:"ts,string"`
 }
 
 // PublicEstimatedPriceService 获取预估交割/行权价格（交割/行权前一小时才有返回值）。
