@@ -34,6 +34,25 @@ func TestWSClient_PlaceOrder_RequiresPrivate(t *testing.T) {
 	}
 }
 
+func TestWSClient_PlaceOrder_RejectsBusinessPrivate(t *testing.T) {
+	c := NewClient()
+	ws := c.NewWSBusinessPrivate()
+
+	_, err := ws.PlaceOrder(context.Background(), WSPlaceOrderArg{
+		InstId:  "BTC-USDT",
+		TdMode:  "cash",
+		Side:    "buy",
+		OrdType: "market",
+		Sz:      "1",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !errors.Is(err, errWSPrivateRequired) {
+		t.Fatalf("error = %v, want errWSPrivateRequired", err)
+	}
+}
+
 func TestWSClient_PlaceOrder_WSOpReply(t *testing.T) {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
