@@ -1747,7 +1747,10 @@ func (w *WSClient) notifyWaiter(ev WSEvent) {
 	if ev.Event == "error" {
 		delete(w.waiters, ev.ID)
 		w.waitMu.Unlock()
-		waiter.done <- fmt.Errorf("okx: ws op=%s id=%s code=%s msg=%s", waiter.op, ev.ID, ev.Code, ev.Msg)
+		select {
+		case waiter.done <- fmt.Errorf("okx: ws op=%s id=%s code=%s msg=%s", waiter.op, ev.ID, ev.Code, ev.Msg):
+		default:
+		}
 		return
 	}
 
@@ -1764,7 +1767,10 @@ func (w *WSClient) notifyWaiter(ev WSEvent) {
 	delete(w.waiters, ev.ID)
 	w.waitMu.Unlock()
 
-	waiter.done <- nil
+	select {
+	case waiter.done <- nil:
+	default:
+	}
 }
 
 func (w *WSClient) failWaiters(err error) {
@@ -1813,7 +1819,10 @@ func (w *WSClient) notifyOpWaiter(reply WSOpReply, raw []byte) {
 	delete(w.opWaiters, reply.ID)
 	w.opWaitMu.Unlock()
 
-	waiter.done <- wsOpRespResult{reply: &reply, raw: raw}
+	select {
+	case waiter.done <- wsOpRespResult{reply: &reply, raw: raw}:
+	default:
+	}
 }
 
 func (w *WSClient) notifyOpWaiterError(ev WSEvent) {
@@ -1830,7 +1839,10 @@ func (w *WSClient) notifyOpWaiterError(ev WSEvent) {
 	delete(w.opWaiters, ev.ID)
 	w.opWaitMu.Unlock()
 
-	waiter.done <- wsOpRespResult{err: fmt.Errorf("okx: ws op=%s id=%s code=%s msg=%s", waiter.op, ev.ID, ev.Code, ev.Msg)}
+	select {
+	case waiter.done <- wsOpRespResult{err: fmt.Errorf("okx: ws op=%s id=%s code=%s msg=%s", waiter.op, ev.ID, ev.Code, ev.Msg)}:
+	default:
+	}
 }
 
 func (w *WSClient) failOpWaiters(err error) {
