@@ -18,6 +18,7 @@ func TestWSClient_Close_ClosesConnAndDone(t *testing.T) {
 	}
 
 	type subMsg struct {
+		ID   string  `json:"id"`
 		Op   string  `json:"op"`
 		Args []WSArg `json:"args"`
 	}
@@ -40,6 +41,17 @@ func TestWSClient_Close_ClosesConnAndDone(t *testing.T) {
 			t.Fatalf("unmarshal subscribe: %v", err)
 		}
 		subCh <- sm
+
+		for _, a := range sm.Args {
+			ev := WSEvent{
+				ID:     sm.ID,
+				Event:  "subscribe",
+				Arg:    &a,
+				ConnID: "x",
+			}
+			b, _ := json.Marshal(ev)
+			_ = c.WriteMessage(websocket.TextMessage, b)
+		}
 
 		for {
 			_, _, err := c.ReadMessage()
@@ -87,6 +99,7 @@ func TestWSClient_Notice64008_ReconnectAndResubscribe(t *testing.T) {
 	}
 
 	type subMsg struct {
+		ID   string  `json:"id"`
 		Op   string  `json:"op"`
 		Args []WSArg `json:"args"`
 	}
@@ -113,13 +126,25 @@ func TestWSClient_Notice64008_ReconnectAndResubscribe(t *testing.T) {
 		}
 		subCh <- sm
 
+		for _, a := range sm.Args {
+			ev := WSEvent{
+				ID:     sm.ID,
+				Event:  "subscribe",
+				Arg:    &a,
+				ConnID: "x",
+			}
+			b, _ := json.Marshal(ev)
+			_ = c.WriteMessage(websocket.TextMessage, b)
+		}
+
 		if n == 1 {
 			_ = c.WriteMessage(websocket.TextMessage, []byte(`{"event":"notice","code":"64008","msg":"upgrade","connId":"x"}`))
-			for {
-				_, _, err := c.ReadMessage()
-				if err != nil {
-					return
-				}
+		}
+
+		for {
+			_, _, err := c.ReadMessage()
+			if err != nil {
+				return
 			}
 		}
 	}))

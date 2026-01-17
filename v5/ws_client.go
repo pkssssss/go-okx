@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"sync"
@@ -59,7 +60,7 @@ type WSArg struct {
 }
 
 func (a WSArg) key() string {
-	return a.Channel + "|" + a.InstId + "|" + a.InstType + "|" + a.InstFamily + "|" + a.SprdId + "|" + a.Uly + "|" + a.AlgoId + "|" + a.Ccy
+	return a.Channel + "|" + a.InstId + "|" + a.InstType + "|" + a.InstFamily + "|" + a.SprdId + "|" + a.Uly + "|" + a.AlgoId + "|" + a.UID + "|" + a.Ccy + "|" + a.ExtraParams
 }
 
 type wsOpRequest struct {
@@ -99,6 +100,18 @@ func WithWSURL(url string) WSOption {
 func WithWSHeartbeat(interval time.Duration) WSOption {
 	return func(c *WSClient) {
 		c.heartbeat = interval
+	}
+}
+
+// WithWSResubscribeWaitTimeout 设置断线重连后自动重订阅的确认超时。
+//
+// 默认 5s。若传入 timeout<=0，将回退到默认值。
+func WithWSResubscribeWaitTimeout(timeout time.Duration) WSOption {
+	return func(c *WSClient) {
+		if timeout <= 0 {
+			timeout = 5 * time.Second
+		}
+		c.resubscribeWait = timeout
 	}
 }
 
@@ -183,9 +196,10 @@ type WSClient struct {
 	dialer    *websocket.Dialer
 	needLogin bool
 
-	heartbeat time.Duration
-	lastRecv  atomic.Int64
-	lastPing  atomic.Int64
+	heartbeat       time.Duration
+	resubscribeWait time.Duration
+	lastRecv        atomic.Int64
+	lastPing        atomic.Int64
 
 	handler      WSMessageHandler
 	errHandler   WSErrorHandler
@@ -277,19 +291,20 @@ func (c *Client) NewWSPublic(opts ...WSOption) *WSClient {
 		endpoint = wsPublicDemoURL
 	}
 	w := &WSClient{
-		c:           c,
-		endpoint:    endpoint,
-		kind:        wsKindPublic,
-		connCh:      make(chan struct{}),
-		desired:     map[string]WSArg{},
-		backoff:     250 * time.Millisecond,
-		heartbeat:   25 * time.Second,
-		typedAsync:  true,
-		typedBuffer: 1024,
-		rawAsync:    true,
-		rawBuffer:   1024,
-		waiters:     map[string]*wsOpWaiter{},
-		opWaiters:   map[string]*wsOpRespWaiter{},
+		c:               c,
+		endpoint:        endpoint,
+		kind:            wsKindPublic,
+		connCh:          make(chan struct{}),
+		desired:         map[string]WSArg{},
+		backoff:         250 * time.Millisecond,
+		heartbeat:       25 * time.Second,
+		resubscribeWait: 5 * time.Second,
+		typedAsync:      true,
+		typedBuffer:     1024,
+		rawAsync:        true,
+		rawBuffer:       1024,
+		waiters:         map[string]*wsOpWaiter{},
+		opWaiters:       map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -304,20 +319,21 @@ func (c *Client) NewWSPrivate(opts ...WSOption) *WSClient {
 		endpoint = wsPrivateDemoURL
 	}
 	w := &WSClient{
-		c:           c,
-		endpoint:    endpoint,
-		kind:        wsKindPrivate,
-		needLogin:   true,
-		connCh:      make(chan struct{}),
-		desired:     map[string]WSArg{},
-		backoff:     250 * time.Millisecond,
-		heartbeat:   25 * time.Second,
-		typedAsync:  true,
-		typedBuffer: 1024,
-		rawAsync:    true,
-		rawBuffer:   1024,
-		waiters:     map[string]*wsOpWaiter{},
-		opWaiters:   map[string]*wsOpRespWaiter{},
+		c:               c,
+		endpoint:        endpoint,
+		kind:            wsKindPrivate,
+		needLogin:       true,
+		connCh:          make(chan struct{}),
+		desired:         map[string]WSArg{},
+		backoff:         250 * time.Millisecond,
+		heartbeat:       25 * time.Second,
+		resubscribeWait: 5 * time.Second,
+		typedAsync:      true,
+		typedBuffer:     1024,
+		rawAsync:        true,
+		rawBuffer:       1024,
+		waiters:         map[string]*wsOpWaiter{},
+		opWaiters:       map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -332,19 +348,20 @@ func (c *Client) NewWSBusiness(opts ...WSOption) *WSClient {
 		endpoint = wsBusinessDemoURL
 	}
 	w := &WSClient{
-		c:           c,
-		endpoint:    endpoint,
-		kind:        wsKindBusiness,
-		connCh:      make(chan struct{}),
-		desired:     map[string]WSArg{},
-		backoff:     250 * time.Millisecond,
-		heartbeat:   25 * time.Second,
-		typedAsync:  true,
-		typedBuffer: 1024,
-		rawAsync:    true,
-		rawBuffer:   1024,
-		waiters:     map[string]*wsOpWaiter{},
-		opWaiters:   map[string]*wsOpRespWaiter{},
+		c:               c,
+		endpoint:        endpoint,
+		kind:            wsKindBusiness,
+		connCh:          make(chan struct{}),
+		desired:         map[string]WSArg{},
+		backoff:         250 * time.Millisecond,
+		heartbeat:       25 * time.Second,
+		resubscribeWait: 5 * time.Second,
+		typedAsync:      true,
+		typedBuffer:     1024,
+		rawAsync:        true,
+		rawBuffer:       1024,
+		waiters:         map[string]*wsOpWaiter{},
+		opWaiters:       map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -361,20 +378,21 @@ func (c *Client) NewWSBusinessPrivate(opts ...WSOption) *WSClient {
 		endpoint = wsBusinessDemoURL
 	}
 	w := &WSClient{
-		c:           c,
-		endpoint:    endpoint,
-		kind:        wsKindBusiness,
-		needLogin:   true,
-		connCh:      make(chan struct{}),
-		desired:     map[string]WSArg{},
-		backoff:     250 * time.Millisecond,
-		heartbeat:   25 * time.Second,
-		typedAsync:  true,
-		typedBuffer: 1024,
-		rawAsync:    true,
-		rawBuffer:   1024,
-		waiters:     map[string]*wsOpWaiter{},
-		opWaiters:   map[string]*wsOpRespWaiter{},
+		c:               c,
+		endpoint:        endpoint,
+		kind:            wsKindBusiness,
+		needLogin:       true,
+		connCh:          make(chan struct{}),
+		desired:         map[string]WSArg{},
+		backoff:         250 * time.Millisecond,
+		heartbeat:       25 * time.Second,
+		resubscribeWait: 5 * time.Second,
+		typedAsync:      true,
+		typedBuffer:     1024,
+		rawAsync:        true,
+		rawBuffer:       1024,
+		waiters:         map[string]*wsOpWaiter{},
+		opWaiters:       map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -679,8 +697,12 @@ func (w *WSClient) run(ctx context.Context) {
 
 		w.setConn(conn)
 
+		var resubscribeWaiter *wsOpWaiter
 		if args := w.snapshotDesired(); len(args) > 0 {
-			if err := w.writeJSON(conn, wsOpRequest{ID: w.nextOpID(), Op: "subscribe", Args: args}); err != nil {
+			id := w.nextOpID()
+			resubscribeWaiter = w.registerWaiter(id, "subscribe", args)
+			if err := w.writeJSON(conn, wsOpRequest{ID: id, Op: "subscribe", Args: args}); err != nil {
+				w.removeWaiter(id)
 				w.onError(err)
 				w.closeConn()
 				w.sleepBackoff(ctx)
@@ -688,7 +710,7 @@ func (w *WSClient) run(ctx context.Context) {
 			}
 		}
 
-		if err := w.readLoop(ctx, conn); err != nil {
+		if err := w.readLoop(ctx, conn, resubscribeWaiter); err != nil {
 			w.onError(err)
 		}
 
@@ -775,13 +797,27 @@ func (w *WSClient) login(ctx context.Context, conn *websocket.Conn) error {
 	}
 }
 
-func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn) error {
+func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn, resubscribeWaiter *wsOpWaiter) error {
+	if resubscribeWaiter != nil {
+		timeout := w.resubscribeWait
+		if timeout <= 0 {
+			timeout = 5 * time.Second
+		}
+		_ = conn.SetReadDeadline(time.Now().Add(timeout))
+	}
+
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
+			if resubscribeWaiter != nil {
+				var netErr net.Error
+				if errors.As(err, &netErr) && netErr.Timeout() {
+					return errors.New("okx: ws auto resubscribe wait timeout")
+				}
+			}
 			return err
 		}
 
@@ -799,11 +835,23 @@ func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn) error {
 			} else {
 				w.onDataMessage(msg)
 			}
-			continue
+		} else {
+			w.onEvent(*ev)
+			if ev.Event == "notice" && ev.Code == "64008" {
+				return errors.New("okx: ws notice 64008 reconnect")
+			}
 		}
-		w.onEvent(*ev)
-		if ev.Event == "notice" && ev.Code == "64008" {
-			return errors.New("okx: ws notice 64008 reconnect")
+
+		if resubscribeWaiter != nil {
+			select {
+			case err := <-resubscribeWaiter.done:
+				if err != nil {
+					return err
+				}
+				resubscribeWaiter = nil
+				_ = conn.SetReadDeadline(time.Time{})
+			default:
+			}
 		}
 	}
 }

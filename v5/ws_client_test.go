@@ -30,6 +30,7 @@ func TestWSClient_PrivateLogin_Subscribe_PingPong(t *testing.T) {
 	}
 
 	type subMsg struct {
+		ID   string  `json:"id"`
 		Op   string  `json:"op"`
 		Args []WSArg `json:"args"`
 	}
@@ -79,6 +80,23 @@ func TestWSClient_PrivateLogin_Subscribe_PingPong(t *testing.T) {
 			t.Fatalf("unmarshal subscribe: %v", err)
 		}
 		subCh <- sm
+
+		for _, a := range sm.Args {
+			ev := WSEvent{
+				ID:     sm.ID,
+				Event:  "subscribe",
+				Arg:    &a,
+				ConnID: "x",
+			}
+			b, _ := json.Marshal(ev)
+			_ = c.WriteMessage(websocket.TextMessage, b)
+		}
+
+		for {
+			if _, _, err := c.ReadMessage(); err != nil {
+				return
+			}
+		}
 	}))
 	t.Cleanup(srv.Close)
 

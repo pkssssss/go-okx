@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-func TestWSClient_CancelCtx_ClosesConnAndDone(t *testing.T) {
+func TestWSClient_AutoResubscribe_ErrorEventVisible(t *testing.T) {
 	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
-
-	connected := make(chan struct{}, 1)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)
@@ -23,11 +22,11 @@ func TestWSClient_CancelCtx_ClosesConnAndDone(t *testing.T) {
 		}
 		defer c.Close()
 
-		// 读取 subscribe（确保客户端已建立连接并进入 readLoop）
 		_, msg, err := c.ReadMessage()
 		if err != nil {
 			return
 		}
+
 		var sm struct {
 			ID   string  `json:"id"`
 			Op   string  `json:"op"`
@@ -39,17 +38,9 @@ func TestWSClient_CancelCtx_ClosesConnAndDone(t *testing.T) {
 		if sm.Op != "subscribe" || sm.ID == "" || len(sm.Args) != 1 {
 			t.Fatalf("subscribe msg = %#v", sm)
 		}
-		for _, a := range sm.Args {
-			ev := WSEvent{ID: sm.ID, Event: "subscribe", Arg: &a, ConnID: "x"}
-			b, _ := json.Marshal(ev)
-			_ = c.WriteMessage(websocket.TextMessage, b)
-		}
-		select {
-		case connected <- struct{}{}:
-		default:
-		}
 
-		// 保持静默：不发送任何消息，模拟低频/无推送场景
+		_ = c.WriteMessage(websocket.TextMessage, []byte(`{"id":"`+sm.ID+`","event":"error","code":"60012","msg":"Invalid request","connId":"x"}`))
+
 		for {
 			if _, _, err := c.ReadMessage(); err != nil {
 				return
@@ -60,29 +51,33 @@ func TestWSClient_CancelCtx_ClosesConnAndDone(t *testing.T) {
 
 	wsURL := "ws" + srv.URL[len("http"):]
 
+	errCh := make(chan error, 1)
+
 	client := NewClient()
-	ws := client.NewWSPublic(WithWSURL(wsURL), WithWSHeartbeat(0))
+	ws := client.NewWSPublic(WithWSURL(wsURL), WithWSHeartbeat(0), WithWSResubscribeWaitTimeout(2*time.Second))
 	_ = ws.Subscribe(WSArg{Channel: WSChannelTickers, InstId: "BTC-USDT"})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-
-	if err := ws.Start(ctx, nil, nil); err != nil {
+	if err := ws.Start(ctx, nil, func(err error) {
+		select {
+		case errCh <- err:
+		default:
+		}
+	}); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
 	t.Cleanup(ws.Close)
 
 	select {
-	case <-connected:
+	case err := <-errCh:
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if !strings.Contains(err.Error(), "op=subscribe") || !strings.Contains(err.Error(), "code=60012") {
+			t.Fatalf("error = %v, want contains op=subscribe and code=60012", err)
+		}
 	case <-time.After(2 * time.Second):
-		t.Fatalf("timeout waiting server connected")
-	}
-
-	cancel()
-
-	select {
-	case <-ws.Done():
-	case <-time.After(2 * time.Second):
-		t.Fatalf("timeout waiting Done after ctx cancel")
+		t.Fatalf("timeout waiting errHandler called")
 	}
 }
