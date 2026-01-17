@@ -25,10 +25,14 @@ func (e *APIError) Error() string {
 	if e == nil {
 		return "<OKX APIError>"
 	}
-	if e.Code != "" || e.Message != "" {
-		return fmt.Sprintf("<OKX APIError> http=%d code=%s msg=%s method=%s path=%s", e.HTTPStatus, e.Code, e.Message, e.Method, e.RequestPath)
+	requestIDPart := ""
+	if e.RequestID != "" {
+		requestIDPart = " requestId=" + e.RequestID
 	}
-	return fmt.Sprintf("<OKX APIError> http=%d method=%s path=%s", e.HTTPStatus, e.Method, e.RequestPath)
+	if e.Code != "" || e.Message != "" {
+		return fmt.Sprintf("<OKX APIError> http=%d code=%s msg=%s method=%s path=%s%s", e.HTTPStatus, e.Code, e.Message, e.Method, e.RequestPath, requestIDPart)
+	}
+	return fmt.Sprintf("<OKX APIError> http=%d method=%s path=%s%s", e.HTTPStatus, e.Method, e.RequestPath, requestIDPart)
 }
 
 // IsAPIError 判断 err 是否为 APIError。

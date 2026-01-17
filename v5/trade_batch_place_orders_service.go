@@ -102,10 +102,11 @@ func (s *BatchPlaceOrdersService) Do(ctx context.Context) ([]TradeOrderAck, erro
 		header = make(http.Header)
 		header.Set("expTime", s.expTimeHeader)
 	}
-	if err := s.c.doWithHeaders(ctx, http.MethodPost, "/api/v5/trade/batch-orders", nil, req, true, header, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/batch-orders", nil, req, true, header, &data)
+	if err != nil {
 		return nil, err
 	}
-	if err := tradeCheckBatchAcks(http.MethodPost, "/api/v5/trade/batch-orders", data); err != nil {
+	if err := tradeCheckBatchAcks(http.MethodPost, "/api/v5/trade/batch-orders", requestID, data); err != nil {
 		return data, err
 	}
 	return data, nil

@@ -64,10 +64,11 @@ func (s *CancelAlgoOrdersService) Do(ctx context.Context) ([]TradeAlgoOrderAck, 
 	}
 
 	var data []TradeAlgoOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/cancel-algos", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/cancel-algos", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
-	if err := tradeCheckAlgoAcks(http.MethodPost, "/api/v5/trade/cancel-algos", data); err != nil {
+	if err := tradeCheckAlgoAcks(http.MethodPost, "/api/v5/trade/cancel-algos", requestID, data); err != nil {
 		return data, err
 	}
 	return data, nil

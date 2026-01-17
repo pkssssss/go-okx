@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -89,6 +90,7 @@ func TestCancelAlgoOrdersService_Do(t *testing.T) {
 
 	t.Run("partial_failure", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-algo-1")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoClOrdId":"","algoId":"1","clOrdId":"","sCode":"51000","sMsg":"failed","tag":""}]}`))
 		}))
@@ -112,6 +114,12 @@ func TestCancelAlgoOrdersService_Do(t *testing.T) {
 		var batchErr *TradeAlgoBatchError
 		if !errors.As(err, &batchErr) {
 			t.Fatalf("error = %T, want *TradeAlgoBatchError", err)
+		}
+		if got, want := batchErr.RequestID, "rid-algo-1"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if !strings.Contains(err.Error(), "requestId=rid-algo-1") {
+			t.Fatalf("err.Error() = %q", err.Error())
 		}
 		if len(acks) != 1 || acks[0].SCode != "51000" {
 			t.Fatalf("acks = %#v", acks)

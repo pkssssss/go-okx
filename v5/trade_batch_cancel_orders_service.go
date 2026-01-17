@@ -60,10 +60,11 @@ func (s *BatchCancelOrdersService) Do(ctx context.Context) ([]TradeOrderAck, err
 	}
 
 	var data []TradeOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/cancel-batch-orders", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/cancel-batch-orders", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
-	if err := tradeCheckBatchAcks(http.MethodPost, "/api/v5/trade/cancel-batch-orders", data); err != nil {
+	if err := tradeCheckBatchAcks(http.MethodPost, "/api/v5/trade/cancel-batch-orders", requestID, data); err != nil {
 		return data, err
 	}
 	return data, nil

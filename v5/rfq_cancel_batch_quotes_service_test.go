@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -40,6 +41,7 @@ func TestRFQCancelBatchQuotesService_Do(t *testing.T) {
 				t.Fatalf("OK-ACCESS-SIGN empty")
 			}
 
+			w.Header().Set("x-request-id", "rid-quote-1")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"quoteId":"1150","clQuoteId":"q1","sCode":"0","sMsg":""},{"quoteId":"1151","clQuoteId":"q2","sCode":"70001","sMsg":"Quote does not exist."}]}`))
 		}))
@@ -66,6 +68,12 @@ func TestRFQCancelBatchQuotesService_Do(t *testing.T) {
 		var batchErr *RFQCancelBatchQuotesError
 		if !errors.As(err, &batchErr) {
 			t.Fatalf("expected RFQCancelBatchQuotesError, got %T: %v", err, err)
+		}
+		if got, want := batchErr.RequestID, "rid-quote-1"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if !strings.Contains(err.Error(), "requestId=rid-quote-1") {
+			t.Fatalf("err.Error() = %q", err.Error())
 		}
 		if len(acks) != 2 || acks[1].SCode != "70001" {
 			t.Fatalf("acks = %#v", acks)

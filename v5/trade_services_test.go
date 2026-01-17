@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -288,6 +289,7 @@ func TestBatchPlaceOrdersService_Do(t *testing.T) {
 
 	t.Run("partial_failure_returns_TradeBatchError", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-batch-1")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"b15","ordId":"","tag":"","ts":"0","sCode":"51000","sMsg":"bad"},{"clOrdId":"b16","ordId":"2","tag":"","ts":"0","sCode":"0","sMsg":""}]}`))
 		}))
@@ -314,6 +316,12 @@ func TestBatchPlaceOrdersService_Do(t *testing.T) {
 		var batchErr *TradeBatchError
 		if !errors.As(err, &batchErr) {
 			t.Fatalf("expected *TradeBatchError, got %T: %v", err, err)
+		}
+		if got, want := batchErr.RequestID, "rid-batch-1"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if !strings.Contains(err.Error(), "requestId=rid-batch-1") {
+			t.Fatalf("err.Error() = %q", err.Error())
 		}
 		if len(acks) != 2 {
 			t.Fatalf("acks = %#v, want 2 items", acks)

@@ -244,6 +244,89 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 	}
 }
 
+func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint string, query url.Values, body any, signed bool, extraHeader http.Header, out any) (requestID string, err error) {
+	requestPath := rest.BuildRequestPath(endpoint, query)
+
+	var bodyBytes []byte
+	var bodyString string
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return "", err
+		}
+		bodyBytes = b
+		bodyString = string(b)
+	}
+
+	retryCfg := c.retry
+	maxRetries := 0
+	if retryCfg != nil && retryCfg.MaxRetries > 0 && method == http.MethodGet {
+		maxRetries = retryCfg.MaxRetries
+	}
+
+	for attempt := 0; ; attempt++ {
+		header := make(http.Header)
+		header.Set("Accept", "application/json")
+		header.Set("Content-Type", "application/json")
+		if c.demo {
+			header.Set("x-simulated-trading", "1")
+		}
+
+		if signed {
+			if c.creds == nil || c.creds.APIKey == "" || c.creds.SecretKey == "" || c.creds.Passphrase == "" {
+				return "", errMissingCredentials
+			}
+
+			tm := c.now().Add(-c.TimeOffset())
+			timestamp := sign.TimestampISO8601Millis(tm)
+			prehash := sign.PrehashREST(timestamp, method, requestPath, bodyString)
+			sig := sign.SignHMACSHA256Base64(c.creds.SecretKey, prehash)
+
+			header.Set("OK-ACCESS-KEY", c.creds.APIKey)
+			header.Set("OK-ACCESS-PASSPHRASE", c.creds.Passphrase)
+			header.Set("OK-ACCESS-TIMESTAMP", timestamp)
+			header.Set("OK-ACCESS-SIGN", sig)
+		}
+
+		if len(extraHeader) > 0 {
+			for k, vs := range extraHeader {
+				if len(vs) == 0 {
+					continue
+				}
+				header.Del(k)
+				for _, v := range vs {
+					header.Add(k, v)
+				}
+			}
+		}
+
+		status, resp, respHeader, err := c.rest.Do(ctx, method, requestPath, bodyBytes, header)
+		if respHeader != nil {
+			requestID = respHeader.Get("x-request-id")
+		}
+		if err != nil {
+			if attempt < maxRetries && isRetryableTransportError(err) {
+				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
+					return requestID, err
+				}
+				continue
+			}
+			return requestID, err
+		}
+
+		if err := decodeEnvelope(status, resp, respHeader, method, requestPath, out); err != nil {
+			if attempt < maxRetries && isRetryableAPIError(err, retryCfg) {
+				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
+					return requestID, err
+				}
+				continue
+			}
+			return requestID, err
+		}
+		return requestID, nil
+	}
+}
+
 func isRetryableTransportError(err error) bool {
 	if err == nil {
 		return false

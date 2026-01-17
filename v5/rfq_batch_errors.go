@@ -7,6 +7,7 @@ type RFQCancelBatchRFQsError struct {
 	HTTPStatus  int
 	Method      string
 	RequestPath string
+	RequestID   string
 
 	Acks []RFQCancelAck
 }
@@ -29,18 +30,27 @@ func (e *RFQCancelBatchRFQsError) Error() string {
 		}
 	}
 	if failed == 0 {
-		return fmt.Sprintf("<OKX RFQCancelBatchRFQsError> http=%d method=%s path=%s", e.HTTPStatus, e.Method, e.RequestPath)
+		requestIDPart := ""
+		if e.RequestID != "" {
+			requestIDPart = " requestId=" + e.RequestID
+		}
+		return fmt.Sprintf("<OKX RFQCancelBatchRFQsError> http=%d method=%s path=%s%s", e.HTTPStatus, e.Method, e.RequestPath, requestIDPart)
 	}
-	return fmt.Sprintf("<OKX RFQCancelBatchRFQsError> http=%d failed=%d code=%s msg=%s method=%s path=%s", e.HTTPStatus, failed, firstCode, firstMsg, e.Method, e.RequestPath)
+	requestIDPart := ""
+	if e.RequestID != "" {
+		requestIDPart = " requestId=" + e.RequestID
+	}
+	return fmt.Sprintf("<OKX RFQCancelBatchRFQsError> http=%d failed=%d code=%s msg=%s method=%s path=%s%s", e.HTTPStatus, failed, firstCode, firstMsg, e.Method, e.RequestPath, requestIDPart)
 }
 
-func rfqCheckCancelBatchRFQs(method, requestPath string, acks []RFQCancelAck) error {
+func rfqCheckCancelBatchRFQs(method, requestPath, requestID string, acks []RFQCancelAck) error {
 	for _, ack := range acks {
 		if ack.SCode != "" && ack.SCode != "0" {
 			return &RFQCancelBatchRFQsError{
 				HTTPStatus:  200,
 				Method:      method,
 				RequestPath: requestPath,
+				RequestID:   requestID,
 				Acks:        acks,
 			}
 		}
@@ -53,6 +63,7 @@ type RFQCancelBatchQuotesError struct {
 	HTTPStatus  int
 	Method      string
 	RequestPath string
+	RequestID   string
 
 	Acks []RFQCancelQuoteAck
 }
@@ -75,18 +86,27 @@ func (e *RFQCancelBatchQuotesError) Error() string {
 		}
 	}
 	if failed == 0 {
-		return fmt.Sprintf("<OKX RFQCancelBatchQuotesError> http=%d method=%s path=%s", e.HTTPStatus, e.Method, e.RequestPath)
+		requestIDPart := ""
+		if e.RequestID != "" {
+			requestIDPart = " requestId=" + e.RequestID
+		}
+		return fmt.Sprintf("<OKX RFQCancelBatchQuotesError> http=%d method=%s path=%s%s", e.HTTPStatus, e.Method, e.RequestPath, requestIDPart)
 	}
-	return fmt.Sprintf("<OKX RFQCancelBatchQuotesError> http=%d failed=%d code=%s msg=%s method=%s path=%s", e.HTTPStatus, failed, firstCode, firstMsg, e.Method, e.RequestPath)
+	requestIDPart := ""
+	if e.RequestID != "" {
+		requestIDPart = " requestId=" + e.RequestID
+	}
+	return fmt.Sprintf("<OKX RFQCancelBatchQuotesError> http=%d failed=%d code=%s msg=%s method=%s path=%s%s", e.HTTPStatus, failed, firstCode, firstMsg, e.Method, e.RequestPath, requestIDPart)
 }
 
-func rfqCheckCancelBatchQuotes(method, requestPath string, acks []RFQCancelQuoteAck) error {
+func rfqCheckCancelBatchQuotes(method, requestPath, requestID string, acks []RFQCancelQuoteAck) error {
 	for _, ack := range acks {
 		if ack.SCode != "" && ack.SCode != "0" {
 			return &RFQCancelBatchQuotesError{
 				HTTPStatus:  200,
 				Method:      method,
 				RequestPath: requestPath,
+				RequestID:   requestID,
 				Acks:        acks,
 			}
 		}

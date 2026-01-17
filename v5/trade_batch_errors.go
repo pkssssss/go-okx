@@ -9,6 +9,7 @@ type TradeBatchError struct {
 	HTTPStatus  int
 	Method      string
 	RequestPath string
+	RequestID   string
 
 	Acks []TradeOrderAck
 }
@@ -32,18 +33,27 @@ func (e *TradeBatchError) Error() string {
 	}
 
 	if failed == 0 {
-		return fmt.Sprintf("<OKX TradeBatchError> http=%d method=%s path=%s", e.HTTPStatus, e.Method, e.RequestPath)
+		requestIDPart := ""
+		if e.RequestID != "" {
+			requestIDPart = " requestId=" + e.RequestID
+		}
+		return fmt.Sprintf("<OKX TradeBatchError> http=%d method=%s path=%s%s", e.HTTPStatus, e.Method, e.RequestPath, requestIDPart)
 	}
-	return fmt.Sprintf("<OKX TradeBatchError> http=%d failed=%d code=%s msg=%s method=%s path=%s", e.HTTPStatus, failed, firstCode, firstMsg, e.Method, e.RequestPath)
+	requestIDPart := ""
+	if e.RequestID != "" {
+		requestIDPart = " requestId=" + e.RequestID
+	}
+	return fmt.Sprintf("<OKX TradeBatchError> http=%d failed=%d code=%s msg=%s method=%s path=%s%s", e.HTTPStatus, failed, firstCode, firstMsg, e.Method, e.RequestPath, requestIDPart)
 }
 
-func tradeCheckBatchAcks(method, requestPath string, acks []TradeOrderAck) error {
+func tradeCheckBatchAcks(method, requestPath, requestID string, acks []TradeOrderAck) error {
 	for _, ack := range acks {
 		if ack.SCode != "" && ack.SCode != "0" {
 			return &TradeBatchError{
 				HTTPStatus:  200,
 				Method:      method,
 				RequestPath: requestPath,
+				RequestID:   requestID,
 				Acks:        acks,
 			}
 		}
