@@ -95,17 +95,7 @@ var (
 	errOrderPrecheckMissingSide    = errors.New("okx: order precheck requires side")
 	errOrderPrecheckMissingOrdType = errors.New("okx: order precheck requires ordType")
 	errOrderPrecheckMissingSz      = errors.New("okx: order precheck requires sz")
-	errOrderPrecheckMissingPx      = errors.New("okx: order precheck requires px for this ordType")
 )
-
-func orderPrecheckRequiresPrice(ordType string) bool {
-	switch ordType {
-	case "limit", "post_only", "fok", "ioc":
-		return true
-	default:
-		return false
-	}
-}
 
 // Do 订单预检查（POST /api/v5/trade/order-precheck）。
 func (s *OrderPrecheckService) Do(ctx context.Context) ([]OrderPrecheckResult, error) {
@@ -123,9 +113,6 @@ func (s *OrderPrecheckService) Do(ctx context.Context) ([]OrderPrecheckResult, e
 	}
 	if s.req.Sz == "" {
 		return nil, errOrderPrecheckMissingSz
-	}
-	if orderPrecheckRequiresPrice(s.req.OrdType) && s.req.Px == "" {
-		return nil, errOrderPrecheckMissingPx
 	}
 
 	var data []OrderPrecheckResult

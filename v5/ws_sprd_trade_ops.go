@@ -73,9 +73,6 @@ func validateWSSprdPlaceOrderArg(prefix string, arg WSSprdPlaceOrderArg) error {
 	if arg.Sz == "" {
 		return fmt.Errorf("%s requires sz", prefix)
 	}
-	if requiresPriceForOrderType(arg.OrdType) && arg.Px == "" {
-		return fmt.Errorf("%s requires px for this ordType", prefix)
-	}
 	return nil
 }
 

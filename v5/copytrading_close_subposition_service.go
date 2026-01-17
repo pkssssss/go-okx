@@ -54,7 +54,6 @@ func (s *CopyTradingCloseSubpositionService) Px(px string) *CopyTradingCloseSubp
 
 var (
 	errCopyTradingCloseSubpositionMissingSubPosId = errors.New("okx: copytrading close subposition requires subPosId")
-	errCopyTradingCloseSubpositionMissingPx       = errors.New("okx: copytrading close subposition requires px for ordType=limit")
 	errEmptyCopyTradingCloseSubpositionResponse   = errors.New("okx: empty copytrading close subposition response")
 )
 
@@ -70,9 +69,6 @@ type copyTradingCloseSubpositionRequest struct {
 func (s *CopyTradingCloseSubpositionService) Do(ctx context.Context) (*CopyTradingSubPositionAck, error) {
 	if s.subPosId == "" {
 		return nil, errCopyTradingCloseSubpositionMissingSubPosId
-	}
-	if s.ordType == "limit" && s.px == "" {
-		return nil, errCopyTradingCloseSubpositionMissingPx
 	}
 
 	req := copyTradingCloseSubpositionRequest{

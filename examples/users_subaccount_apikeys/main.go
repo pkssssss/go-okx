@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/pkssssss/go-okx/examples/internal/redact"
 	"github.com/pkssssss/go-okx/v5"
 )
 
@@ -47,9 +48,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("users_subaccount_apikeys: subAcct=%s apiKeyFilter=%s items=%d", subAcct, apiKeyFilter, len(items))
+	log.Printf("users_subaccount_apikeys: subAcct=%s apiKeyFilter=%s items=%d", subAcct, redact.Mask(apiKeyFilter), len(items))
 	for i := 0; i < len(items) && i < 5; i++ {
 		x := items[i]
-		log.Printf("item[%d]: label=%s apiKey=%s perm=%s ip=%s ts=%s", i, x.Label, x.APIKey, x.Perm, x.IP, x.TS)
+		log.Printf("item[%d]: label=%s apiKey=%s perm=%s ip=%s ts=%s", i, x.Label, redact.Mask(x.APIKey), x.Perm, x.IP, x.TS)
 	}
 }

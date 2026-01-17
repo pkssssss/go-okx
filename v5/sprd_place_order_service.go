@@ -54,7 +54,7 @@ func (s *SprdPlaceOrderService) OrdType(ordType string) *SprdPlaceOrderService {
 	return s
 }
 
-// Px 设置委托价格（对 limit/post_only/ioc 必填）。
+// Px 设置委托价格（是否必填以 OKX 服务端规则为准）。
 func (s *SprdPlaceOrderService) Px(px string) *SprdPlaceOrderService {
 	s.px = px
 	return s
@@ -71,7 +71,6 @@ var (
 	errSprdPlaceOrderMissingSide    = errors.New("okx: sprd place order requires side")
 	errSprdPlaceOrderMissingOrdType = errors.New("okx: sprd place order requires ordType")
 	errSprdPlaceOrderMissingSz      = errors.New("okx: sprd place order requires sz")
-	errSprdPlaceOrderMissingPx      = errors.New("okx: sprd place order requires px for this ordType")
 	errEmptySprdPlaceOrderResponse  = errors.New("okx: empty sprd place order response")
 )
 
@@ -98,9 +97,6 @@ func (s *SprdPlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) 
 	}
 	if s.sz == "" {
 		return nil, errSprdPlaceOrderMissingSz
-	}
-	if requiresPriceForOrderType(s.ordType) && s.px == "" {
-		return nil, errSprdPlaceOrderMissingPx
 	}
 
 	req := sprdPlaceOrderRequest{

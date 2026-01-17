@@ -139,8 +139,28 @@ func TestPlaceOrderService_Do(t *testing.T) {
 		}
 	})
 
-	t.Run("validate_missing_price_for_post_only", func(t *testing.T) {
-		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
+	t.Run("missing_price_for_post_only_is_server_validated", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bodyBytes, _ := io.ReadAll(r.Body)
+			if got, want := string(bodyBytes), `{"instId":"BTC-USDT","tdMode":"isolated","side":"buy","ordType":"post_only","sz":"1"}`; got != want {
+				t.Fatalf("body = %q, want %q", got, want)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"51000","msg":"invalid","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
 		_, err := c.NewPlaceOrderService().
 			InstId("BTC-USDT").
 			TdMode("isolated").
@@ -148,8 +168,15 @@ func TestPlaceOrderService_Do(t *testing.T) {
 			OrdType("post_only").
 			Sz("1").
 			Do(context.Background())
-		if !errors.Is(err, errPlaceOrderMissingPx) {
-			t.Fatalf("expected errPlaceOrderMissingPx, got %T: %v", err, err)
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if apiErr.Code != "51000" {
+			t.Fatalf("apiErr.Code = %q, want %q", apiErr.Code, "51000")
 		}
 	})
 

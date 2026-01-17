@@ -698,7 +698,22 @@ func TestTradingBotSignalSubOrdersService_Do_Validation(t *testing.T) {
 }
 
 func TestTradingBotSignalSubOrderService_Do_Validation(t *testing.T) {
-	c := NewClient()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bodyBytes, _ := io.ReadAll(r.Body)
+		if got, want := string(bodyBytes), `{"instId":"BTC-USDT-SWAP","algoId":"1","side":"buy","ordType":"limit","sz":"1"}`; got != want {
+			t.Fatalf("body = %q, want %q", got, want)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"51000","msg":"invalid","data":[]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+	)
+
 	err := c.NewTradingBotSignalSubOrderService().
 		AlgoId("1").
 		InstId("BTC-USDT-SWAP").
@@ -709,7 +724,11 @@ func TestTradingBotSignalSubOrderService_Do_Validation(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-	if err != errTradingBotSignalSubOrderMissingPx {
-		t.Fatalf("error = %v, want %v", err, errTradingBotSignalSubOrderMissingPx)
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("err = %T, want *APIError: %v", err, err)
+	}
+	if apiErr.Code != "51000" {
+		t.Fatalf("apiErr.Code = %q, want %q", apiErr.Code, "51000")
 	}
 }

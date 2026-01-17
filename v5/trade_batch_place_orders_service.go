@@ -93,9 +93,6 @@ func (s *BatchPlaceOrdersService) Do(ctx context.Context) ([]TradeOrderAck, erro
 		if countNonEmptyStrings(o.Px, o.PxUsd, o.PxVol) > 1 {
 			return nil, fmt.Errorf("okx: batch place orders[%d] requires at most one of px/pxUsd/pxVol", i)
 		}
-		if requiresPriceForOrderType(o.OrdType) && o.Px == "" && o.PxUsd == "" && o.PxVol == "" {
-			return nil, fmt.Errorf("okx: batch place orders[%d] missing px/pxUsd/pxVol for this ordType", i)
-		}
 		req = append(req, o)
 	}
 

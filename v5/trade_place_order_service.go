@@ -139,7 +139,6 @@ var (
 	errPlaceOrderMissingSide    = errors.New("okx: place order requires side")
 	errPlaceOrderMissingOrdType = errors.New("okx: place order requires ordType")
 	errPlaceOrderMissingSz      = errors.New("okx: place order requires sz")
-	errPlaceOrderMissingPx      = errors.New("okx: place order requires px/pxUsd/pxVol for this ordType")
 	errPlaceOrderTooManyPx      = errors.New("okx: place order requires at most one of px/pxUsd/pxVol")
 	errEmptyPlaceOrderResponse  = errors.New("okx: empty place order response")
 )
@@ -186,9 +185,6 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 
 	if countNonEmptyStrings(s.px, s.pxUsd, s.pxVol) > 1 {
 		return nil, errPlaceOrderTooManyPx
-	}
-	if requiresPriceForOrderType(s.ordType) && s.px == "" && s.pxUsd == "" && s.pxVol == "" {
-		return nil, errPlaceOrderMissingPx
 	}
 
 	req := placeOrderRequest{

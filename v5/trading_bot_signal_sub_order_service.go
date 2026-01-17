@@ -66,16 +66,12 @@ func (s *TradingBotSignalSubOrderService) ReduceOnly(reduceOnly bool) *TradingBo
 
 var (
 	errTradingBotSignalSubOrderMissingRequired = errors.New("okx: tradingBot signal sub-order requires algoId, instId, side, ordType and sz")
-	errTradingBotSignalSubOrderMissingPx       = errors.New("okx: tradingBot signal sub-order requires px when ordType is limit")
 )
 
 // Do 下单（POST /api/v5/tradingBot/signal/sub-order）。
 func (s *TradingBotSignalSubOrderService) Do(ctx context.Context) error {
 	if s.r.AlgoId == "" || s.r.InstId == "" || s.r.Side == "" || s.r.OrdType == "" || s.r.Sz == "" {
 		return errTradingBotSignalSubOrderMissingRequired
-	}
-	if s.r.OrdType == "limit" && s.r.Px == "" {
-		return errTradingBotSignalSubOrderMissingPx
 	}
 
 	return s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/sub-order", nil, s.r, true, nil)

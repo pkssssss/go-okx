@@ -2,6 +2,7 @@ package okx
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,11 +23,43 @@ func TestOrderPrecheckService_Do(t *testing.T) {
 		}
 	})
 
-	t.Run("missing_px_for_limit", func(t *testing.T) {
-		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
-		_, err := c.NewOrderPrecheckService().InstId("BTC-USDT").TdMode("cash").Side("buy").OrdType("limit").Sz("2").Do(context.Background())
-		if err != errOrderPrecheckMissingPx {
-			t.Fatalf("error = %v, want %v", err, errOrderPrecheckMissingPx)
+	t.Run("missing_px_for_limit_is_server_validated", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bodyBytes, _ := io.ReadAll(r.Body)
+			if got, want := string(bodyBytes), `{"instId":"BTC-USDT","tdMode":"cash","side":"buy","ordType":"limit","sz":"2"}`; got != want {
+				t.Fatalf("body = %q, want %q", got, want)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"51000","msg":"invalid","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+		_, err := c.NewOrderPrecheckService().
+			InstId("BTC-USDT").
+			TdMode("cash").
+			Side("buy").
+			OrdType("limit").
+			Sz("2").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if apiErr.Code != "51000" {
+			t.Fatalf("apiErr.Code = %q, want %q", apiErr.Code, "51000")
 		}
 	})
 
