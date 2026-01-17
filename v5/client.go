@@ -37,6 +37,8 @@ type Client struct {
 	creds *Credentials
 	demo  bool
 
+	gate *requestGate
+
 	retry *RetryConfig
 
 	timeOffsetNanos atomic.Int64
@@ -53,7 +55,8 @@ func NewClient(opts ...Option) *Client {
 			BaseURL:   defaultBaseURL,
 			UserAgent: defaultUserAgent,
 		},
-		now: time.Now,
+		gate: newRequestGate(defaultRequestGateConfig()),
+		now:  time.Now,
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -185,6 +188,25 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 	}
 
 	for attempt := 0; ; attempt++ {
+		attemptCtx, attemptCancel := c.rest.ContextWithDefaultTimeout(ctx)
+
+		if signed {
+			if c.creds == nil || c.creds.APIKey == "" || c.creds.SecretKey == "" || c.creds.Passphrase == "" {
+				if attemptCancel != nil {
+					attemptCancel()
+				}
+				return errMissingCredentials
+			}
+		}
+
+		release, err := c.gate.acquire(attemptCtx, method, endpoint)
+		if err != nil {
+			if attemptCancel != nil {
+				attemptCancel()
+			}
+			return err
+		}
+
 		header := make(http.Header)
 		header.Set("Accept", "application/json")
 		header.Set("Content-Type", "application/json")
@@ -193,10 +215,6 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 		}
 
 		if signed {
-			if c.creds == nil || c.creds.APIKey == "" || c.creds.SecretKey == "" || c.creds.Passphrase == "" {
-				return errMissingCredentials
-			}
-
 			tm := c.now().Add(-c.TimeOffset())
 			timestamp := sign.TimestampISO8601Millis(tm)
 			prehash := sign.PrehashREST(timestamp, method, requestPath, bodyString)
@@ -220,7 +238,11 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 			}
 		}
 
-		status, resp, respHeader, err := c.rest.Do(ctx, method, requestPath, bodyBytes, header)
+		status, resp, respHeader, err := c.rest.Do(attemptCtx, method, requestPath, bodyBytes, header)
+		release()
+		if attemptCancel != nil {
+			attemptCancel()
+		}
 		if err != nil {
 			if attempt < maxRetries && isRetryableTransportError(err) {
 				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
@@ -265,6 +287,25 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 	}
 
 	for attempt := 0; ; attempt++ {
+		attemptCtx, attemptCancel := c.rest.ContextWithDefaultTimeout(ctx)
+
+		if signed {
+			if c.creds == nil || c.creds.APIKey == "" || c.creds.SecretKey == "" || c.creds.Passphrase == "" {
+				if attemptCancel != nil {
+					attemptCancel()
+				}
+				return "", errMissingCredentials
+			}
+		}
+
+		release, err := c.gate.acquire(attemptCtx, method, endpoint)
+		if err != nil {
+			if attemptCancel != nil {
+				attemptCancel()
+			}
+			return requestID, err
+		}
+
 		header := make(http.Header)
 		header.Set("Accept", "application/json")
 		header.Set("Content-Type", "application/json")
@@ -273,10 +314,6 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 		}
 
 		if signed {
-			if c.creds == nil || c.creds.APIKey == "" || c.creds.SecretKey == "" || c.creds.Passphrase == "" {
-				return "", errMissingCredentials
-			}
-
 			tm := c.now().Add(-c.TimeOffset())
 			timestamp := sign.TimestampISO8601Millis(tm)
 			prehash := sign.PrehashREST(timestamp, method, requestPath, bodyString)
@@ -300,7 +337,11 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 			}
 		}
 
-		status, resp, respHeader, err := c.rest.Do(ctx, method, requestPath, bodyBytes, header)
+		status, resp, respHeader, err := c.rest.Do(attemptCtx, method, requestPath, bodyBytes, header)
+		release()
+		if attemptCancel != nil {
+			attemptCancel()
+		}
 		if respHeader != nil {
 			requestID = respHeader.Get("x-request-id")
 		}

@@ -19,26 +19,35 @@ type Client struct {
 	DefaultTimeout time.Duration
 }
 
-func (c *Client) Do(ctx context.Context, method, requestPath string, body []byte, header http.Header) (status int, resp []byte, respHeader http.Header, err error) {
-	fullURL := c.BaseURL + requestPath
-
+// ContextWithDefaultTimeout 在 ctx 未设置 deadline 时，为其附加 DefaultTimeout（Fail-Fast）。
+// 返回的 cancel 需要由调用方负责调用（若为 nil 则无需调用）。
+func (c *Client) ContextWithDefaultTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, nil
+	}
 
-	if _, ok := ctx.Deadline(); !ok {
-		timeout := c.DefaultTimeout
-		switch {
-		case timeout == 0:
-			timeout = 10 * time.Second
-		case timeout < 0:
-			timeout = 0
-		}
-		if timeout > 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, timeout)
-			defer cancel()
-		}
+	timeout := c.DefaultTimeout
+	switch {
+	case timeout == 0:
+		timeout = 10 * time.Second
+	case timeout < 0:
+		timeout = 0
+	}
+	if timeout <= 0 {
+		return ctx, nil
+	}
+	return context.WithTimeout(ctx, timeout)
+}
+
+func (c *Client) Do(ctx context.Context, method, requestPath string, body []byte, header http.Header) (status int, resp []byte, respHeader http.Header, err error) {
+	fullURL := c.BaseURL + requestPath
+
+	ctx, cancel := c.ContextWithDefaultTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
 	}
 
 	var bodyReader io.Reader

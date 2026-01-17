@@ -37,5 +37,10 @@ func (s *TradeAccountRateLimitService) Do(ctx context.Context) (*TradeAccountRat
 	if len(data) == 0 {
 		return nil, errEmptyTradeAccountRateLimitResponse
 	}
-	return &data[0], nil
+
+	info := &data[0]
+	if err := s.c.applyTradeAccountRateLimit(info); err != nil {
+		return info, err
+	}
+	return info, nil
 }
