@@ -7,6 +7,7 @@
 3. [`coverage.md`](coverage.md)：覆盖矩阵（Endpoint -> Service/Test/Example）
 4. [`roadmap.md`](roadmap.md)：迭代计划
 5. [`design.md`](design.md)：设计记录（更偏贡献者/维护者视角）
+6. [`runbook.md`](runbook.md)：运行手册（生产故障处置与演练）
 
 ## 常用入口（API Quick Index）
 

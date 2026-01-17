@@ -59,11 +59,26 @@ SDK 默认启用（25s），可配置：
 
 ### 4.2 启用异步分发（可选）
 
-默认情况下，typed handler 在 WS read goroutine 中执行；如果 handler 逻辑较重，建议启用：
+SDK 默认启用异步分发（typed/raw 都是：buffer=1024），把 handler 从 WS read goroutine 解耦，降低“回调阻塞导致断线”的概率。
 
-- `client.NewWSPrivate(okx.WithWSTypedHandlerAsync(1024))`
+你仍可根据场景显式选择：
 
-队列满时会丢弃该条 typed 回调，并通过 `errHandler` 报错（你应增大 buffer 或优化 handler）。
+- typed handler：
+  - `WithWSTypedHandlerAsync(n)`：异步（默认）
+  - `WithWSTypedHandlerInline()`：inline（仅适合极轻 handler，避免额外队列/协程开销）
+- raw handler：
+  - `WithWSRawHandlerAsync(n)`：异步（默认）
+  - `WithWSRawHandlerInline()`：inline
+
+**背压语义（重要）**：
+
+- 当队列满时，SDK 会先通过 `errHandler` 上报 `"queue full; blocking"`，随后进入阻塞入队（Fail-Closed：不静默丢关键事件）。
+- 这意味着在高消息速率 + handler 处理不过来时，read loop 可能被背压阻塞，进而触发心跳超时/断线。
+
+建议：
+
+- handler 只做轻量分发，把重逻辑交给你自己的 worker；
+- 结合 `ws.Stats()` 监控 `TypedQueueLen/Cap` 与 `RawQueueLen/Cap`，并据此调大 buffer 或降载。
 
 ## 5. 深度（Order Book）的正确用法
 
@@ -77,7 +92,7 @@ SDK 默认启用（25s），可配置：
 
 SDK 提供 `WSOrderBookStore` 来做这件事。
 
-> 并发说明：`WSOrderBookStore` 非并发安全；请在单一 goroutine 中串行调用 `Apply/ApplyMessage/Reset`。若跨 goroutine 读取 `Snapshot/Ready`，请由调用方自行加锁或做串行化。
+> 并发说明：`WSOrderBookStore` 并发安全；`Apply/ApplyMessage/Reset` 与 `Snapshot/Ready` 可并发调用（内部带锁与快照深拷贝）。为减少锁竞争，建议由单一 goroutine 串行 `Apply`，其他 goroutine 只读 `Snapshot`。
 
 ### 5.2 典型模式
 
@@ -103,3 +118,7 @@ OKX 的 K 线数据本身不带 `instId/sprdId`，需要通过订阅参数 `arg`
 - err handler：运行时错误回调（断线、心跳超时、队列满、回调 panic 等）
 
 SDK 会对 raw/event/err handler 的 panic 做保护（不会让 WS 主循环崩溃）。
+
+## 8. 运行监控（Stats）
+
+`ws.Stats()` 可返回一份并发安全的运行状态快照，便于你做指标化与告警（例如：最后收包时间、重连次数、订阅成功/失败计数、handler 队列堆积等）。
