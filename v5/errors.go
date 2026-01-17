@@ -35,6 +35,39 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("<OKX APIError> http=%d method=%s path=%s%s", e.HTTPStatus, e.Method, e.RequestPath, requestIDPart)
 }
 
+// RequestStage 表示 REST 请求失败发生的阶段。
+// 用于区分“未发送”（例如 gate 排队超时）与“已发送但未收到响应”（例如网络/服务端超时）。
+type RequestStage string
+
+const (
+	RequestStageGate RequestStage = "gate"
+	RequestStageHTTP RequestStage = "http"
+)
+
+// RequestStateError 表示 REST 请求在“未形成 HTTP 响应”之前失败的错误。
+//
+// 约定：
+// - 若是 *APIError，则表示已收到 HTTP 响应（可能是业务错误/HTTP 错误）。
+// - 若是 *RequestStateError：
+//   - Dispatched=false 表示请求未发出（例如 gate 排队/获取并发名额阶段失败）；
+//   - Dispatched=true 表示已调用底层 HTTP Do（请求已发出或已尝试发出），但未拿到可解析的响应。
+type RequestStateError struct {
+	Stage       RequestStage
+	Dispatched  bool
+	Method      string
+	RequestPath string
+	Err         error
+}
+
+func (e *RequestStateError) Error() string {
+	if e == nil {
+		return "<OKX RequestStateError>"
+	}
+	return fmt.Sprintf("okx: request failed stage=%s dispatched=%t method=%s path=%s: %v", e.Stage, e.Dispatched, e.Method, e.RequestPath, e.Err)
+}
+
+func (e *RequestStateError) Unwrap() error { return e.Err }
+
 // IsAPIError 判断 err 是否为 APIError。
 func IsAPIError(err error) bool {
 	var apiErr *APIError

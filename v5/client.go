@@ -204,7 +204,13 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 			if attemptCancel != nil {
 				attemptCancel()
 			}
-			return err
+			return &RequestStateError{
+				Stage:       RequestStageGate,
+				Dispatched:  false,
+				Method:      method,
+				RequestPath: requestPath,
+				Err:         err,
+			}
 		}
 
 		header := make(http.Header)
@@ -250,7 +256,13 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 				}
 				continue
 			}
-			return err
+			return &RequestStateError{
+				Stage:       RequestStageHTTP,
+				Dispatched:  true,
+				Method:      method,
+				RequestPath: requestPath,
+				Err:         err,
+			}
 		}
 
 		if err := decodeEnvelope(status, resp, respHeader, method, requestPath, out); err != nil {
@@ -303,7 +315,13 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 			if attemptCancel != nil {
 				attemptCancel()
 			}
-			return requestID, err
+			return requestID, &RequestStateError{
+				Stage:       RequestStageGate,
+				Dispatched:  false,
+				Method:      method,
+				RequestPath: requestPath,
+				Err:         err,
+			}
 		}
 
 		header := make(http.Header)
@@ -352,7 +370,13 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 				}
 				continue
 			}
-			return requestID, err
+			return requestID, &RequestStateError{
+				Stage:       RequestStageHTTP,
+				Dispatched:  true,
+				Method:      method,
+				RequestPath: requestPath,
+				Err:         err,
+			}
 		}
 
 		if err := decodeEnvelope(status, resp, respHeader, method, requestPath, out); err != nil {

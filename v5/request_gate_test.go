@@ -52,6 +52,13 @@ func TestRequestGate_MaxConcurrentBlocks(t *testing.T) {
 	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("error = %v, want context deadline exceeded", err)
 	}
+	var stErr *RequestStateError
+	if !errors.As(err, &stErr) {
+		t.Fatalf("error = %T, want *RequestStateError", err)
+	}
+	if stErr.Stage != RequestStageGate || stErr.Dispatched {
+		t.Fatalf("RequestStateError = %#v, want stage=gate dispatched=false", stErr)
+	}
 
 	close(unblock)
 
@@ -101,8 +108,67 @@ func TestTradeAccountRateLimitService_Do_UpdatesGate(t *testing.T) {
 	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("second trade/order error = %v, want context deadline exceeded", err)
 	}
+	var stErr *RequestStateError
+	if !errors.As(err, &stErr) {
+		t.Fatalf("error = %T, want *RequestStateError", err)
+	}
+	if stErr.Stage != RequestStageGate || stErr.Dispatched {
+		t.Fatalf("RequestStateError = %#v, want stage=gate dispatched=false", stErr)
+	}
 
 	if got, want := orderRequests.Load(), int32(1); got != want {
 		t.Fatalf("orderRequests = %d, want %d", got, want)
+	}
+}
+
+func TestRequestStateError_HTTPStage_DispatchedTrue(t *testing.T) {
+	started := make(chan struct{})
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.URL.Path, "/api/v5/public/time"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+		select {
+		case <-started:
+		default:
+			close(started)
+		}
+		time.Sleep(300 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"ts":"1"}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithRequestGate(RequestGateConfig{MaxConcurrent: 10}),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	t.Cleanup(cancel)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := c.NewPublicTimeService().Do(ctx)
+		done <- err
+	}()
+
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting server handler")
+	}
+
+	err := <-done
+	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want context deadline exceeded", err)
+	}
+	var stErr *RequestStateError
+	if !errors.As(err, &stErr) {
+		t.Fatalf("error = %T, want *RequestStateError", err)
+	}
+	if stErr.Stage != RequestStageHTTP || !stErr.Dispatched {
+		t.Fatalf("RequestStateError = %#v, want stage=http dispatched=true", stErr)
 	}
 }

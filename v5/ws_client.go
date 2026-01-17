@@ -200,6 +200,14 @@ type WSClient struct {
 	resubscribeWait time.Duration
 	lastRecv        atomic.Int64
 	lastPing        atomic.Int64
+	dialAttempts    atomic.Uint64
+	connects        atomic.Uint64
+	reconnects      atomic.Uint64
+	subscribeOK     atomic.Uint64
+	subscribeErr    atomic.Uint64
+	unsubscribeOK   atomic.Uint64
+	unsubscribeErr  atomic.Uint64
+	lastError       atomic.Value
 
 	handler      WSMessageHandler
 	errHandler   WSErrorHandler
@@ -673,6 +681,7 @@ func (w *WSClient) run(ctx context.Context) {
 			return
 		}
 
+		w.dialAttempts.Add(1)
 		conn, err := w.dial(ctx)
 		if err != nil {
 			w.onError(err)
@@ -695,6 +704,9 @@ func (w *WSClient) run(ctx context.Context) {
 			}
 		}
 
+		if n := w.connects.Add(1); n > 1 {
+			w.reconnects.Add(1)
+		}
 		w.setConn(conn)
 
 		var resubscribeWaiter *wsOpWaiter
@@ -1488,6 +1500,9 @@ func (w *WSClient) writeControl(conn *websocket.Conn, messageType int, data []by
 }
 
 func (w *WSClient) onError(err error) {
+	if err != nil && !errors.Is(err, context.Canceled) {
+		w.lastError.Store(WSLastError{Time: time.Now(), Message: err.Error()})
+	}
 	if w.errHandler != nil && err != nil && !errors.Is(err, context.Canceled) {
 		defer func() {
 			_ = recover() // 避免用户 errHandler panic 影响 WS 主循环
@@ -1745,6 +1760,12 @@ func (w *WSClient) notifyWaiter(ev WSEvent) {
 	}
 
 	if ev.Event == "error" {
+		switch waiter.op {
+		case "subscribe":
+			w.subscribeErr.Add(1)
+		case "unsubscribe":
+			w.unsubscribeErr.Add(1)
+		}
 		delete(w.waiters, ev.ID)
 		w.waitMu.Unlock()
 		select {
@@ -1767,6 +1788,12 @@ func (w *WSClient) notifyWaiter(ev WSEvent) {
 	delete(w.waiters, ev.ID)
 	w.waitMu.Unlock()
 
+	switch waiter.op {
+	case "subscribe":
+		w.subscribeOK.Add(1)
+	case "unsubscribe":
+		w.unsubscribeOK.Add(1)
+	}
 	select {
 	case waiter.done <- nil:
 	default:
