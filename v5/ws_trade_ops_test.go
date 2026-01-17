@@ -53,6 +53,41 @@ func TestWSClient_PlaceOrder_RejectsBusinessPrivate(t *testing.T) {
 	}
 }
 
+func TestWSClient_CancelOrder_RejectsBothOrdIDAndClOrdID(t *testing.T) {
+	c := NewClient()
+	ws := c.NewWSPrivate()
+
+	_, err := ws.CancelOrder(context.Background(), WSCancelOrderArg{
+		InstId:  "BTC-USDT",
+		OrdId:   "o1",
+		ClOrdId: "c1",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "exactly one of ordId or clOrdId") {
+		t.Fatalf("error = %v, want contains %q", err, "exactly one of ordId or clOrdId")
+	}
+}
+
+func TestWSClient_AmendOrder_RejectsBothOrdIDAndClOrdID(t *testing.T) {
+	c := NewClient()
+	ws := c.NewWSPrivate()
+
+	_, err := ws.AmendOrder(context.Background(), WSAmendOrderArg{
+		InstId:  "BTC-USDT",
+		OrdId:   "o1",
+		ClOrdId: "c1",
+		NewSz:   "2",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "exactly one of ordId or clOrdId") {
+		t.Fatalf("error = %v, want contains %q", err, "exactly one of ordId or clOrdId")
+	}
+}
+
 func TestWSClient_PlaceOrder_WSOpReply(t *testing.T) {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },

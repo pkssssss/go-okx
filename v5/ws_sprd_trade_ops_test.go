@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,6 +41,39 @@ func TestWSClient_SprdPlaceOrder_RequiresBusinessPrivate(t *testing.T) {
 			t.Fatalf("error = %v, want errWSBusinessRequired", err)
 		}
 	})
+}
+
+func TestWSClient_SprdCancelOrder_RejectsBothOrdIDAndClOrdID(t *testing.T) {
+	c := NewClient()
+	ws := c.NewWSBusinessPrivate()
+
+	_, err := ws.SprdCancelOrder(context.Background(), WSSprdCancelOrderArg{
+		OrdId:   "o1",
+		ClOrdId: "c1",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "exactly one of ordId or clOrdId") {
+		t.Fatalf("error = %v, want contains %q", err, "exactly one of ordId or clOrdId")
+	}
+}
+
+func TestWSClient_SprdAmendOrder_RejectsBothOrdIDAndClOrdID(t *testing.T) {
+	c := NewClient()
+	ws := c.NewWSBusinessPrivate()
+
+	_, err := ws.SprdAmendOrder(context.Background(), WSSprdAmendOrderArg{
+		OrdId:   "o1",
+		ClOrdId: "c1",
+		NewSz:   "2",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "exactly one of ordId or clOrdId") {
+		t.Fatalf("error = %v, want contains %q", err, "exactly one of ordId or clOrdId")
+	}
 }
 
 func TestWSClient_SprdPlaceOrder_WSOpReply(t *testing.T) {

@@ -215,7 +215,8 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 		header = make(http.Header)
 		header.Set("expTime", s.expTimeHeader)
 	}
-	if err := s.c.doWithHeaders(ctx, http.MethodPost, "/api/v5/trade/order", nil, req, true, header, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/order", nil, req, true, header, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -226,6 +227,7 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/trade/order",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

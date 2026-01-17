@@ -57,3 +57,50 @@ func TestSprdCancelOrderService_Do(t *testing.T) {
 		}
 	})
 }
+
+func TestSprdCancelOrderService_Do_RejectsBothOrdIDAndClOrdID(t *testing.T) {
+	c := NewClient()
+	_, err := c.NewSprdCancelOrderService().
+		OrdId("2510789768709120").
+		ClOrdId("c1").
+		Do(context.Background())
+	if err != errSprdCancelOrderTooManyId {
+		t.Fatalf("error = %v, want %v", err, errSprdCancelOrderTooManyId)
+	}
+}
+
+func TestSprdCancelOrderService_Do_AckError_IncludesRequestID(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("x-request-id", "rid-sprd-cancel-1")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"","sCode":"51000","sMsg":"failed"}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewSprdCancelOrderService().
+		OrdId("2510789768709120").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-sprd-cancel-1"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+}

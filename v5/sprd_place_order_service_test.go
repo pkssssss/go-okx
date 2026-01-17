@@ -110,4 +110,41 @@ func TestSprdPlaceOrderService_Do(t *testing.T) {
 			t.Fatalf("apiErr.Code = %q, want %q", apiErr.Code, "51000")
 		}
 	})
+
+	t.Run("item_error_sCode_includes_request_id", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-sprd-place-1")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"","tag":"","sCode":"51000","sMsg":"bad"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewSprdPlaceOrderService().
+			SprdId("BTC-USDT_BTC-USDT-SWAP").
+			Side("buy").
+			OrdType("market").
+			Sz("2").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-sprd-place-1"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+	})
 }

@@ -159,7 +159,8 @@ func (s *AmendAlgoOrderService) Do(ctx context.Context) (*TradeAlgoOrderAck, err
 	}
 
 	var data []TradeAlgoOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/amend-algos", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/amend-algos", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -170,6 +171,7 @@ func (s *AmendAlgoOrderService) Do(ctx context.Context) (*TradeAlgoOrderAck, err
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/trade/amend-algos",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

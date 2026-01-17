@@ -90,6 +90,7 @@ func (s *AmendOrderService) ExpTime(expTimeMillis string) *AmendOrderService {
 var (
 	errAmendOrderMissingInstId = errors.New("okx: amend order requires instId")
 	errAmendOrderMissingId     = errors.New("okx: amend order requires ordId or clOrdId")
+	errAmendOrderTooManyId     = errors.New("okx: amend order requires exactly one of ordId or clOrdId")
 	errAmendOrderMissingChange = errors.New("okx: amend order requires newSz or newPx/newPxUsd/newPxVol")
 	errAmendOrderTooManyPx     = errors.New("okx: amend order requires at most one of newPx/newPxUsd/newPxVol")
 	errEmptyAmendOrderResponse = errors.New("okx: empty amend order response")
@@ -113,8 +114,11 @@ func (s *AmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 	if s.instId == "" {
 		return nil, errAmendOrderMissingInstId
 	}
-	if s.ordId == "" && s.clOrdId == "" {
+	switch countNonEmptyStrings(s.ordId, s.clOrdId) {
+	case 0:
 		return nil, errAmendOrderMissingId
+	case 2:
+		return nil, errAmendOrderTooManyId
 	}
 
 	if countNonEmptyStrings(s.newPx, s.newPxUsd, s.newPxVol) > 1 {
@@ -143,7 +147,8 @@ func (s *AmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 		header = make(http.Header)
 		header.Set("expTime", s.expTimeHeader)
 	}
-	if err := s.c.doWithHeaders(ctx, http.MethodPost, "/api/v5/trade/amend-order", nil, req, true, header, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/amend-order", nil, req, true, header, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -154,6 +159,7 @@ func (s *AmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/trade/amend-order",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

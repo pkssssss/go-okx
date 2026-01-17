@@ -199,6 +199,7 @@ func TestPlaceOrderService_Do(t *testing.T) {
 
 	t.Run("item_error_sCode", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-place-1")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"","tag":"","ts":"0","sCode":"51000","sMsg":"bad"}]}`))
 		}))
@@ -228,6 +229,9 @@ func TestPlaceOrderService_Do(t *testing.T) {
 		var apiErr *APIError
 		if !errors.As(err, &apiErr) {
 			t.Fatalf("expected *APIError, got %T: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-place-1"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
 		}
 		if apiErr.Code != "51000" {
 			t.Fatalf("Code = %q, want %q", apiErr.Code, "51000")
@@ -377,6 +381,55 @@ func TestCancelOrderService_Do(t *testing.T) {
 	}
 	if got.OrdId != "123" {
 		t.Fatalf("OrdId = %q, want %q", got.OrdId, "123")
+	}
+}
+
+func TestCancelOrderService_Do_RejectsBothOrdIDAndClOrdID(t *testing.T) {
+	c := NewClient()
+	_, err := c.NewCancelOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		ClOrdId("c1").
+		Do(context.Background())
+	if err != errCancelOrderTooManyId {
+		t.Fatalf("error = %v, want %v", err, errCancelOrderTooManyId)
+	}
+}
+
+func TestCancelOrderService_Do_AckError_IncludesRequestID(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("x-request-id", "rid-cancel-1")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"","ts":"0","sCode":"51000","sMsg":"failed"}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewCancelOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-cancel-1"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
 	}
 }
 
@@ -556,6 +609,57 @@ func TestAmendOrderService_Do(t *testing.T) {
 			t.Fatalf("expected errAmendOrderTooManyPx, got %T: %v", err, err)
 		}
 	})
+}
+
+func TestAmendOrderService_Do_RejectsBothOrdIDAndClOrdID(t *testing.T) {
+	c := NewClient()
+	_, err := c.NewAmendOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		ClOrdId("c1").
+		NewSz("2").
+		Do(context.Background())
+	if err != errAmendOrderTooManyId {
+		t.Fatalf("error = %v, want %v", err, errAmendOrderTooManyId)
+	}
+}
+
+func TestAmendOrderService_Do_AckError_IncludesRequestID(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("x-request-id", "rid-amend-1")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"","reqId":"","ts":"0","sCode":"51000","sMsg":"failed"}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewAmendOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		NewSz("2").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-amend-1"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
 }
 
 func TestBatchAmendOrdersService_Do(t *testing.T) {

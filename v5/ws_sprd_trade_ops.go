@@ -77,15 +77,21 @@ func validateWSSprdPlaceOrderArg(prefix string, arg WSSprdPlaceOrderArg) error {
 }
 
 func validateWSSprdCancelOrderArg(prefix string, arg WSSprdCancelOrderArg) error {
-	if arg.OrdId == "" && arg.ClOrdId == "" {
+	switch countNonEmptyStrings(arg.OrdId, arg.ClOrdId) {
+	case 0:
 		return fmt.Errorf("%s requires ordId or clOrdId", prefix)
+	case 2:
+		return fmt.Errorf("%s requires exactly one of ordId or clOrdId", prefix)
 	}
 	return nil
 }
 
 func validateWSSprdAmendOrderArg(prefix string, arg WSSprdAmendOrderArg) error {
-	if arg.OrdId == "" && arg.ClOrdId == "" {
+	switch countNonEmptyStrings(arg.OrdId, arg.ClOrdId) {
+	case 0:
 		return fmt.Errorf("%s requires ordId or clOrdId", prefix)
+	case 2:
+		return fmt.Errorf("%s requires exactly one of ordId or clOrdId", prefix)
 	}
 	if arg.NewSz == "" && arg.NewPx == "" {
 		return fmt.Errorf("%s requires newSz or newPx", prefix)

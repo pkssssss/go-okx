@@ -94,6 +94,7 @@ func TestAmendAlgoOrderService_Do(t *testing.T) {
 
 	t.Run("ack_error", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-amend-algo-1")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoClOrdId":"algo_01","algoId":"1","reqId":"po","sCode":"51000","sMsg":"failed"}]}`))
 		}))
@@ -114,8 +115,12 @@ func TestAmendAlgoOrderService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if _, ok := err.(*APIError); !ok {
+		apiErr, ok := err.(*APIError)
+		if !ok {
 			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-amend-algo-1"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
 		}
 	})
 

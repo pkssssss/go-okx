@@ -50,6 +50,7 @@ func (s *SprdAmendOrderService) NewPx(newPx string) *SprdAmendOrderService {
 
 var (
 	errSprdAmendOrderMissingId     = errors.New("okx: sprd amend order requires ordId or clOrdId")
+	errSprdAmendOrderTooManyId     = errors.New("okx: sprd amend order requires exactly one of ordId or clOrdId")
 	errSprdAmendOrderMissingChange = errors.New("okx: sprd amend order requires newSz or newPx")
 	errEmptySprdAmendOrderResponse = errors.New("okx: empty sprd amend order response")
 )
@@ -64,8 +65,11 @@ type sprdAmendOrderRequest struct {
 
 // Do 价差交易改单（POST /api/v5/sprd/amend-order）。
 func (s *SprdAmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
-	if s.ordId == "" && s.clOrdId == "" {
+	switch countNonEmptyStrings(s.ordId, s.clOrdId) {
+	case 0:
 		return nil, errSprdAmendOrderMissingId
+	case 2:
+		return nil, errSprdAmendOrderTooManyId
 	}
 	if s.newSz == "" && s.newPx == "" {
 		return nil, errSprdAmendOrderMissingChange
@@ -80,7 +84,8 @@ func (s *SprdAmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) 
 	}
 
 	var data []TradeOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/sprd/amend-order", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/sprd/amend-order", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -91,6 +96,7 @@ func (s *SprdAmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) 
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/sprd/amend-order",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

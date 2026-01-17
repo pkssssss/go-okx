@@ -172,8 +172,11 @@ func validateWSCancelOrderArg(prefix string, arg WSCancelOrderArg) error {
 	if arg.InstId == "" && arg.InstIdCode == 0 {
 		return fmt.Errorf("%s requires instId or instIdCode", prefix)
 	}
-	if arg.OrdId == "" && arg.ClOrdId == "" {
+	switch countNonEmptyStrings(arg.OrdId, arg.ClOrdId) {
+	case 0:
 		return fmt.Errorf("%s requires ordId or clOrdId", prefix)
+	case 2:
+		return fmt.Errorf("%s requires exactly one of ordId or clOrdId", prefix)
 	}
 	return nil
 }
@@ -182,8 +185,11 @@ func validateWSAmendOrderArg(prefix string, arg WSAmendOrderArg) error {
 	if arg.InstId == "" && arg.InstIdCode == 0 {
 		return fmt.Errorf("%s requires instId or instIdCode", prefix)
 	}
-	if arg.OrdId == "" && arg.ClOrdId == "" {
+	switch countNonEmptyStrings(arg.OrdId, arg.ClOrdId) {
+	case 0:
 		return fmt.Errorf("%s requires ordId or clOrdId", prefix)
+	case 2:
+		return fmt.Errorf("%s requires exactly one of ordId or clOrdId", prefix)
 	}
 	if arg.NewSz == "" && arg.NewPx == "" && arg.NewPxUsd == "" && arg.NewPxVol == "" {
 		return fmt.Errorf("%s requires newSz/newPx/newPxUsd/newPxVol", prefix)

@@ -19,13 +19,13 @@ func (c *Client) NewSprdCancelOrderService() *SprdCancelOrderService {
 	return &SprdCancelOrderService{c: c}
 }
 
-// OrdId 设置订单 ID（ordId/clOrdId 必须传一个；若都传，以 ordId 为主）。
+// OrdId 设置订单 ID（ordId/clOrdId 必须且只能传一个）。
 func (s *SprdCancelOrderService) OrdId(ordId string) *SprdCancelOrderService {
 	s.ordId = ordId
 	return s
 }
 
-// ClOrdId 设置客户自定义订单 ID（ordId/clOrdId 必须传一个）。
+// ClOrdId 设置客户自定义订单 ID（ordId/clOrdId 必须且只能传一个）。
 func (s *SprdCancelOrderService) ClOrdId(clOrdId string) *SprdCancelOrderService {
 	s.clOrdId = clOrdId
 	return s
@@ -33,6 +33,7 @@ func (s *SprdCancelOrderService) ClOrdId(clOrdId string) *SprdCancelOrderService
 
 var (
 	errSprdCancelOrderMissingId     = errors.New("okx: sprd cancel order requires ordId or clOrdId")
+	errSprdCancelOrderTooManyId     = errors.New("okx: sprd cancel order requires exactly one of ordId or clOrdId")
 	errEmptySprdCancelOrderResponse = errors.New("okx: empty sprd cancel order response")
 )
 
@@ -43,8 +44,11 @@ type sprdCancelOrderRequest struct {
 
 // Do 价差交易撤单（POST /api/v5/sprd/cancel-order）。
 func (s *SprdCancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
-	if s.ordId == "" && s.clOrdId == "" {
+	switch countNonEmptyStrings(s.ordId, s.clOrdId) {
+	case 0:
 		return nil, errSprdCancelOrderMissingId
+	case 2:
+		return nil, errSprdCancelOrderTooManyId
 	}
 
 	req := sprdCancelOrderRequest{
@@ -53,7 +57,8 @@ func (s *SprdCancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error)
 	}
 
 	var data []TradeOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/sprd/cancel-order", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/sprd/cancel-order", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -64,6 +69,7 @@ func (s *SprdCancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error)
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/sprd/cancel-order",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

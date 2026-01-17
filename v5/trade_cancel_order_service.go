@@ -38,6 +38,7 @@ func (s *CancelOrderService) ClOrdId(clOrdId string) *CancelOrderService {
 var (
 	errCancelOrderMissingInstId = errors.New("okx: cancel order requires instId")
 	errCancelOrderMissingId     = errors.New("okx: cancel order requires ordId or clOrdId")
+	errCancelOrderTooManyId     = errors.New("okx: cancel order requires exactly one of ordId or clOrdId")
 	errEmptyCancelOrderResponse = errors.New("okx: empty cancel order response")
 )
 
@@ -52,8 +53,11 @@ func (s *CancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 	if s.instId == "" {
 		return nil, errCancelOrderMissingInstId
 	}
-	if s.ordId == "" && s.clOrdId == "" {
+	switch countNonEmptyStrings(s.ordId, s.clOrdId) {
+	case 0:
 		return nil, errCancelOrderMissingId
+	case 2:
+		return nil, errCancelOrderTooManyId
 	}
 
 	req := cancelOrderRequest{
@@ -63,7 +67,8 @@ func (s *CancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 	}
 
 	var data []TradeOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/cancel-order", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/cancel-order", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -74,6 +79,7 @@ func (s *CancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/trade/cancel-order",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}
