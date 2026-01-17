@@ -7,12 +7,17 @@ import (
 	"time"
 )
 
-func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
+func TestWSClient_DispatchTyped_BlocksWhenQueueFull(t *testing.T) {
 	errCh := make(chan error, 1)
+	gotCh := make(chan string, 2)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 
 	w := &WSClient{
 		typedAsync: true,
-		typedQueue: make(chan wsTypedTask), // unbuffered + no receiver => full
+		typedQueue: make(chan wsTypedTask, 1),
+		ctxDone:    ctx.Done(),
 		errHandler: func(err error) {
 			select {
 			case errCh <- err:
@@ -21,11 +26,52 @@ func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
 		},
 	}
 
-	w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrders, orders: []TradeOrder{{OrdId: "o1"}}})
+	w.OnOrders(func(order TradeOrder) {
+		select {
+		case gotCh <- order.OrdId:
+		default:
+		}
+	})
+
+	// 先塞满队列，再发一个任务，确保触发“队列满 => 阻塞发送”的路径（不丢事件）。
+	w.typedQueue <- wsTypedTask{kind: wsTypedKindOrders, orders: []TradeOrder{{OrdId: "o0"}}}
+
+	doneCh := make(chan struct{})
+	go func() {
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrders, orders: []TradeOrder{{OrdId: "o1"}}})
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+		t.Fatalf("expected dispatchTyped to block while queue is full")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	go w.typedDispatchLoop(ctx)
+
+	select {
+	case <-doneCh:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting dispatchTyped to finish")
+	}
+
+	got := map[string]bool{}
+	for i := 0; i < 2; i++ {
+		select {
+		case id := <-gotCh:
+			got[id] = true
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timeout waiting orders")
+		}
+	}
+	if !got["o0"] || !got["o1"] {
+		t.Fatalf("got=%v", got)
+	}
 
 	select {
 	case err := <-errCh:
-		if err == nil || !strings.Contains(err.Error(), "queue full") || !strings.Contains(err.Error(), "kind=orders") {
+		if err == nil || !strings.Contains(err.Error(), "queue full") || !strings.Contains(err.Error(), "blocking") || !strings.Contains(err.Error(), "kind=orders") {
 			t.Fatalf("err = %v", err)
 		}
 	case <-time.After(2 * time.Second):

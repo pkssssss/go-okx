@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -119,6 +121,7 @@ type RetryConfig struct {
 	MaxRetries int
 
 	// BaseDelay 表示第一次重试的等待时间（指数退避起点）。
+	// 未设置（<=0）且启用重试时，会使用安全默认值（200ms）。
 	BaseDelay time.Duration
 
 	// MaxDelay 表示最大等待时间（为 0 表示不限制）。
@@ -139,6 +142,9 @@ func WithRetry(cfg RetryConfig) Option {
 	}
 	if cfgCopy.MaxDelay < 0 {
 		cfgCopy.MaxDelay = 0
+	}
+	if cfgCopy.MaxRetries > 0 && cfgCopy.BaseDelay <= 0 {
+		cfgCopy.BaseDelay = 200 * time.Millisecond
 	}
 
 	return func(c *Client) {
@@ -312,9 +318,36 @@ func retryDelay(cfg RetryConfig, retryIndex int) time.Duration {
 	}
 
 	if cfg.MaxDelay > 0 && d > cfg.MaxDelay {
-		return cfg.MaxDelay
+		d = cfg.MaxDelay
 	}
-	return d
+
+	// 加入抖动，避免多个 goroutine 同步重试造成“429 风暴”。
+	// 采用 [d/2, d] 区间的均匀随机（Full Jitter 的简化变体）。
+	if d <= 0 {
+		return 0
+	}
+	half := d / 2
+	if half <= 0 {
+		return d
+	}
+	return half + retryJitterDuration(half)
+}
+
+var retryJitterRand = struct {
+	mu  sync.Mutex
+	rnd *rand.Rand
+}{
+	rnd: rand.New(rand.NewSource(time.Now().UnixNano())),
+}
+
+func retryJitterDuration(max time.Duration) time.Duration {
+	if max <= 0 {
+		return 0
+	}
+	retryJitterRand.mu.Lock()
+	n := retryJitterRand.rnd.Int63n(int64(max) + 1)
+	retryJitterRand.mu.Unlock()
+	return time.Duration(n)
 }
 
 func decodeEnvelope(status int, resp []byte, respHeader http.Header, method, requestPath string, out any) error {

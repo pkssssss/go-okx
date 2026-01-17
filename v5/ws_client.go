@@ -104,12 +104,12 @@ func WithWSHeartbeat(interval time.Duration) WSOption {
 
 // WithWSTypedHandlerAsync 启用 typed handler 的异步分发（所有 On* typed handler 回调）。
 //
-// 默认情况下，typed handler 会在 WS read goroutine 中执行；若 handler 逻辑较重可能阻塞读取导致断线/重连。
-// 启用该选项后，SDK 会将 typed handler 的执行移动到独立 worker goroutine，并通过有界队列解耦。
+// 默认情况下，typed handler 会在独立 worker goroutine 中执行，并通过有界队列与 WS read goroutine 解耦；
+// 这样可以避免在 read 热路径中执行重逻辑导致延迟抖动/断连。
 //
 // 注意：
-// - 队列满时会丢弃该条 typed 回调，并通过 errHandler 回调报告错误（调用方需自行调大 buffer 或优化 handler）。
-// - raw handler（Start 的 handler 参数）仍在 read goroutine 中执行，如需解耦请避免在 raw handler 中做重逻辑。
+// - 若队列积压导致 buffer 填满，read goroutine 会被迫阻塞（Fail-Closed：不丢关键事件）。此时应调大 buffer 或降低 handler 负载。
+// - raw handler（Start 的 handler 参数）默认也会异步执行；如需在 read goroutine 中直接执行，可使用 WithWSRawHandlerInline。
 func WithWSTypedHandlerAsync(buffer int) WSOption {
 	return func(c *WSClient) {
 		if buffer <= 0 {
@@ -117,6 +117,38 @@ func WithWSTypedHandlerAsync(buffer int) WSOption {
 		}
 		c.typedAsync = true
 		c.typedBuffer = buffer
+	}
+}
+
+// WithWSTypedHandlerInline 让 typed handler 在 WS read goroutine 中执行（不推荐）。
+// 适用场景：handler 仅做极轻量的指标/转发，且希望最小化 goroutine/队列开销。
+func WithWSTypedHandlerInline() WSOption {
+	return func(c *WSClient) {
+		c.typedAsync = false
+		c.typedBuffer = 0
+		c.typedQueue = nil
+	}
+}
+
+// WithWSRawHandlerAsync 设置 Start 传入的 raw handler 的异步分发。
+//
+// 默认启用（buffer=1024）。若 raw handler 逻辑较重，建议保持异步并在 handler 内部自行做进一步解耦/限流。
+func WithWSRawHandlerAsync(buffer int) WSOption {
+	return func(c *WSClient) {
+		if buffer <= 0 {
+			buffer = 1024
+		}
+		c.rawAsync = true
+		c.rawBuffer = buffer
+	}
+}
+
+// WithWSRawHandlerInline 让 raw handler 在 WS read goroutine 中执行（不推荐）。
+func WithWSRawHandlerInline() WSOption {
+	return func(c *WSClient) {
+		c.rawAsync = false
+		c.rawBuffer = 0
+		c.rawQueue = nil
 	}
 }
 
@@ -213,9 +245,14 @@ type WSClient struct {
 	typedBuffer int
 	typedQueue  chan wsTypedTask
 
+	rawAsync  bool
+	rawBuffer int
+	rawQueue  chan []byte
+
 	started atomic.Bool
 	cancel  context.CancelFunc
 	done    chan struct{}
+	ctxDone <-chan struct{}
 
 	opSeq atomic.Uint64
 
@@ -240,15 +277,19 @@ func (c *Client) NewWSPublic(opts ...WSOption) *WSClient {
 		endpoint = wsPublicDemoURL
 	}
 	w := &WSClient{
-		c:         c,
-		endpoint:  endpoint,
-		kind:      wsKindPublic,
-		connCh:    make(chan struct{}),
-		desired:   map[string]WSArg{},
-		backoff:   250 * time.Millisecond,
-		heartbeat: 25 * time.Second,
-		waiters:   map[string]*wsOpWaiter{},
-		opWaiters: map[string]*wsOpRespWaiter{},
+		c:           c,
+		endpoint:    endpoint,
+		kind:        wsKindPublic,
+		connCh:      make(chan struct{}),
+		desired:     map[string]WSArg{},
+		backoff:     250 * time.Millisecond,
+		heartbeat:   25 * time.Second,
+		typedAsync:  true,
+		typedBuffer: 1024,
+		rawAsync:    true,
+		rawBuffer:   1024,
+		waiters:     map[string]*wsOpWaiter{},
+		opWaiters:   map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -263,16 +304,20 @@ func (c *Client) NewWSPrivate(opts ...WSOption) *WSClient {
 		endpoint = wsPrivateDemoURL
 	}
 	w := &WSClient{
-		c:         c,
-		endpoint:  endpoint,
-		kind:      wsKindPrivate,
-		needLogin: true,
-		connCh:    make(chan struct{}),
-		desired:   map[string]WSArg{},
-		backoff:   250 * time.Millisecond,
-		heartbeat: 25 * time.Second,
-		waiters:   map[string]*wsOpWaiter{},
-		opWaiters: map[string]*wsOpRespWaiter{},
+		c:           c,
+		endpoint:    endpoint,
+		kind:        wsKindPrivate,
+		needLogin:   true,
+		connCh:      make(chan struct{}),
+		desired:     map[string]WSArg{},
+		backoff:     250 * time.Millisecond,
+		heartbeat:   25 * time.Second,
+		typedAsync:  true,
+		typedBuffer: 1024,
+		rawAsync:    true,
+		rawBuffer:   1024,
+		waiters:     map[string]*wsOpWaiter{},
+		opWaiters:   map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -287,15 +332,19 @@ func (c *Client) NewWSBusiness(opts ...WSOption) *WSClient {
 		endpoint = wsBusinessDemoURL
 	}
 	w := &WSClient{
-		c:         c,
-		endpoint:  endpoint,
-		kind:      wsKindBusiness,
-		connCh:    make(chan struct{}),
-		desired:   map[string]WSArg{},
-		backoff:   250 * time.Millisecond,
-		heartbeat: 25 * time.Second,
-		waiters:   map[string]*wsOpWaiter{},
-		opWaiters: map[string]*wsOpRespWaiter{},
+		c:           c,
+		endpoint:    endpoint,
+		kind:        wsKindBusiness,
+		connCh:      make(chan struct{}),
+		desired:     map[string]WSArg{},
+		backoff:     250 * time.Millisecond,
+		heartbeat:   25 * time.Second,
+		typedAsync:  true,
+		typedBuffer: 1024,
+		rawAsync:    true,
+		rawBuffer:   1024,
+		waiters:     map[string]*wsOpWaiter{},
+		opWaiters:   map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -312,16 +361,20 @@ func (c *Client) NewWSBusinessPrivate(opts ...WSOption) *WSClient {
 		endpoint = wsBusinessDemoURL
 	}
 	w := &WSClient{
-		c:         c,
-		endpoint:  endpoint,
-		kind:      wsKindBusiness,
-		needLogin: true,
-		connCh:    make(chan struct{}),
-		desired:   map[string]WSArg{},
-		backoff:   250 * time.Millisecond,
-		heartbeat: 25 * time.Second,
-		waiters:   map[string]*wsOpWaiter{},
-		opWaiters: map[string]*wsOpRespWaiter{},
+		c:           c,
+		endpoint:    endpoint,
+		kind:        wsKindBusiness,
+		needLogin:   true,
+		connCh:      make(chan struct{}),
+		desired:     map[string]WSArg{},
+		backoff:     250 * time.Millisecond,
+		heartbeat:   25 * time.Second,
+		typedAsync:  true,
+		typedBuffer: 1024,
+		rawAsync:    true,
+		rawBuffer:   1024,
+		waiters:     map[string]*wsOpWaiter{},
+		opWaiters:   map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -335,6 +388,10 @@ func (w *WSClient) Start(ctx context.Context, handler WSMessageHandler, errHandl
 		return errors.New("okx: ws client already started")
 	}
 
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	w.handler = handler
 	w.errHandler = errHandler
 	w.done = make(chan struct{})
@@ -342,6 +399,7 @@ func (w *WSClient) Start(ctx context.Context, handler WSMessageHandler, errHandl
 
 	runCtx, cancel := context.WithCancel(ctx)
 	w.cancel = cancel
+	w.ctxDone = runCtx.Done()
 	// 仅取消 ctx 不会中断 ReadMessage；这里主动关闭连接以确保 Done() 可判定地退出。
 	go func() {
 		<-runCtx.Done()
@@ -355,6 +413,15 @@ func (w *WSClient) Start(ctx context.Context, handler WSMessageHandler, errHandl
 		}
 		w.typedQueue = make(chan wsTypedTask, buf)
 		go w.typedDispatchLoop(runCtx)
+	}
+
+	if w.rawAsync && w.handler != nil && w.rawQueue == nil {
+		buf := w.rawBuffer
+		if buf <= 0 {
+			buf = 1024
+		}
+		w.rawQueue = make(chan []byte, buf)
+		go w.rawDispatchLoop(runCtx)
 	}
 
 	if w.heartbeat > 0 {
@@ -613,7 +680,12 @@ func (w *WSClient) run(ctx context.Context) {
 		w.setConn(conn)
 
 		if args := w.snapshotDesired(); len(args) > 0 {
-			_ = w.writeJSON(conn, wsOpRequest{ID: w.nextOpID(), Op: "subscribe", Args: args})
+			if err := w.writeJSON(conn, wsOpRequest{ID: w.nextOpID(), Op: "subscribe", Args: args}); err != nil {
+				w.onError(err)
+				w.closeConn()
+				w.sleepBackoff(ctx)
+				continue
+			}
 		}
 
 		if err := w.readLoop(ctx, conn); err != nil {
@@ -683,9 +755,7 @@ func (w *WSClient) login(ctx context.Context, conn *websocket.Conn) error {
 			continue
 		}
 
-		if w.handler != nil {
-			w.safeRawHandlerCall(msg)
-		}
+		w.dispatchRaw(msg)
 
 		ev, ok, err := WSParseEvent(msg)
 		if err != nil || !ok {
@@ -720,9 +790,7 @@ func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn) error {
 			continue
 		}
 
-		if w.handler != nil {
-			w.safeRawHandlerCall(msg)
-		}
+		w.dispatchRaw(msg)
 
 		ev, ok, err := WSParseEvent(msg)
 		if err != nil || !ok {

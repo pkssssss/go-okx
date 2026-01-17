@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/pkssssss/go-okx/v5"
 )
@@ -58,22 +59,29 @@ func main() {
 		okx.WithDemoTrading(demo),
 	)
 
-	if _, err := c.SyncTime(context.Background()); err != nil {
+	syncCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := c.SyncTime(syncCtx); err != nil {
 		log.Fatal(err)
+	}
+
+	clOrdId := os.Getenv("OKX_CL_ORD_ID")
+	if clOrdId == "" {
+		// 默认生成一个可复用的 clOrdId（便于幂等重试与排查）。如果你需要人工重试，请复用日志中打印的 clOrdId。
+		clOrdId = "gookx" + strconv.FormatInt(time.Now().UnixNano(), 36)
+		log.Printf("generated OKX_CL_ORD_ID=%s (reuse it for idempotent retry)", clOrdId)
 	}
 
 	svc := c.NewPlaceOrderService().
 		InstId(instId).
 		TdMode(tdMode).
+		ClOrdId(clOrdId).
 		Side(side).
 		OrdType(ordType).
 		Sz(sz)
 
 	if v := os.Getenv("OKX_CCY"); v != "" {
 		svc.Ccy(v)
-	}
-	if v := os.Getenv("OKX_CL_ORD_ID"); v != "" {
-		svc.ClOrdId(v)
 	}
 	if v := os.Getenv("OKX_TAG"); v != "" {
 		svc.Tag(v)
@@ -122,7 +130,9 @@ func main() {
 		svc.ExpTime(v)
 	}
 
-	ack, err := svc.Do(context.Background())
+	orderCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	ack, err := svc.Do(orderCtx)
 	if err != nil {
 		log.Fatal(err)
 	}
