@@ -8,6 +8,13 @@ import (
 	"github.com/pkssssss/go-okx/v5"
 )
 
+func maskSensitive(s string) string {
+	if len(s) <= 8 {
+		return "****"
+	}
+	return s[:4] + "****" + s[len(s)-4:]
+}
+
 func main() {
 	if os.Getenv("OKX_CONFIRM_USERS_MODIFY_APIKEY") != "YES" {
 		log.Fatal("refuse to modify subaccount apikey without OKX_CONFIRM_USERS_MODIFY_APIKEY=YES")
@@ -64,5 +71,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("users_subaccount_modify_apikey: subAcct=%s apiKey=%s label=%s perm=%s ip=%s ts=%s", res.SubAcct, res.APIKey, res.Label, res.Perm, res.IP, res.TS)
+	log.Printf("users_subaccount_modify_apikey: subAcct=%s apiKey=%s label=%s perm=%s ip=%s ts=%s", res.SubAcct, maskSensitive(res.APIKey), res.Label, res.Perm, res.IP, res.TS)
 }

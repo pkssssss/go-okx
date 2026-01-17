@@ -1576,7 +1576,12 @@ func (w *WSClient) sleepBackoff(ctx context.Context) {
 	if d > 10*time.Second {
 		d = 10 * time.Second
 	}
-	timer := time.NewTimer(d)
+	sleep := d
+	half := d / 2
+	if half > 0 {
+		sleep = half + retryJitterDuration(half)
+	}
+	timer := time.NewTimer(sleep)
 	defer timer.Stop()
 
 	select {
@@ -1631,6 +1636,9 @@ func (w *WSClient) notifyConnChangeLocked() {
 }
 
 func (w *WSClient) waitConn(ctx context.Context) (*websocket.Conn, error) {
+	if ctx == nil {
+		return nil, errors.New("okx: nil context")
+	}
 	for {
 		w.mu.Lock()
 		conn := w.conn

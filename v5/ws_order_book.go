@@ -6,6 +6,7 @@ import (
 	"hash/crc32"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // WSOrderBookStore 用于在本地维护 OKX WS 深度数据（合并 snapshot/update，校验 seqId/prevSeqId 与 checksum）。
@@ -14,9 +15,10 @@ import (
 // - books/books-elp/books-l2-tbt/books50-l2-tbt：首次为 snapshot，之后为增量 update（需要合并）
 // - books5/bbo-tbt：定量推送（推荐按“全量替换”处理，以避免残留旧档位）
 //
-// 并发：该结构体非并发安全；请在单一 goroutine 中串行调用 Apply/ApplyMessage/Reset。
-// 若跨 goroutine 读取 Snapshot/Ready，请由调用方自行加锁或做串行化。
+// 并发：该结构体并发安全；Apply/ApplyMessage/Reset 与 Snapshot/Ready 可并发调用。
 type WSOrderBookStore struct {
+	mu sync.RWMutex
+
 	channel string
 	instId  string
 	sprdId  string
@@ -96,6 +98,8 @@ func (s *WSOrderBookStore) Ready() bool {
 	if s == nil {
 		return false
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.ready
 }
 
@@ -104,12 +108,9 @@ func (s *WSOrderBookStore) Reset() {
 	if s == nil {
 		return
 	}
-	s.ready = false
-	s.asks = nil
-	s.bids = nil
-	s.ts = 0
-	s.seqId = 0
-	s.checksum = 0
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.resetLocked()
 }
 
 // Snapshot 返回当前深度快照（深拷贝 asks/bids，便于调用方安全使用）。
@@ -117,6 +118,9 @@ func (s *WSOrderBookStore) Snapshot() WSOrderBookSnapshot {
 	if s == nil {
 		return WSOrderBookSnapshot{}
 	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	out := WSOrderBookSnapshot{
 		Channel:  s.channel,
@@ -144,13 +148,20 @@ func (s *WSOrderBookStore) ApplyMessage(message []byte) (ok bool, err error) {
 	if s == nil {
 		return true, errors.New("okx: nil ws order book store")
 	}
-	if s.channel != "" && dm.Arg.Channel != s.channel {
+
+	s.mu.RLock()
+	channel := s.channel
+	instId := s.instId
+	sprdId := s.sprdId
+	s.mu.RUnlock()
+
+	if channel != "" && dm.Arg.Channel != channel {
 		return false, nil
 	}
-	if s.instId != "" && dm.Arg.InstId != "" && dm.Arg.InstId != s.instId {
+	if instId != "" && dm.Arg.InstId != "" && dm.Arg.InstId != instId {
 		return false, nil
 	}
-	if s.sprdId != "" && dm.Arg.SprdId != "" && dm.Arg.SprdId != s.sprdId {
+	if sprdId != "" && dm.Arg.SprdId != "" && dm.Arg.SprdId != sprdId {
 		return false, nil
 	}
 	return true, s.Apply(dm)
@@ -164,6 +175,10 @@ func (s *WSOrderBookStore) Apply(dm *WSData[WSOrderBook]) error {
 	if dm == nil {
 		return errors.New("okx: nil ws order book data")
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if dm.Arg.Channel == "" {
 		return errors.New("okx: ws order book missing channel")
 	}
@@ -227,13 +242,22 @@ func (s *WSOrderBookStore) Apply(dm *WSData[WSOrderBook]) error {
 			return &WSOrderBookNotReadyError{Channel: dm.Arg.Channel, InstId: s.instId, SprdId: s.sprdId}
 		}
 		if err := s.applyUpdate(dm.Arg.Channel, upd); err != nil {
-			s.Reset()
+			s.resetLocked()
 			return err
 		}
 		return nil
 	default:
 		return fmt.Errorf("okx: ws order book unknown action %q", action)
 	}
+}
+
+func (s *WSOrderBookStore) resetLocked() {
+	s.ready = false
+	s.asks = nil
+	s.bids = nil
+	s.ts = 0
+	s.seqId = 0
+	s.checksum = 0
 }
 
 func (s *WSOrderBookStore) applySnapshot(upd WSOrderBook) error {

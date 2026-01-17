@@ -8,6 +8,13 @@ import (
 	"github.com/pkssssss/go-okx/v5"
 )
 
+func maskSensitive(s string) string {
+	if len(s) <= 8 {
+		return "****"
+	}
+	return s[:4] + "****" + s[len(s)-4:]
+}
+
 func main() {
 	if os.Getenv("OKX_CONFIRM_USERS_CREATE_APIKEY") != "YES" {
 		log.Fatal("refuse to create subaccount apikey without OKX_CONFIRM_USERS_CREATE_APIKEY=YES")
@@ -66,6 +73,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("users_subaccount_create_apikey: subAcct=%s label=%s apiKey=%s perm=%s ip=%s ts=%s", res.SubAcct, res.Label, res.APIKey, res.Perm, res.IP, res.TS)
-	log.Printf("users_subaccount_create_apikey: secretKey=%s passphrase=%s", res.SecretKey, res.Passphrase)
+	log.Printf("users_subaccount_create_apikey: subAcct=%s label=%s apiKey=%s perm=%s ip=%s ts=%s", res.SubAcct, res.Label, maskSensitive(res.APIKey), res.Perm, res.IP, res.TS)
+	log.Printf("users_subaccount_create_apikey: secretKey/passphrase returned but not printed; store them securely now")
 }

@@ -453,6 +453,8 @@ func unmarshalTradeOrderAcks(reply *WSOpReply, raw []byte) ([]TradeOrderAck, err
 	return acks, nil
 }
 
+// requiresPriceForOrderType 是对 OKX ordType 价格字段要求的“best-effort”本地校验。
+// 注意：OKX 文档/服务端语义为准；对于未知 ordType，这里默认不拦截，由服务端返回错误。
 func requiresPriceForOrderType(ordType string) bool {
 	switch ordType {
 	case "limit", "post_only", "fok", "ioc", "mmp", "mmp_and_post_only":
