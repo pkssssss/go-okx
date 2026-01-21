@@ -72,14 +72,14 @@ SDK 默认启用异步分发（typed/raw 都是：buffer=1024），把 handler �
 
 **背压语义（重要）**：
 
-- 当队列满时，SDK 会通过 `errHandler` 上报 `"queue full; dropping"`，并丢弃该条回调任务（不会阻塞 read loop）。
-- 这避免了“回调消费不过来→阻塞 ReadMessage→心跳超时/断线”的放大效应，但代价是你需要把 **丢弃视为降级信号**。
+- 当队列满时，SDK 会通过 `errHandler` 上报 `"queue full; blocking"` 并阻塞等待入队（默认策略：`WSQueueFullBlock`，尽量不丢关键事件）。
+- 若你订阅的是公开高频行情且对延迟更敏感，可使用 `WithWSQueueFullPolicy(WSQueueFullDrop)` 改为丢弃，或使用 `WithWSQueueFullPolicy(WSQueueFullDisconnect)` 在队列满时主动断线重连（Fail-Fast）。
 
 建议：
 
 - handler 只做轻量分发，把重逻辑交给你自己的 worker；
-- 结合 `ws.Stats()` 监控 `TypedQueueLen/Cap`、`RawQueueLen/Cap` 以及 `TypedDropped/RawDropped`，并据此调大 buffer 或降载；
-- 对关键状态（订单/持仓/余额）请始终保留 REST 对账补偿路径：一旦出现 dropped，应主动触发对账或重建本地状态机。
+- 结合 `ws.Stats()` 监控 `TypedQueueLen/Cap`、`RawQueueLen/Cap`，并据此调大 buffer / 拆分 worker / 降载；
+- 若你使用了 drop/disconnect 策略，请同时监控 `TypedDropped/RawDropped` 并在异常时触发 REST 对账或重建本地状态机。
 
 ## 5. 深度（Order Book）的正确用法
 

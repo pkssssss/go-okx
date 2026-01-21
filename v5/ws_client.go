@@ -86,6 +86,73 @@ type wsLoginRequest struct {
 // WSOption 用于配置 WSClient。
 type WSOption func(*WSClient)
 
+// WSQueueFullPolicy 表示 WS 异步 handler 队列满时的处理策略。
+//
+// 注意：
+// - 交易关键事件（订单/成交/仓位/余额）默认不应被 SDK 主动丢弃；
+// - 若你的 handler 消费能力不足，应优先扩容（增大 buffer / 拆分 worker / 降载），而不是依赖 drop。
+type WSQueueFullPolicy uint8
+
+const (
+	// WSQueueFullBlock 表示队列满时阻塞等待入队（默认，尽量不丢关键事件）。
+	WSQueueFullBlock WSQueueFullPolicy = iota
+	// WSQueueFullDrop 表示队列满时丢弃该条回调任务（不阻塞 read loop）。
+	WSQueueFullDrop
+	// WSQueueFullDisconnect 表示队列满时关闭连接并触发重连（Fail-Fast，避免静默状态漂移）。
+	WSQueueFullDisconnect
+)
+
+func (p WSQueueFullPolicy) String() string {
+	switch p {
+	case WSQueueFullBlock:
+		return "block"
+	case WSQueueFullDrop:
+		return "drop"
+	case WSQueueFullDisconnect:
+		return "disconnect"
+	default:
+		return "unknown"
+	}
+}
+
+// WSQueueFullError 表示 WS 异步 handler 队列满导致的背压事件。
+// 可用于告警与判定“状态机可能不完整/需要对账”。
+type WSQueueFullError struct {
+	Queue    string // "raw" or "typed"
+	Kind     string // typed kind
+	Policy   WSQueueFullPolicy
+	QueueLen int
+	QueueCap int
+}
+
+func (e *WSQueueFullError) Error() string {
+	if e == nil {
+		return "okx: ws handler queue full"
+	}
+	action := e.Policy.String()
+	switch e.Policy {
+	case WSQueueFullBlock:
+		action = "blocking"
+	case WSQueueFullDrop:
+		action = "dropping"
+	case WSQueueFullDisconnect:
+		action = "disconnecting"
+	}
+	kindPart := ""
+	if e.Kind != "" {
+		kindPart = " kind=" + e.Kind
+	}
+	return fmt.Sprintf("okx: ws %s handler queue full; %s%s len=%d cap=%d", e.Queue, action, kindPart, e.QueueLen, e.QueueCap)
+}
+
+// WithWSQueueFullPolicy 设置 WS 异步 handler 队列满时的策略（typed/raw 同时生效）。
+func WithWSQueueFullPolicy(policy WSQueueFullPolicy) WSOption {
+	return func(c *WSClient) {
+		c.typedQueueFullPolicy = policy
+		c.rawQueueFullPolicy = policy
+	}
+}
+
 // WithWSURL 覆盖 WS Endpoint（主要用于测试或自定义网关）。
 func WithWSURL(url string) WSOption {
 	return func(c *WSClient) {
@@ -135,7 +202,7 @@ func WithWSResubscribeWaitTimeout(timeout time.Duration) WSOption {
 // 这样可以避免在 read 热路径中执行重逻辑导致延迟抖动/断连。
 //
 // 注意：
-// - 若队列积压导致 buffer 填满，SDK 会通过 errHandler 上报 "queue full; dropping" 并丢弃该条回调任务（避免阻塞 read goroutine）。
+// - 若队列积压导致 buffer 填满，默认会阻塞等待入队（尽量不丢关键事件）；可用 WithWSQueueFullPolicy 调整为 drop 或 disconnect。
 // - raw handler（Start 的 handler 参数）默认也会异步执行；如需在 read goroutine 中直接执行，可使用 WithWSRawHandlerInline。
 func WithWSTypedHandlerAsync(buffer int) WSOption {
 	return func(c *WSClient) {
@@ -280,13 +347,17 @@ type WSClient struct {
 	sprdTickersHandler                 func(ticker MarketSprdTicker)
 	opReplyHandler                     func(reply WSOpReply, raw []byte)
 
-	typedAsync  bool
-	typedBuffer int
-	typedQueue  chan wsTypedTask
+	typedAsync           bool
+	typedBuffer          int
+	typedQueue           chan wsTypedTask
+	typedQueueFullPolicy WSQueueFullPolicy
+	typedQueueFullWarnAt atomic.Int64
 
-	rawAsync  bool
-	rawBuffer int
-	rawQueue  chan []byte
+	rawAsync           bool
+	rawBuffer          int
+	rawQueue           chan []byte
+	rawQueueFullPolicy WSQueueFullPolicy
+	rawQueueFullWarnAt atomic.Int64
 
 	started atomic.Bool
 	cancel  context.CancelFunc
@@ -316,20 +387,22 @@ func (c *Client) NewWSPublic(opts ...WSOption) *WSClient {
 		endpoint = wsPublicDemoURL
 	}
 	w := &WSClient{
-		c:               c,
-		endpoint:        endpoint,
-		kind:            wsKindPublic,
-		connCh:          make(chan struct{}),
-		desired:         map[string]WSArg{},
-		backoff:         250 * time.Millisecond,
-		heartbeat:       25 * time.Second,
-		resubscribeWait: 5 * time.Second,
-		typedAsync:      true,
-		typedBuffer:     1024,
-		rawAsync:        true,
-		rawBuffer:       1024,
-		waiters:         map[string]*wsOpWaiter{},
-		opWaiters:       map[string]*wsOpRespWaiter{},
+		c:                    c,
+		endpoint:             endpoint,
+		kind:                 wsKindPublic,
+		connCh:               make(chan struct{}),
+		desired:              map[string]WSArg{},
+		backoff:              250 * time.Millisecond,
+		heartbeat:            25 * time.Second,
+		resubscribeWait:      5 * time.Second,
+		typedAsync:           true,
+		typedBuffer:          1024,
+		typedQueueFullPolicy: WSQueueFullBlock,
+		rawAsync:             true,
+		rawBuffer:            1024,
+		rawQueueFullPolicy:   WSQueueFullBlock,
+		waiters:              map[string]*wsOpWaiter{},
+		opWaiters:            map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -344,21 +417,23 @@ func (c *Client) NewWSPrivate(opts ...WSOption) *WSClient {
 		endpoint = wsPrivateDemoURL
 	}
 	w := &WSClient{
-		c:               c,
-		endpoint:        endpoint,
-		kind:            wsKindPrivate,
-		needLogin:       true,
-		connCh:          make(chan struct{}),
-		desired:         map[string]WSArg{},
-		backoff:         250 * time.Millisecond,
-		heartbeat:       25 * time.Second,
-		resubscribeWait: 5 * time.Second,
-		typedAsync:      true,
-		typedBuffer:     1024,
-		rawAsync:        true,
-		rawBuffer:       1024,
-		waiters:         map[string]*wsOpWaiter{},
-		opWaiters:       map[string]*wsOpRespWaiter{},
+		c:                    c,
+		endpoint:             endpoint,
+		kind:                 wsKindPrivate,
+		needLogin:            true,
+		connCh:               make(chan struct{}),
+		desired:              map[string]WSArg{},
+		backoff:              250 * time.Millisecond,
+		heartbeat:            25 * time.Second,
+		resubscribeWait:      5 * time.Second,
+		typedAsync:           true,
+		typedBuffer:          1024,
+		typedQueueFullPolicy: WSQueueFullBlock,
+		rawAsync:             true,
+		rawBuffer:            1024,
+		rawQueueFullPolicy:   WSQueueFullBlock,
+		waiters:              map[string]*wsOpWaiter{},
+		opWaiters:            map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -373,20 +448,22 @@ func (c *Client) NewWSBusiness(opts ...WSOption) *WSClient {
 		endpoint = wsBusinessDemoURL
 	}
 	w := &WSClient{
-		c:               c,
-		endpoint:        endpoint,
-		kind:            wsKindBusiness,
-		connCh:          make(chan struct{}),
-		desired:         map[string]WSArg{},
-		backoff:         250 * time.Millisecond,
-		heartbeat:       25 * time.Second,
-		resubscribeWait: 5 * time.Second,
-		typedAsync:      true,
-		typedBuffer:     1024,
-		rawAsync:        true,
-		rawBuffer:       1024,
-		waiters:         map[string]*wsOpWaiter{},
-		opWaiters:       map[string]*wsOpRespWaiter{},
+		c:                    c,
+		endpoint:             endpoint,
+		kind:                 wsKindBusiness,
+		connCh:               make(chan struct{}),
+		desired:              map[string]WSArg{},
+		backoff:              250 * time.Millisecond,
+		heartbeat:            25 * time.Second,
+		resubscribeWait:      5 * time.Second,
+		typedAsync:           true,
+		typedBuffer:          1024,
+		typedQueueFullPolicy: WSQueueFullBlock,
+		rawAsync:             true,
+		rawBuffer:            1024,
+		rawQueueFullPolicy:   WSQueueFullBlock,
+		waiters:              map[string]*wsOpWaiter{},
+		opWaiters:            map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -403,21 +480,23 @@ func (c *Client) NewWSBusinessPrivate(opts ...WSOption) *WSClient {
 		endpoint = wsBusinessDemoURL
 	}
 	w := &WSClient{
-		c:               c,
-		endpoint:        endpoint,
-		kind:            wsKindBusiness,
-		needLogin:       true,
-		connCh:          make(chan struct{}),
-		desired:         map[string]WSArg{},
-		backoff:         250 * time.Millisecond,
-		heartbeat:       25 * time.Second,
-		resubscribeWait: 5 * time.Second,
-		typedAsync:      true,
-		typedBuffer:     1024,
-		rawAsync:        true,
-		rawBuffer:       1024,
-		waiters:         map[string]*wsOpWaiter{},
-		opWaiters:       map[string]*wsOpRespWaiter{},
+		c:                    c,
+		endpoint:             endpoint,
+		kind:                 wsKindBusiness,
+		needLogin:            true,
+		connCh:               make(chan struct{}),
+		desired:              map[string]WSArg{},
+		backoff:              250 * time.Millisecond,
+		heartbeat:            25 * time.Second,
+		resubscribeWait:      5 * time.Second,
+		typedAsync:           true,
+		typedBuffer:          1024,
+		typedQueueFullPolicy: WSQueueFullBlock,
+		rawAsync:             true,
+		rawBuffer:            1024,
+		rawQueueFullPolicy:   WSQueueFullBlock,
+		waiters:              map[string]*wsOpWaiter{},
+		opWaiters:            map[string]*wsOpRespWaiter{},
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -1574,6 +1653,22 @@ func (w *WSClient) onError(err error) {
 		}()
 		w.errHandler(err)
 	}
+}
+
+func (w *WSClient) warnQueueFull(last *atomic.Int64, err error) {
+	if w == nil || last == nil || err == nil {
+		return
+	}
+
+	now := time.Now().UnixNano()
+	prev := last.Load()
+	if prev != 0 && now-prev < int64(time.Second) {
+		return
+	}
+	if !last.CompareAndSwap(prev, now) {
+		return
+	}
+	w.onError(err)
 }
 
 func (w *WSClient) safeRawHandlerCall(message []byte) {

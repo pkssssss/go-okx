@@ -15,9 +15,10 @@ func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
 	t.Cleanup(cancel)
 
 	w := &WSClient{
-		typedAsync: true,
-		typedQueue: make(chan wsTypedTask, 1),
-		ctxDone:    ctx.Done(),
+		typedAsync:           true,
+		typedQueue:           make(chan wsTypedTask, 1),
+		typedQueueFullPolicy: WSQueueFullDrop,
+		ctxDone:              ctx.Done(),
 		errHandler: func(err error) {
 			select {
 			case errCh <- err:
@@ -70,6 +71,81 @@ func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
 	select {
 	case err := <-errCh:
 		if err == nil || !strings.Contains(err.Error(), "queue full") || !strings.Contains(err.Error(), "dropping") || !strings.Contains(err.Error(), "kind=orders") {
+			t.Fatalf("err = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting error")
+	}
+}
+
+func TestWSClient_DispatchTyped_BlocksWhenQueueFull(t *testing.T) {
+	errCh := make(chan error, 1)
+	gotCh := make(chan string, 2)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	w := &WSClient{
+		typedAsync: true,
+		typedQueue: make(chan wsTypedTask, 1),
+		ctxDone:    ctx.Done(),
+		errHandler: func(err error) {
+			select {
+			case errCh <- err:
+			default:
+			}
+		},
+	}
+
+	w.OnOrders(func(order TradeOrder) {
+		select {
+		case gotCh <- order.OrdId:
+		default:
+		}
+	})
+
+	w.typedQueue <- wsTypedTask{kind: wsTypedKindOrders, orders: []TradeOrder{{OrdId: "o0"}}}
+
+	doneCh := make(chan struct{})
+	go func() {
+		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrders, orders: []TradeOrder{{OrdId: "o1"}}})
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+		t.Fatalf("dispatchTyped should block when queue is full")
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	go w.typedDispatchLoop(ctx)
+
+	select {
+	case <-doneCh:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting dispatchTyped to unblock")
+	}
+
+	got := map[string]bool{}
+	for i := 0; i < 2; i++ {
+		select {
+		case id := <-gotCh:
+			got[id] = true
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timeout waiting orders")
+		}
+	}
+	if !got["o0"] || !got["o1"] {
+		t.Fatalf("got=%v", got)
+	}
+
+	if got := w.typedDropped.Load(); got != 0 {
+		t.Fatalf("typedDropped = %d, want %d", got, 0)
+	}
+
+	select {
+	case err := <-errCh:
+		if err == nil || !strings.Contains(err.Error(), "queue full") || !strings.Contains(err.Error(), "blocking") || !strings.Contains(err.Error(), "kind=orders") {
 			t.Fatalf("err = %v", err)
 		}
 	case <-time.After(2 * time.Second):
