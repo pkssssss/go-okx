@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestMarketBooksSBEService_Do(t *testing.T) {
@@ -80,6 +81,56 @@ func TestMarketBooksSBEService_Do(t *testing.T) {
 		}
 		if apiErr.Code != "51000" {
 			t.Fatalf("Code = %q, want %q", apiErr.Code, "51000")
+		}
+	})
+
+	t.Run("respects_request_gate", func(t *testing.T) {
+		started := make(chan struct{})
+		unblock := make(chan struct{})
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			select {
+			case <-started:
+			default:
+				close(started)
+			}
+
+			<-unblock
+			w.Header().Set("Content-Type", "application/sbe")
+			_, _ = w.Write([]byte{0x01})
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithRequestGate(RequestGateConfig{MaxConcurrent: 1}),
+		)
+
+		done := make(chan error, 1)
+		go func() {
+			_, err := c.NewMarketBooksSBEService().InstIdCode(12345).Do(context.Background())
+			done <- err
+		}()
+
+		select {
+		case <-started:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timeout waiting first request")
+		}
+
+		ctx2, cancel2 := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		t.Cleanup(cancel2)
+
+		_, err := c.NewMarketBooksSBEService().InstIdCode(12345).Do(ctx2)
+		var stErr *RequestStateError
+		if err == nil || !errors.As(err, &stErr) || stErr.Stage != RequestStageGate || stErr.Dispatched {
+			t.Fatalf("error = %v, want gate RequestStateError dispatched=false", err)
+		}
+
+		close(unblock)
+		if err := <-done; err != nil {
+			t.Fatalf("first request error = %v", err)
 		}
 	})
 }

@@ -68,21 +68,48 @@ func (s *MarketBooksSBEService) Do(ctx context.Context) ([]byte, error) {
 	}
 
 	for attempt := 0; ; attempt++ {
+		attemptCtx, attemptCancel := s.c.rest.ContextWithDefaultTimeout(ctx)
+
+		release, err := s.c.gate.acquire(attemptCtx, http.MethodGet, endpoint)
+		if err != nil {
+			if attemptCancel != nil {
+				attemptCancel()
+			}
+			return nil, &RequestStateError{
+				Stage:       RequestStageGate,
+				Dispatched:  false,
+				Method:      http.MethodGet,
+				RequestPath: requestPath,
+				Err:         err,
+			}
+		}
+
 		header := make(http.Header)
 		header.Set("Accept", "application/sbe,application/json")
 		if s.c.demo {
 			header.Set("x-simulated-trading", "1")
 		}
 
-		status, resp, respHeader, err := s.c.rest.Do(ctx, http.MethodGet, requestPath, nil, header)
+		status, resp, respHeader, err := s.c.rest.Do(attemptCtx, http.MethodGet, requestPath, nil, header)
+		release()
+		if attemptCancel != nil {
+			attemptCancel()
+		}
 		if err != nil {
-			if attempt < maxRetries && isRetryableTransportError(err) {
+			wsErr := &RequestStateError{
+				Stage:       RequestStageHTTP,
+				Dispatched:  true,
+				Method:      http.MethodGet,
+				RequestPath: requestPath,
+				Err:         err,
+			}
+			if attempt < maxRetries && isRetryableTransportError(wsErr) {
 				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
 					return nil, err
 				}
 				continue
 			}
-			return nil, err
+			return nil, wsErr
 		}
 
 		contentType := respHeader.Get("Content-Type")

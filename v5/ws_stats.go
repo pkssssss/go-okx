@@ -41,6 +41,9 @@ type WSStats struct {
 	RawQueueLen   int
 	RawQueueCap   int
 
+	TypedDropped uint64
+	RawDropped   uint64
+
 	Backoff time.Duration
 }
 
@@ -101,6 +104,8 @@ func (w *WSClient) Stats() WSStats {
 		s.RawQueueLen = len(q)
 		s.RawQueueCap = cap(q)
 	}
+	s.TypedDropped = w.typedDropped.Load()
+	s.RawDropped = w.rawDropped.Load()
 
 	w.waitMu.Lock()
 	s.Waiters = len(w.waiters)

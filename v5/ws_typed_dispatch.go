@@ -244,12 +244,9 @@ func (w *WSClient) dispatchTyped(task wsTypedTask) {
 	case w.typedQueue <- task:
 		return
 	default:
-		w.onError(fmt.Errorf("okx: ws typed handler queue full; blocking kind=%s", task.kind.String()))
-	}
-
-	select {
-	case w.typedQueue <- task:
-	case <-w.ctxDone:
+		w.typedDropped.Add(1)
+		w.onError(fmt.Errorf("okx: ws typed handler queue full; dropping kind=%s", task.kind.String()))
+		return
 	}
 }
 

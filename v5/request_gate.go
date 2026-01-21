@@ -65,6 +65,12 @@ type routeKey struct {
 	Endpoint string
 }
 
+const requestGateMethodWS = "WS"
+
+func wsOpGateKey(op string) string {
+	return "op:" + op
+}
+
 type requestGate struct {
 	sem *semaphore
 
@@ -155,19 +161,29 @@ func (c *Client) applyTradeAccountRateLimit(info *TradeAccountRateLimit) error {
 	if err != nil {
 		return fmt.Errorf("okx: invalid accRateLimit: %w", err)
 	}
-	if limit2s <= 0 {
-		c.gate.setRouteLimiter(tradeAccountRateLimitRoutes(), nil)
-		return nil
+	effective2s := limit2s
+	if effective2s <= 0 && info.NextAccRateLimit != "" {
+		if next2s, err := strconv.ParseInt(info.NextAccRateLimit, 10, 64); err == nil && next2s > 0 {
+			effective2s = next2s
+		}
+	}
+	if effective2s <= 0 {
+		// Fail-Safe：口径不明确或额度为 0 时，至少保留一个极保守的闸门，避免“Fail-Open”放大限频风暴。
+		effective2s = 1
 	}
 
-	rps := float64(limit2s) / 2.0
-	burst := int(limit2s)
+	rps := float64(effective2s) / 2.0
+	burst := int(effective2s)
 	limiter := newTokenBucketLimiter(rps, burst)
-	c.gate.setRouteLimiter(tradeAccountRateLimitRoutes(), limiter)
+	c.gate.setRouteLimiter(tradeAccountRateLimitKeys(), limiter)
 	return nil
 }
 
-func tradeAccountRateLimitRoutes() []routeKey {
+func tradeAccountRateLimitKeys() []routeKey {
+	return append(tradeAccountRateLimitRESTKeys(), tradeAccountRateLimitWSKeys()...)
+}
+
+func tradeAccountRateLimitRESTKeys() []routeKey {
 	return []routeKey{
 		{Method: http.MethodPost, Endpoint: "/api/v5/trade/order"},
 		{Method: http.MethodPost, Endpoint: "/api/v5/trade/batch-orders"},
@@ -180,6 +196,14 @@ func tradeAccountRateLimitRoutes() []routeKey {
 		{Method: http.MethodPost, Endpoint: "/api/v5/trade/cancel-algos"},
 		{Method: http.MethodPost, Endpoint: "/api/v5/trade/mass-cancel"},
 		{Method: http.MethodPost, Endpoint: "/api/v5/trade/cancel-all-after"},
+	}
+}
+
+func tradeAccountRateLimitWSKeys() []routeKey {
+	return []routeKey{
+		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpOrder)},
+		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpCancelOrder)},
+		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpAmendOrder)},
 	}
 }
 

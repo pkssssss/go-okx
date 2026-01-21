@@ -207,6 +207,8 @@ type WSClient struct {
 	subscribeErr    atomic.Uint64
 	unsubscribeOK   atomic.Uint64
 	unsubscribeErr  atomic.Uint64
+	typedDropped    atomic.Uint64
+	rawDropped      atomic.Uint64
 	lastError       atomic.Value
 
 	handler      WSMessageHandler
@@ -545,9 +547,31 @@ func (w *WSClient) doOpAndWaitRaw(ctx context.Context, op string, args any) (*WS
 		Args: args,
 	}
 
+	var release func()
+	if w.c != nil {
+		var err error
+		release, err = w.c.gate.acquire(ctx, requestGateMethodWS, wsOpGateKey(op))
+		if err != nil {
+			w.removeOpWaiter(id)
+			return nil, nil, &RequestStateError{
+				Stage:       RequestStageGate,
+				Dispatched:  false,
+				Method:      requestGateMethodWS,
+				RequestPath: wsOpGateKey(op),
+				Err:         err,
+			}
+		}
+	}
+
 	if err := w.writeJSON(conn, req); err != nil {
+		if release != nil {
+			release()
+		}
 		w.removeOpWaiter(id)
 		return nil, nil, err
+	}
+	if release != nil {
+		release()
 	}
 
 	select {

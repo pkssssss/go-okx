@@ -72,13 +72,14 @@ SDK 默认启用异步分发（typed/raw 都是：buffer=1024），把 handler �
 
 **背压语义（重要）**：
 
-- 当队列满时，SDK 会先通过 `errHandler` 上报 `"queue full; blocking"`，随后进入阻塞入队（Fail-Closed：不静默丢关键事件）。
-- 这意味着在高消息速率 + handler 处理不过来时，read loop 可能被背压阻塞，进而触发心跳超时/断线。
+- 当队列满时，SDK 会通过 `errHandler` 上报 `"queue full; dropping"`，并丢弃该条回调任务（不会阻塞 read loop）。
+- 这避免了“回调消费不过来→阻塞 ReadMessage→心跳超时/断线”的放大效应，但代价是你需要把 **丢弃视为降级信号**。
 
 建议：
 
 - handler 只做轻量分发，把重逻辑交给你自己的 worker；
-- 结合 `ws.Stats()` 监控 `TypedQueueLen/Cap` 与 `RawQueueLen/Cap`，并据此调大 buffer 或降载。
+- 结合 `ws.Stats()` 监控 `TypedQueueLen/Cap`、`RawQueueLen/Cap` 以及 `TypedDropped/RawDropped`，并据此调大 buffer 或降载；
+- 对关键状态（订单/持仓/余额）请始终保留 REST 对账补偿路径：一旦出现 dropped，应主动触发对账或重建本地状态机。
 
 ## 5. 深度（Order Book）的正确用法
 

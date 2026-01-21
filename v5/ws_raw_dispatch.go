@@ -33,11 +33,8 @@ func (w *WSClient) dispatchRaw(message []byte) {
 	case w.rawQueue <- message:
 		return
 	default:
-		w.onError(fmt.Errorf("okx: ws raw handler queue full; blocking"))
-	}
-
-	select {
-	case w.rawQueue <- message:
-	case <-w.ctxDone:
+		w.rawDropped.Add(1)
+		w.onError(fmt.Errorf("okx: ws raw handler queue full; dropping"))
+		return
 	}
 }
