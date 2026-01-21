@@ -1024,6 +1024,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 		Arg WSArg `json:"arg"`
 	}
 	if err := json.Unmarshal(message, &probe); err != nil {
+		w.onError(fmt.Errorf("okx: ws probe unmarshal failed: %w", err))
 		return
 	}
 	if probe.Arg.Channel == "" {
@@ -1036,7 +1037,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseOrders(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrders, orders: dm.Data})
@@ -1045,7 +1046,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseFills(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindFills, fills: dm.Data})
@@ -1054,7 +1055,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseAccount(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAccount, balances: dm.Data})
@@ -1063,7 +1064,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParsePositions(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindPositions, positions: dm.Data})
@@ -1072,7 +1073,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseBalanceAndPosition(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindBalanceAndPosition, balPos: dm.Data})
@@ -1081,7 +1082,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseLiquidationWarning(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindLiquidationWarning, liquidationWarnings: dm.Data})
@@ -1090,7 +1091,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseAccountGreeks(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAccountGreeks, accountGreeks: dm.Data})
@@ -1099,7 +1100,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseOrdersAlgo(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrdersAlgo, ordersAlgo: dm.Data})
@@ -1108,7 +1109,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseAlgoAdvance(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAlgoAdvance, algoAdvance: dm.Data})
@@ -1117,7 +1118,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseGridOrdersSpot(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridOrdersSpot, gridOrdersSpot: dm.Data})
@@ -1126,7 +1127,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseGridOrdersContract(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridOrdersContract, gridOrdersContract: dm.Data})
@@ -1135,7 +1136,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseGridPositions(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridPositions, gridPositions: dm.Data})
@@ -1144,7 +1145,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseGridSubOrders(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindGridSubOrders, gridSubOrders: dm.Data})
@@ -1153,7 +1154,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseAlgoRecurringBuy(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindAlgoRecurringBuy, algoRecurringBuy: dm.Data})
@@ -1162,7 +1163,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseCopytradingLeadNotification(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindCopyTradingLeadNotification, copyTradingLeadNotification: dm.Data})
@@ -1171,7 +1172,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseRFQs(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindRFQs, rfqs: dm.Data})
@@ -1180,7 +1181,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseQuotes(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindQuotes, quotes: dm.Data})
@@ -1189,7 +1190,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseStrucBlockTrades(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindStrucBlockTrades, strucBlockTrades: dm.Data})
@@ -1198,7 +1199,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParsePublicStrucBlockTrades(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindPublicStrucBlockTrades, publicStrucBlockTrades: dm.Data})
@@ -1207,7 +1208,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParsePublicBlockTrades(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindPublicBlockTrades, publicBlockTrades: dm.Data})
@@ -1216,7 +1217,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseBlockTickers(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindBlockTickers, blockTickers: dm.Data})
@@ -1225,7 +1226,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseDepositInfo(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindDepositInfo, depositInfo: dm.Data})
@@ -1234,7 +1235,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseWithdrawalInfo(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindWithdrawalInfo, withdrawalInfo: dm.Data})
@@ -1243,7 +1244,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseSprdOrders(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdOrders, sprdOrders: dm.Data})
@@ -1252,7 +1253,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseSprdTrades(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdTrades, sprdTrades: dm.Data})
@@ -1261,7 +1262,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseTickers(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindTickers, tickers: dm.Data})
@@ -1270,7 +1271,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseTrades(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindTrades, trades: dm.Data})
@@ -1279,7 +1280,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseTradesAll(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindTradesAll, tradesAll: dm.Data})
@@ -1288,7 +1289,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseStatus(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindStatus, statuses: dm.Data})
@@ -1297,7 +1298,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseOpenInterest(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOpenInterest, openInterests: dm.Data})
@@ -1306,7 +1307,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseFundingRate(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindFundingRate, fundingRates: dm.Data})
@@ -1315,7 +1316,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseMarkPrice(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindMarkPrice, markPrices: dm.Data})
@@ -1324,7 +1325,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseIndexTickers(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindIndexTickers, indexTickers: dm.Data})
@@ -1333,7 +1334,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParsePriceLimit(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindPriceLimit, priceLimits: dm.Data})
@@ -1342,7 +1343,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseOptSummary(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOptSummary, optSummaries: dm.Data})
@@ -1351,7 +1352,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseInstruments(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindInstruments, instruments: dm.Data})
@@ -1360,7 +1361,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseEstimatedPrice(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindEstimatedPrice, estimatedPrices: dm.Data})
@@ -1369,7 +1370,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseADLWarning(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindADLWarning, adlWarnings: dm.Data})
@@ -1378,7 +1379,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseEconomicCalendar(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindEconomicCalendar, economicCalendarEvents: dm.Data})
@@ -1387,7 +1388,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseLiquidationOrders(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindLiquidationOrders, liquidationOrders: dm.Data})
@@ -1396,7 +1397,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseOptionTrades(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindOptionTrades, optionTrades: dm.Data})
@@ -1405,7 +1406,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseCallAuctionDetails(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindCallAuctionDetails, callAuctionDetails: dm.Data})
@@ -1414,7 +1415,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseSprdPublicTrades(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdPublicTrades, sprdPublicTrades: dm.Data})
@@ -1423,7 +1424,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			return
 		}
 		dm, ok, err := WSParseSprdTickers(message)
-		if err != nil || !ok || len(dm.Data) == 0 {
+		if !w.wsParseGuard(probe.Arg.Channel, ok, err) || len(dm.Data) == 0 {
 			return
 		}
 		w.dispatchTyped(wsTypedTask{kind: wsTypedKindSprdTickers, sprdTickers: dm.Data})
@@ -1432,7 +1433,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 
 		if orderBookH != nil && isOrderBookChannel(channel) {
 			dm, ok, err := WSParseOrderBook(message)
-			if err != nil || !ok || len(dm.Data) == 0 {
+			if !w.wsParseGuard(channel, ok, err) || len(dm.Data) == 0 {
 				return
 			}
 			w.dispatchTyped(wsTypedTask{kind: wsTypedKindOrderBook, orderBooks: []WSData[WSOrderBook]{*dm}})
@@ -1443,7 +1444,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			switch {
 			case isCandleChannel(channel):
 				dm, ok, err := WSParseCandles(message)
-				if err != nil || !ok || len(dm.Data) == 0 {
+				if !w.wsParseGuard(channel, ok, err) || len(dm.Data) == 0 {
 					return
 				}
 				out := make([]WSCandle, 0, len(dm.Data))
@@ -1455,7 +1456,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 				return
 			case isSprdCandleChannel(channel):
 				dm, ok, err := WSParseSprdCandles(message)
-				if err != nil || !ok || len(dm.Data) == 0 {
+				if !w.wsParseGuard(channel, ok, err) || len(dm.Data) == 0 {
 					return
 				}
 				out := make([]WSCandle, 0, len(dm.Data))
@@ -1474,7 +1475,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 			switch {
 			case isMarkPriceCandleChannel(channel):
 				dm, ok, err := WSParseMarkPriceCandles(message)
-				if err != nil || !ok || len(dm.Data) == 0 {
+				if !w.wsParseGuard(channel, ok, err) || len(dm.Data) == 0 {
 					return
 				}
 				out := make([]WSPriceCandle, 0, len(dm.Data))
@@ -1486,7 +1487,7 @@ func (w *WSClient) onDataMessage(message []byte) {
 				return
 			case isIndexCandleChannel(channel):
 				dm, ok, err := WSParseIndexCandles(message)
-				if err != nil || !ok || len(dm.Data) == 0 {
+				if !w.wsParseGuard(channel, ok, err) || len(dm.Data) == 0 {
 					return
 				}
 				out := make([]WSPriceCandle, 0, len(dm.Data))
@@ -1503,6 +1504,21 @@ func (w *WSClient) onDataMessage(message []byte) {
 
 		return
 	}
+}
+
+func (w *WSClient) wsParseGuard(channel string, ok bool, err error) bool {
+	if w == nil {
+		return false
+	}
+	if err != nil {
+		w.onError(fmt.Errorf("okx: ws parse failed channel=%s: %w", channel, err))
+		return false
+	}
+	if !ok {
+		w.onError(fmt.Errorf("okx: ws parse failed channel=%s: ok=false", channel))
+		return false
+	}
+	return true
 }
 
 func (w *WSClient) writeJSON(conn *websocket.Conn, v any) error {

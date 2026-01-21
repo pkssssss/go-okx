@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestClientRetry_GET_ServerError(t *testing.T) {
@@ -36,6 +37,13 @@ func TestClientRetry_GET_ServerError(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Fatalf("calls = %d, want %d", calls, 2)
+	}
+}
+
+func TestSleepRetry_NilContext_NoPanic(t *testing.T) {
+	cfg := &RetryConfig{BaseDelay: 1 * time.Millisecond}
+	if err := sleepRetry(nil, cfg, 1); err != nil {
+		t.Fatalf("sleepRetry() error = %v", err)
 	}
 }
 

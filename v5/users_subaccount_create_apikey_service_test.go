@@ -101,7 +101,7 @@ func TestUsersSubaccountCreateAPIKeyService_Do(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Do() error = %v", err)
 		}
-		if got.SubAcct != "test-1" || got.Label != "v5" || got.APIKey != "k" || got.SecretKey != "s" || got.IP != "1.1.1.1,2.2.2.2" {
+		if got.SubAcct != "test-1" || got.Label != "v5" || got.APIKey != "k" || got.SecretKey.Value() != "s" || got.Passphrase.Value() != "p" || got.IP != "1.1.1.1,2.2.2.2" {
 			t.Fatalf("result = %#v", got)
 		}
 	})

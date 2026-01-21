@@ -435,6 +435,9 @@ func sleepRetry(ctx context.Context, cfg *RetryConfig, retryIndex int) error {
 	if cfg == nil {
 		return nil
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	d := retryDelay(*cfg, retryIndex)
 	if d <= 0 {

@@ -233,7 +233,7 @@ v0.1 路由策略：
 高可用建议：
 
 - 若 handler 逻辑较重，建议启用 `WithWSTypedHandlerAsync(buffer)` 将 typed handler 移到独立 worker goroutine 执行（避免阻塞 read goroutine）。
-- 队列满时会丢弃该条 typed 回调，并通过 `errHandler` 报错；调用方可调大 buffer 或优化 handler。
+- 队列满时会通过 `errHandler` 报错并在入队处阻塞（Fail-Closed：不丢关键事件）；调用方应调大 buffer 或优化 handler，避免放大到连接层。
 
 ### 8.5 业务 op 请求/响应（交易链路闭环）
 

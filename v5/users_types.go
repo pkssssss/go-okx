@@ -28,14 +28,14 @@ type UsersSubaccountCreateSubaccountResult struct {
 
 // UsersSubaccountAPIKeyCreateResult 表示创建子账户 API Key 的返回项（会返回 secretKey）。
 type UsersSubaccountAPIKeyCreateResult struct {
-	SubAcct    string `json:"subAcct"`
-	Label      string `json:"label"`
-	APIKey     string `json:"apiKey"`
-	SecretKey  string `json:"secretKey"`
-	Passphrase string `json:"passphrase"`
-	Perm       string `json:"perm"`
-	IP         string `json:"ip"`
-	TS         string `json:"ts"`
+	SubAcct    string          `json:"subAcct"`
+	Label      string          `json:"label"`
+	APIKey     string          `json:"apiKey"`
+	SecretKey  SensitiveString `json:"secretKey"`
+	Passphrase SensitiveString `json:"passphrase"`
+	Perm       string          `json:"perm"`
+	IP         string          `json:"ip"`
+	TS         string          `json:"ts"`
 }
 
 // UsersSubaccountAPIKeyInfo 表示子账户 API Key 信息（查询/重置返回项）。

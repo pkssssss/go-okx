@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
+func TestWSClient_DispatchTyped_BlocksWhenQueueFull(t *testing.T) {
 	errCh := make(chan error, 1)
 	gotCh := make(chan string, 2)
 
@@ -33,7 +33,7 @@ func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
 		}
 	})
 
-	// 先塞满队列，再发一个任务，确保触发“队列满 => 丢弃”的路径（不阻塞 read loop）。
+	// 先塞满队列，再发一个任务，确保触发“队列满 => 阻塞入队”的路径（Fail-Closed：不丢关键事件）。
 	w.typedQueue <- wsTypedTask{kind: wsTypedKindOrders, orders: []TradeOrder{{OrdId: "o0"}}}
 
 	doneCh := make(chan struct{})
@@ -44,14 +44,14 @@ func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
 
 	select {
 	case <-doneCh:
-	case <-time.After(2 * time.Second):
-		t.Fatalf("timeout waiting dispatchTyped")
+		t.Fatalf("dispatchTyped returned unexpectedly (should block until queue drained)")
+	case <-time.After(100 * time.Millisecond):
 	}
 
 	go w.typedDispatchLoop(ctx)
 
 	got := map[string]bool{}
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 2; i++ {
 		select {
 		case id := <-gotCh:
 			got[id] = true
@@ -59,17 +59,19 @@ func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
 			t.Fatalf("timeout waiting orders")
 		}
 	}
-	if !got["o0"] || got["o1"] {
+	if !got["o0"] || !got["o1"] {
 		t.Fatalf("got=%v", got)
 	}
 
-	if got := w.typedDropped.Load(); got != 1 {
-		t.Fatalf("typedDropped = %d, want %d", got, 1)
+	select {
+	case <-doneCh:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting dispatchTyped")
 	}
 
 	select {
 	case err := <-errCh:
-		if err == nil || !strings.Contains(err.Error(), "queue full") || !strings.Contains(err.Error(), "dropping") || !strings.Contains(err.Error(), "kind=orders") {
+		if err == nil || !strings.Contains(err.Error(), "queue full") || !strings.Contains(err.Error(), "blocking") || !strings.Contains(err.Error(), "kind=orders") {
 			t.Fatalf("err = %v", err)
 		}
 	case <-time.After(2 * time.Second):
@@ -105,6 +107,33 @@ func TestWSClient_TypedDispatchLoop_PanicRecovered(t *testing.T) {
 	select {
 	case err := <-errCh:
 		if err == nil || !strings.Contains(err.Error(), "panic") || !strings.Contains(err.Error(), "kind=orders") {
+			t.Fatalf("err = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting error")
+	}
+}
+
+func TestWSClient_onDataMessage_TypedParseError_Observable(t *testing.T) {
+	errCh := make(chan error, 1)
+
+	w := &WSClient{
+		errHandler: func(err error) {
+			select {
+			case errCh <- err:
+			default:
+			}
+		},
+	}
+	w.OnOrders(func(order TradeOrder) {
+		t.Fatalf("unexpected handler call: %+v", order)
+	})
+
+	w.onDataMessage([]byte(`{"arg":{"channel":"orders"},"data":[{"ordId":123}]}`))
+
+	select {
+	case err := <-errCh:
+		if err == nil || !strings.Contains(err.Error(), "ws parse failed") || !strings.Contains(err.Error(), "channel=orders") {
 			t.Fatalf("err = %v", err)
 		}
 	case <-time.After(2 * time.Second):

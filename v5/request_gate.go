@@ -30,8 +30,12 @@ type RequestGateConfig struct {
 
 func defaultRequestGateConfig() RequestGateConfig {
 	return RequestGateConfig{
-		// 默认只做并发闸门：对高并发突发做“削峰”，但不武断设置 QPS（不同账户/接口限频差异很大）。
+		// 默认做“并发 + 保守速率”双闸门：
+		// - 并发用于削峰，避免单机突发把 OKX 打进限频/网关异常；
+		// - 全局 RPS 只是安全下限（不同账户/接口限频差异很大），生产环境应按自身场景显式配置或禁用。
 		MaxConcurrent: 10,
+		GlobalRPS:     10,
+		GlobalBurst:   20,
 	}
 }
 
