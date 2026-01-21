@@ -26,6 +26,8 @@ const (
 	wsBusinessDemoURL = "wss://wspap.okx.com:8443/ws/v5/business"
 )
 
+const defaultWSReadLimitBytes int64 = 16 << 20 // 16MiB：避免过小上限导致 "read limit exceeded" 断线
+
 type wsKind uint8
 
 const (
@@ -103,6 +105,18 @@ func WithWSHeartbeat(interval time.Duration) WSOption {
 	}
 }
 
+// WithWSReadLimitBytes 设置 WebSocket 单条消息最大读取字节数（gorilla/websocket ReadLimit）。
+//
+// 说明：
+// - 过小会导致正常的大消息（例如深度 snapshot）触发 "read limit exceeded" 断线；
+// - 过大则会放大异常大消息导致的内存风险。
+// - 若 limit<=0，将使用默认值（16MiB）。
+func WithWSReadLimitBytes(limit int64) WSOption {
+	return func(c *WSClient) {
+		c.readLimitBytes = limit
+	}
+}
+
 // WithWSResubscribeWaitTimeout 设置断线重连后自动重订阅的确认超时。
 //
 // 默认 5s。若传入 timeout<=0，将回退到默认值。
@@ -121,7 +135,7 @@ func WithWSResubscribeWaitTimeout(timeout time.Duration) WSOption {
 // 这样可以避免在 read 热路径中执行重逻辑导致延迟抖动/断连。
 //
 // 注意：
-// - 若队列积压导致 buffer 填满，SDK 会通过 errHandler 上报 "queue full; blocking" 并阻塞等待队列腾出空间（避免丢失关键事件）。
+// - 若队列积压导致 buffer 填满，SDK 会通过 errHandler 上报 "queue full; dropping" 并丢弃该条回调任务（避免阻塞 read goroutine）。
 // - raw handler（Start 的 handler 参数）默认也会异步执行；如需在 read goroutine 中直接执行，可使用 WithWSRawHandlerInline。
 func WithWSTypedHandlerAsync(buffer int) WSOption {
 	return func(c *WSClient) {
@@ -196,22 +210,21 @@ type WSClient struct {
 	dialer    *websocket.Dialer
 	needLogin bool
 
-	heartbeat            time.Duration
-	resubscribeWait      time.Duration
-	lastRecv             atomic.Int64
-	lastPing             atomic.Int64
-	dialAttempts         atomic.Uint64
-	connects             atomic.Uint64
-	reconnects           atomic.Uint64
-	subscribeOK          atomic.Uint64
-	subscribeErr         atomic.Uint64
-	unsubscribeOK        atomic.Uint64
-	unsubscribeErr       atomic.Uint64
-	typedDropped         atomic.Uint64
-	rawDropped           atomic.Uint64
-	typedQueueFullWarnAt atomic.Int64
-	rawQueueFullWarnAt   atomic.Int64
-	lastError            atomic.Value
+	heartbeat       time.Duration
+	resubscribeWait time.Duration
+	readLimitBytes  int64
+	lastRecv        atomic.Int64
+	lastPing        atomic.Int64
+	dialAttempts    atomic.Uint64
+	connects        atomic.Uint64
+	reconnects      atomic.Uint64
+	subscribeOK     atomic.Uint64
+	subscribeErr    atomic.Uint64
+	unsubscribeOK   atomic.Uint64
+	unsubscribeErr  atomic.Uint64
+	typedDropped    atomic.Uint64
+	rawDropped      atomic.Uint64
+	lastError       atomic.Value
 
 	handler      WSMessageHandler
 	errHandler   WSErrorHandler
@@ -721,7 +734,11 @@ func (w *WSClient) run(ctx context.Context) {
 			continue
 		}
 
-		conn.SetReadLimit(1024 * 1024)
+		limit := w.readLimitBytes
+		if limit <= 0 {
+			limit = defaultWSReadLimitBytes
+		}
+		conn.SetReadLimit(limit)
 
 		conn.SetPingHandler(func(appData string) error {
 			return w.writeControl(conn, websocket.PongMessage, []byte(appData), 5*time.Second)
@@ -1557,30 +1574,6 @@ func (w *WSClient) onError(err error) {
 		}()
 		w.errHandler(err)
 	}
-}
-
-func (w *WSClient) warnRawQueueFull() {
-	w.warnQueueFull(&w.rawQueueFullWarnAt, "okx: ws raw handler queue full; blocking")
-}
-
-func (w *WSClient) warnTypedQueueFull(kind wsTypedKind) {
-	w.warnQueueFull(&w.typedQueueFullWarnAt, fmt.Sprintf("okx: ws typed handler queue full; blocking kind=%s", kind.String()))
-}
-
-func (w *WSClient) warnQueueFull(last *atomic.Int64, msg string) {
-	if w == nil || last == nil || msg == "" {
-		return
-	}
-
-	now := time.Now().UnixNano()
-	prev := last.Load()
-	if prev != 0 && now-prev < int64(time.Second) {
-		return
-	}
-	if !last.CompareAndSwap(prev, now) {
-		return
-	}
-	w.onError(errors.New(msg))
 }
 
 func (w *WSClient) safeRawHandlerCall(message []byte) {

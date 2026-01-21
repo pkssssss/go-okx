@@ -2,6 +2,7 @@ package okx
 
 import (
 	"context"
+	"fmt"
 )
 
 func (w *WSClient) rawDispatchLoop(ctx context.Context) {
@@ -32,17 +33,8 @@ func (w *WSClient) dispatchRaw(message []byte) {
 	case w.rawQueue <- message:
 		return
 	default:
-		w.warnRawQueueFull()
-	}
-
-	done := w.ctxDone
-	if done == nil {
-		w.rawQueue <- message
+		w.rawDropped.Add(1)
+		w.onError(fmt.Errorf("okx: ws raw handler queue full; dropping"))
 		return
-	}
-
-	select {
-	case w.rawQueue <- message:
-	case <-done:
 	}
 }

@@ -30,6 +30,45 @@ type Credentials struct {
 	Passphrase string
 }
 
+func (c Credentials) Redacted() Credentials {
+	return Credentials{
+		APIKey:     maskLast4(c.APIKey),
+		SecretKey:  "***",
+		Passphrase: "***",
+	}
+}
+
+func (c Credentials) String() string {
+	r := c.Redacted()
+	return fmt.Sprintf("Credentials{APIKey:%q, SecretKey:%q, Passphrase:%q}", r.APIKey, r.SecretKey, r.Passphrase)
+}
+
+func (c Credentials) GoString() string { return c.String() }
+
+func (c Credentials) MarshalJSON() ([]byte, error) {
+	r := c.Redacted()
+	type out struct {
+		APIKey     string `json:"APIKey"`
+		SecretKey  string `json:"SecretKey"`
+		Passphrase string `json:"Passphrase"`
+	}
+	return json.Marshal(out{
+		APIKey:     r.APIKey,
+		SecretKey:  r.SecretKey,
+		Passphrase: r.Passphrase,
+	})
+}
+
+func maskLast4(s string) string {
+	if s == "" {
+		return ""
+	}
+	if len(s) <= 4 {
+		return "***"
+	}
+	return "****" + s[len(s)-4:]
+}
+
 // ClientErrorHandler 用于接收客户端内部“非业务请求”的运行错误（例如自动预热/后台任务）。
 // 注意：正常 API 调用的错误仍通过 Do() 返回值返回，不会走该 handler。
 type ClientErrorHandler func(err error)
@@ -219,7 +258,18 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 		}
 
 		if signed && isTradeAccountRateLimitedREST(method, endpoint) {
-			_ = c.ensureTradeAccountRateLimit(attemptCtx)
+			if err := c.ensureTradeAccountRateLimit(attemptCtx); err != nil {
+				if attemptCancel != nil {
+					attemptCancel()
+				}
+				return &RequestStateError{
+					Stage:       RequestStagePreflight,
+					Dispatched:  false,
+					Method:      method,
+					RequestPath: requestPath,
+					Err:         err,
+				}
+			}
 		}
 
 		release, err := c.gate.acquire(attemptCtx, method, endpoint)
@@ -334,7 +384,18 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 		}
 
 		if signed && isTradeAccountRateLimitedREST(method, endpoint) {
-			_ = c.ensureTradeAccountRateLimit(attemptCtx)
+			if err := c.ensureTradeAccountRateLimit(attemptCtx); err != nil {
+				if attemptCancel != nil {
+					attemptCancel()
+				}
+				return requestID, &RequestStateError{
+					Stage:       RequestStagePreflight,
+					Dispatched:  false,
+					Method:      method,
+					RequestPath: requestPath,
+					Err:         err,
+				}
+			}
 		}
 
 		release, err := c.gate.acquire(attemptCtx, method, endpoint)

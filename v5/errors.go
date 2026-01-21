@@ -40,8 +40,9 @@ func (e *APIError) Error() string {
 type RequestStage string
 
 const (
-	RequestStageGate RequestStage = "gate"
-	RequestStageHTTP RequestStage = "http"
+	RequestStagePreflight RequestStage = "preflight"
+	RequestStageGate      RequestStage = "gate"
+	RequestStageHTTP      RequestStage = "http"
 )
 
 // RequestStateError 表示 REST 请求在“未形成 HTTP 响应”之前失败的错误。
