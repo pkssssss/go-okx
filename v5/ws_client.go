@@ -121,7 +121,7 @@ func WithWSResubscribeWaitTimeout(timeout time.Duration) WSOption {
 // 这样可以避免在 read 热路径中执行重逻辑导致延迟抖动/断连。
 //
 // 注意：
-// - 若队列积压导致 buffer 填满，SDK 会通过 errHandler 上报 "queue full; dropping" 并丢弃该条回调任务（避免阻塞 read goroutine）。
+// - 若队列积压导致 buffer 填满，SDK 会通过 errHandler 上报 "queue full; blocking" 并阻塞等待队列腾出空间（避免丢失关键事件）。
 // - raw handler（Start 的 handler 参数）默认也会异步执行；如需在 read goroutine 中直接执行，可使用 WithWSRawHandlerInline。
 func WithWSTypedHandlerAsync(buffer int) WSOption {
 	return func(c *WSClient) {
@@ -196,20 +196,22 @@ type WSClient struct {
 	dialer    *websocket.Dialer
 	needLogin bool
 
-	heartbeat       time.Duration
-	resubscribeWait time.Duration
-	lastRecv        atomic.Int64
-	lastPing        atomic.Int64
-	dialAttempts    atomic.Uint64
-	connects        atomic.Uint64
-	reconnects      atomic.Uint64
-	subscribeOK     atomic.Uint64
-	subscribeErr    atomic.Uint64
-	unsubscribeOK   atomic.Uint64
-	unsubscribeErr  atomic.Uint64
-	typedDropped    atomic.Uint64
-	rawDropped      atomic.Uint64
-	lastError       atomic.Value
+	heartbeat            time.Duration
+	resubscribeWait      time.Duration
+	lastRecv             atomic.Int64
+	lastPing             atomic.Int64
+	dialAttempts         atomic.Uint64
+	connects             atomic.Uint64
+	reconnects           atomic.Uint64
+	subscribeOK          atomic.Uint64
+	subscribeErr         atomic.Uint64
+	unsubscribeOK        atomic.Uint64
+	unsubscribeErr       atomic.Uint64
+	typedDropped         atomic.Uint64
+	rawDropped           atomic.Uint64
+	typedQueueFullWarnAt atomic.Int64
+	rawQueueFullWarnAt   atomic.Int64
+	lastError            atomic.Value
 
 	handler      WSMessageHandler
 	errHandler   WSErrorHandler
@@ -530,7 +532,9 @@ func (w *WSClient) doOpAndWaitRaw(ctx context.Context, op string, args any) (*WS
 	}
 
 	if w.c != nil && (op == wsOpOrder || op == wsOpCancelOrder || op == wsOpAmendOrder) {
-		w.c.ensureTradeAccountRateLimit(ctx)
+		if err := w.c.ensureTradeAccountRateLimit(ctx); err != nil {
+			w.onError(fmt.Errorf("okx: ws trade account-rate-limit prime failed: %w", err))
+		}
 	}
 
 	conn, err := w.waitConn(ctx)
@@ -1553,6 +1557,30 @@ func (w *WSClient) onError(err error) {
 		}()
 		w.errHandler(err)
 	}
+}
+
+func (w *WSClient) warnRawQueueFull() {
+	w.warnQueueFull(&w.rawQueueFullWarnAt, "okx: ws raw handler queue full; blocking")
+}
+
+func (w *WSClient) warnTypedQueueFull(kind wsTypedKind) {
+	w.warnQueueFull(&w.typedQueueFullWarnAt, fmt.Sprintf("okx: ws typed handler queue full; blocking kind=%s", kind.String()))
+}
+
+func (w *WSClient) warnQueueFull(last *atomic.Int64, msg string) {
+	if w == nil || last == nil || msg == "" {
+		return
+	}
+
+	now := time.Now().UnixNano()
+	prev := last.Load()
+	if prev != 0 && now-prev < int64(time.Second) {
+		return
+	}
+	if !last.CompareAndSwap(prev, now) {
+		return
+	}
+	w.onError(errors.New(msg))
 }
 
 func (w *WSClient) safeRawHandlerCall(message []byte) {

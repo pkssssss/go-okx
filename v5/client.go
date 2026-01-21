@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"net"
@@ -29,6 +30,10 @@ type Credentials struct {
 	Passphrase string
 }
 
+// ClientErrorHandler 用于接收客户端内部“非业务请求”的运行错误（例如自动预热/后台任务）。
+// 注意：正常 API 调用的错误仍通过 Do() 返回值返回，不会走该 handler。
+type ClientErrorHandler func(err error)
+
 // Client 是 OKX V5 API 客户端（REST + WS）。
 // v0.1 先落地 REST 核心能力，WS 随后补齐。
 type Client struct {
@@ -41,7 +46,12 @@ type Client struct {
 
 	retry *RetryConfig
 
-	tradeAccountRateLimitOnce sync.Once
+	errHandler ClientErrorHandler
+
+	tradeAccountRateLimitMu          sync.Mutex
+	tradeAccountRateLimitPrimed      atomic.Bool
+	tradeAccountRateLimitLastAttempt atomic.Int64
+	tradeAccountRateLimitLastErr     atomic.Value
 
 	timeOffsetNanos atomic.Int64
 	now             func() time.Time
@@ -113,6 +123,13 @@ func WithTimeOffset(offset time.Duration) Option {
 func WithNowFunc(now func() time.Time) Option {
 	return func(c *Client) {
 		c.now = now
+	}
+}
+
+// WithClientErrorHandler 设置客户端内部错误回调（用于可观测告警）。
+func WithClientErrorHandler(handler ClientErrorHandler) Option {
+	return func(c *Client) {
+		c.errHandler = handler
 	}
 }
 
@@ -202,7 +219,7 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 		}
 
 		if signed && isTradeAccountRateLimitedREST(method, endpoint) {
-			c.ensureTradeAccountRateLimit(attemptCtx)
+			_ = c.ensureTradeAccountRateLimit(attemptCtx)
 		}
 
 		release, err := c.gate.acquire(attemptCtx, method, endpoint)
@@ -317,7 +334,7 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 		}
 
 		if signed && isTradeAccountRateLimitedREST(method, endpoint) {
-			c.ensureTradeAccountRateLimit(attemptCtx)
+			_ = c.ensureTradeAccountRateLimit(attemptCtx)
 		}
 
 		release, err := c.gate.acquire(attemptCtx, method, endpoint)
@@ -402,16 +419,82 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 	}
 }
 
-func (c *Client) ensureTradeAccountRateLimit(ctx context.Context) {
-	if c == nil || c.gate == nil {
+const tradeAccountRateLimitPrimeMinInterval = time.Second
+
+// TradeAccountRateLimitPrimeStatus 表示 accRateLimit 自动预热的状态快照（用于自检/排障）。
+type TradeAccountRateLimitPrimeStatus struct {
+	Primed      bool
+	LastAttempt time.Time
+	LastError   string
+}
+
+func (c *Client) TradeAccountRateLimitPrimeStatus() TradeAccountRateLimitPrimeStatus {
+	var s TradeAccountRateLimitPrimeStatus
+	if c == nil {
+		return s
+	}
+
+	s.Primed = c.tradeAccountRateLimitPrimed.Load()
+	if ns := c.tradeAccountRateLimitLastAttempt.Load(); ns != 0 {
+		s.LastAttempt = time.Unix(0, ns)
+	}
+	if v := c.tradeAccountRateLimitLastErr.Load(); v != nil {
+		if msg, ok := v.(string); ok {
+			s.LastError = msg
+		}
+	}
+	return s
+}
+
+func (c *Client) onError(err error) {
+	if c == nil || c.errHandler == nil || err == nil || errors.Is(err, context.Canceled) {
 		return
+	}
+	defer func() {
+		_ = recover()
+	}()
+	c.errHandler(err)
+}
+
+func (c *Client) ensureTradeAccountRateLimit(ctx context.Context) error {
+	if c == nil || c.gate == nil || c.tradeAccountRateLimitPrimed.Load() {
+		return nil
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	c.tradeAccountRateLimitOnce.Do(func() {
-		_, _ = c.NewTradeAccountRateLimitService().Do(ctx)
-	})
+
+	now := time.Now()
+	if last := c.tradeAccountRateLimitLastAttempt.Load(); last != 0 {
+		if now.Sub(time.Unix(0, last)) < tradeAccountRateLimitPrimeMinInterval {
+			return nil
+		}
+	}
+
+	c.tradeAccountRateLimitMu.Lock()
+	defer c.tradeAccountRateLimitMu.Unlock()
+
+	if c.tradeAccountRateLimitPrimed.Load() {
+		return nil
+	}
+	now = time.Now()
+	if last := c.tradeAccountRateLimitLastAttempt.Load(); last != 0 {
+		if now.Sub(time.Unix(0, last)) < tradeAccountRateLimitPrimeMinInterval {
+			return nil
+		}
+	}
+	c.tradeAccountRateLimitLastAttempt.Store(now.UnixNano())
+
+	_, err := c.NewTradeAccountRateLimitService().Do(ctx)
+	if err != nil {
+		c.tradeAccountRateLimitLastErr.Store(err.Error())
+		c.onError(fmt.Errorf("okx: trade account-rate-limit prime failed: %w", err))
+		return err
+	}
+
+	c.tradeAccountRateLimitPrimed.Store(true)
+	c.tradeAccountRateLimitLastErr.Store("")
+	return nil
 }
 
 func isTradeAccountRateLimitedREST(method, endpoint string) bool {
