@@ -42,6 +42,9 @@ func TestCancelAlgoOrdersService_Do(t *testing.T) {
 		wantSig := sign.SignHMACSHA256Base64("mysecret", sign.PrehashREST(timestamp, http.MethodPost, "/api/v5/trade/cancel-algos", wantBody))
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}
@@ -90,6 +93,9 @@ func TestCancelAlgoOrdersService_Do(t *testing.T) {
 
 	t.Run("partial_failure", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			w.Header().Set("x-request-id", "rid-algo-1")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoClOrdId":"","algoId":"1","clOrdId":"","sCode":"51000","sMsg":"failed","tag":""}]}`))

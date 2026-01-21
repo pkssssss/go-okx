@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestWSClient_DispatchTyped_BlocksWhenQueueFull(t *testing.T) {
+func TestWSClient_DispatchTyped_DropsWhenQueueFull(t *testing.T) {
 	errCh := make(chan error, 1)
 	gotCh := make(chan string, 2)
 
@@ -33,7 +33,7 @@ func TestWSClient_DispatchTyped_BlocksWhenQueueFull(t *testing.T) {
 		}
 	})
 
-	// 先塞满队列，再发一个任务，确保触发“队列满 => 阻塞入队”的路径（Fail-Closed：不丢关键事件）。
+	// 先塞满队列，再发一个任务，确保触发“队列满 => 丢弃”的路径（不阻塞 read loop）。
 	w.typedQueue <- wsTypedTask{kind: wsTypedKindOrders, orders: []TradeOrder{{OrdId: "o0"}}}
 
 	doneCh := make(chan struct{})
@@ -44,14 +44,14 @@ func TestWSClient_DispatchTyped_BlocksWhenQueueFull(t *testing.T) {
 
 	select {
 	case <-doneCh:
-		t.Fatalf("dispatchTyped returned unexpectedly (should block until queue drained)")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting dispatchTyped")
 	}
 
 	go w.typedDispatchLoop(ctx)
 
 	got := map[string]bool{}
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 1; i++ {
 		select {
 		case id := <-gotCh:
 			got[id] = true
@@ -59,19 +59,17 @@ func TestWSClient_DispatchTyped_BlocksWhenQueueFull(t *testing.T) {
 			t.Fatalf("timeout waiting orders")
 		}
 	}
-	if !got["o0"] || !got["o1"] {
+	if !got["o0"] || got["o1"] {
 		t.Fatalf("got=%v", got)
 	}
 
-	select {
-	case <-doneCh:
-	case <-time.After(2 * time.Second):
-		t.Fatalf("timeout waiting dispatchTyped")
+	if got := w.typedDropped.Load(); got != 1 {
+		t.Fatalf("typedDropped = %d, want %d", got, 1)
 	}
 
 	select {
 	case err := <-errCh:
-		if err == nil || !strings.Contains(err.Error(), "queue full") || !strings.Contains(err.Error(), "blocking") || !strings.Contains(err.Error(), "kind=orders") {
+		if err == nil || !strings.Contains(err.Error(), "queue full") || !strings.Contains(err.Error(), "dropping") || !strings.Contains(err.Error(), "kind=orders") {
 			t.Fatalf("err = %v", err)
 		}
 	case <-time.After(2 * time.Second):

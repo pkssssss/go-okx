@@ -21,6 +21,9 @@ func TestMassCancelService_Do(t *testing.T) {
 		wantSig := sign.SignHMACSHA256Base64("mysecret", sign.PrehashREST(timestamp, http.MethodPost, "/api/v5/trade/mass-cancel", wantBody))
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}

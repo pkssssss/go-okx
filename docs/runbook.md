@@ -47,10 +47,11 @@
 
 1. 暂停非关键轮询（行情/状态查询降频，避免“对抗限频”）。
 2. 降低并发与发送速率（优先降低交易写入类接口的频率）。
-3. 确认已启用 request gate（默认已启用并发闸门）并合理配置：
-   - `okx.WithRequestGate(okx.RequestGateConfig{MaxConcurrent: ...})`
-4. 主动拉取账户限频并让 SDK 联动调度（SDK 会在 `TradeAccountRateLimitService.Do()` 成功后更新 gate）：
-   - `c.NewTradeAccountRateLimitService().Do(ctx)`
+3. 确认已启用 request gate（默认已启用并发 + 保守速率闸门）并合理配置：
+   - `okx.WithRequestGate(okx.RequestGateConfig{MaxConcurrent: ..., GlobalRPS: ..., GlobalBurst: ...})`
+4. 对齐账户级下单额度（accRateLimit）：
+   - SDK 会在首次触发交易写入类接口/WS trade op 时自动尝试拉取一次 `trade/account-rate-limit` 并更新 gate；
+   - 仍建议在启动阶段显式调用一次（避免首单/首撤多一次 RTT）：`c.NewTradeAccountRateLimitService().Do(ctx)`
 
 ### 2.3 恢复与验证
 
@@ -144,4 +145,3 @@
 - WS 断网演练：验证重连+重订阅可恢复；恢复后对账通过。
 - handler 堆积演练：刻意让 handler 变慢，观察队列堆积与断连行为是否符合预期，并调整 buffer/负载。
 - 深度断档演练：模拟 prevSeqId 断档，验证 `Reset + 重订阅` 能确定性恢复。
-

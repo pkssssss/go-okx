@@ -121,7 +121,7 @@ func WithWSResubscribeWaitTimeout(timeout time.Duration) WSOption {
 // 这样可以避免在 read 热路径中执行重逻辑导致延迟抖动/断连。
 //
 // 注意：
-// - 若队列积压导致 buffer 填满，read goroutine 会被迫阻塞（Fail-Closed：不丢关键事件）。此时应调大 buffer 或降低 handler 负载。
+// - 若队列积压导致 buffer 填满，SDK 会通过 errHandler 上报 "queue full; dropping" 并丢弃该条回调任务（避免阻塞 read goroutine）。
 // - raw handler（Start 的 handler 参数）默认也会异步执行；如需在 read goroutine 中直接执行，可使用 WithWSRawHandlerInline。
 func WithWSTypedHandlerAsync(buffer int) WSOption {
 	return func(c *WSClient) {
@@ -527,6 +527,10 @@ func (w *WSClient) doOpAndWaitRaw(ctx context.Context, op string, args any) (*WS
 	}
 	if args == nil {
 		return nil, nil, errors.New("okx: ws op requires args")
+	}
+
+	if w.c != nil && (op == wsOpOrder || op == wsOpCancelOrder || op == wsOpAmendOrder) {
+		w.c.ensureTradeAccountRateLimit(ctx)
 	}
 
 	conn, err := w.waitConn(ctx)

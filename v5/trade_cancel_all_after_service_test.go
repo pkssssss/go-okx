@@ -15,6 +15,9 @@ func TestCancelAllAfterService_Do(t *testing.T) {
 
 	t.Run("signed_request_and_body", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}

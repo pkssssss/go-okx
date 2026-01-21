@@ -16,6 +16,9 @@ func TestPlaceOrderService_Do(t *testing.T) {
 
 	t.Run("signed_request_and_body", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}
@@ -75,6 +78,9 @@ func TestPlaceOrderService_Do(t *testing.T) {
 
 	t.Run("signed_request_and_body_with_options_and_expTime", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}
@@ -142,6 +148,9 @@ func TestPlaceOrderService_Do(t *testing.T) {
 
 	t.Run("missing_price_for_post_only_is_server_validated", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			bodyBytes, _ := io.ReadAll(r.Body)
 			if got, want := string(bodyBytes), `{"instId":"BTC-USDT","tdMode":"isolated","side":"buy","ordType":"post_only","sz":"1"}`; got != want {
 				t.Fatalf("body = %q, want %q", got, want)
@@ -199,6 +208,9 @@ func TestPlaceOrderService_Do(t *testing.T) {
 
 	t.Run("item_error_sCode", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			w.Header().Set("x-request-id", "rid-place-1")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"","tag":"","ts":"0","sCode":"51000","sMsg":"bad"}]}`))
@@ -244,6 +256,9 @@ func TestBatchPlaceOrdersService_Do(t *testing.T) {
 
 	t.Run("signed_request_and_body", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}
@@ -293,6 +308,9 @@ func TestBatchPlaceOrdersService_Do(t *testing.T) {
 
 	t.Run("partial_failure_returns_TradeBatchError", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			w.Header().Set("x-request-id", "rid-batch-1")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"b15","ordId":"","tag":"","ts":"0","sCode":"51000","sMsg":"bad"},{"clOrdId":"b16","ordId":"2","tag":"","ts":"0","sCode":"0","sMsg":""}]}`))
@@ -337,6 +355,9 @@ func TestCancelOrderService_Do(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
 		if got, want := r.Method, http.MethodPost; got != want {
 			t.Fatalf("method = %q, want %q", got, want)
 		}
@@ -400,6 +421,9 @@ func TestCancelOrderService_Do_AckError_IncludesRequestID(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
 		w.Header().Set("x-request-id", "rid-cancel-1")
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"","ts":"0","sCode":"51000","sMsg":"failed"}]}`))
@@ -437,6 +461,9 @@ func TestBatchCancelOrdersService_Do(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
 		if got, want := r.Method, http.MethodPost; got != want {
 			t.Fatalf("method = %q, want %q", got, want)
 		}
@@ -486,6 +513,9 @@ func TestAmendOrderService_Do(t *testing.T) {
 
 	t.Run("signed_request_and_body", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}
@@ -542,6 +572,9 @@ func TestAmendOrderService_Do(t *testing.T) {
 
 	t.Run("signed_request_and_body_with_options_and_expTime", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}
@@ -628,6 +661,9 @@ func TestAmendOrderService_Do_AckError_IncludesRequestID(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
 		w.Header().Set("x-request-id", "rid-amend-1")
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"","reqId":"","ts":"0","sCode":"51000","sMsg":"failed"}]}`))
@@ -666,6 +702,9 @@ func TestBatchAmendOrdersService_Do(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
 		if got, want := r.Method, http.MethodPost; got != want {
 			t.Fatalf("method = %q, want %q", got, want)
 		}

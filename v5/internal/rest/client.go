@@ -17,6 +17,23 @@ type Client struct {
 	// DefaultTimeout 用于在 ctx 未设置 deadline 时，给请求提供一个安全的默认超时（Fail-Fast）。
 	// 若为 0，则使用内部默认值；若为负数，则表示禁用默认超时（不建议）。
 	DefaultTimeout time.Duration
+	// MaxResponseBodyBytes 用于限制响应体最大读取字节数，避免异常响应导致内存/延迟尖刺。
+	// 若为 0，则使用内部默认值；若为负数，则表示禁用上限（不建议）。
+	MaxResponseBodyBytes int64
+}
+
+// ResponseBodyTooLargeError 表示响应体超过预期上限（通常是上游异常/代理干扰/错误返回）。
+type ResponseBodyTooLargeError struct {
+	Method      string
+	RequestPath string
+	MaxBytes    int64
+}
+
+func (e *ResponseBodyTooLargeError) Error() string {
+	if e == nil {
+		return "rest: response body too large"
+	}
+	return "rest: response body too large"
 }
 
 // ContextWithDefaultTimeout 在 ctx 未设置 deadline 时，为其附加 DefaultTimeout（Fail-Fast）。
@@ -80,9 +97,25 @@ func (c *Client) Do(ctx context.Context, method, requestPath string, body []byte
 		_ = res.Body.Close()
 	}()
 
-	data, err := io.ReadAll(res.Body)
+	maxBody := c.MaxResponseBodyBytes
+	switch {
+	case maxBody == 0:
+		maxBody = 16 << 20 // 16MiB：覆盖 OKX 常规响应并限制异常大 body 风险
+	case maxBody < 0:
+		maxBody = 0
+	}
+
+	reader := io.Reader(res.Body)
+	if maxBody > 0 {
+		reader = io.LimitReader(res.Body, maxBody+1)
+	}
+
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return 0, nil, nil, err
+	}
+	if maxBody > 0 && int64(len(data)) > maxBody {
+		return 0, nil, nil, &ResponseBodyTooLargeError{Method: method, RequestPath: requestPath, MaxBytes: maxBody}
 	}
 
 	return res.StatusCode, data, res.Header.Clone(), nil

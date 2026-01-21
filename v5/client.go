@@ -41,6 +41,8 @@ type Client struct {
 
 	retry *RetryConfig
 
+	tradeAccountRateLimitOnce sync.Once
+
 	timeOffsetNanos atomic.Int64
 	now             func() time.Time
 }
@@ -199,6 +201,10 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 			}
 		}
 
+		if signed && isTradeAccountRateLimitedREST(method, endpoint) {
+			c.ensureTradeAccountRateLimit(attemptCtx)
+		}
+
 		release, err := c.gate.acquire(attemptCtx, method, endpoint)
 		if err != nil {
 			if attemptCancel != nil {
@@ -310,6 +316,10 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 			}
 		}
 
+		if signed && isTradeAccountRateLimitedREST(method, endpoint) {
+			c.ensureTradeAccountRateLimit(attemptCtx)
+		}
+
 		release, err := c.gate.acquire(attemptCtx, method, endpoint)
 		if err != nil {
 			if attemptCancel != nil {
@@ -390,6 +400,27 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 		}
 		return requestID, nil
 	}
+}
+
+func (c *Client) ensureTradeAccountRateLimit(ctx context.Context) {
+	if c == nil || c.gate == nil {
+		return
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	c.tradeAccountRateLimitOnce.Do(func() {
+		_, _ = c.NewTradeAccountRateLimitService().Do(ctx)
+	})
+}
+
+func isTradeAccountRateLimitedREST(method, endpoint string) bool {
+	for _, k := range tradeAccountRateLimitRESTKeys() {
+		if k.Method == method && k.Endpoint == endpoint {
+			return true
+		}
+	}
+	return false
 }
 
 func isRetryableTransportError(err error) bool {
