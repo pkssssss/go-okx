@@ -206,8 +206,11 @@ func tradeAccountRateLimitRESTKeys() []routeKey {
 func tradeAccountRateLimitWSKeys() []routeKey {
 	return []routeKey{
 		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpOrder)},
+		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpBatchOrders)},
 		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpCancelOrder)},
+		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpBatchCancelOrders)},
 		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpAmendOrder)},
+		{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpBatchAmendOrders)},
 	}
 }
 

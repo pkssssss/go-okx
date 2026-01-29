@@ -196,12 +196,15 @@ func TestTradeAccountRateLimitService_Do_UpdatesGate_WSCoversTradeOps(t *testing
 	g := c.gate
 	g.mu.RLock()
 	_, okOrder := g.routeLimiter[routeKey{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpOrder)}]
+	_, okBatchOrder := g.routeLimiter[routeKey{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpBatchOrders)}]
 	_, okCancel := g.routeLimiter[routeKey{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpCancelOrder)}]
+	_, okBatchCancel := g.routeLimiter[routeKey{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpBatchCancelOrders)}]
 	_, okAmend := g.routeLimiter[routeKey{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpAmendOrder)}]
+	_, okBatchAmend := g.routeLimiter[routeKey{Method: requestGateMethodWS, Endpoint: wsOpGateKey(wsOpBatchAmendOrders)}]
 	g.mu.RUnlock()
 
-	if !okOrder || !okCancel || !okAmend {
-		t.Fatalf("missing ws op limiters: order=%v cancel=%v amend=%v", okOrder, okCancel, okAmend)
+	if !okOrder || !okBatchOrder || !okCancel || !okBatchCancel || !okAmend || !okBatchAmend {
+		t.Fatalf("missing ws op limiters: order=%v batch-order=%v cancel=%v batch-cancel=%v amend=%v batch-amend=%v", okOrder, okBatchOrder, okCancel, okBatchCancel, okAmend, okBatchAmend)
 	}
 }
 

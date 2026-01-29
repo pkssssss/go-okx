@@ -36,7 +36,7 @@
 
 WS 交易 op 仅支持 `client.NewWSPrivate()`（public/business/business-private 都不支持）。
 
-为减少限频风暴风险，SDK 在首次触发 WS 交易 op（`order/cancel-order/amend-order`）前会做一次 preflight：
+为减少限频风暴风险，SDK 在首次触发 WS 交易 op（`order/batch-orders/cancel-order/batch-cancel-orders/amend-order/batch-amend-orders`）前会做一次 preflight：
 
 - 通过 REST 拉取 `GET /api/v5/trade/account-rate-limit` 并更新 request gate 的路由限速；
 - 若 preflight 失败，默认 **Fail-Closed**：直接返回 `*okx.RequestStateError{Stage: preflight, Dispatched: false}`，不会发送 WS op。

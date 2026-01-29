@@ -623,7 +623,7 @@ func (w *WSClient) doOpAndWaitRaw(ctx context.Context, op string, args any) (*WS
 		return nil, nil, errors.New("okx: ws op requires args")
 	}
 
-	if w.c != nil && (op == wsOpOrder || op == wsOpCancelOrder || op == wsOpAmendOrder) {
+	if w.c != nil && (op == wsOpOrder || op == wsOpBatchOrders || op == wsOpCancelOrder || op == wsOpBatchCancelOrders || op == wsOpAmendOrder || op == wsOpBatchAmendOrders) {
 		if err := w.c.ensureTradeAccountRateLimit(ctx); err != nil {
 			return nil, nil, &RequestStateError{
 				Stage:       RequestStagePreflight,

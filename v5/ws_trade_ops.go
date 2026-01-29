@@ -11,6 +11,10 @@ const (
 	wsOpOrder       = "order"
 	wsOpCancelOrder = "cancel-order"
 	wsOpAmendOrder  = "amend-order"
+
+	wsOpBatchOrders       = "batch-orders"
+	wsOpBatchCancelOrders = "batch-cancel-orders"
+	wsOpBatchAmendOrders  = "batch-amend-orders"
 )
 
 var errWSPrivateRequired = errors.New("okx: ws private client required")
@@ -252,7 +256,7 @@ func (w *WSClient) PlaceOrder(ctx context.Context, arg WSPlaceOrderArg) (*TradeO
 	return &acks[0], nil
 }
 
-// PlaceOrders 通过 WS 批量下单（op=order，args 为数组）。
+// PlaceOrders 通过 WS 批量下单（op=batch-orders，args 为数组）。
 // 注意：该方法会真实提交订单（建议在模拟盘验证，且调用方务必设置超时 ctx）。
 func (w *WSClient) PlaceOrders(ctx context.Context, args ...WSPlaceOrderArg) ([]TradeOrderAck, error) {
 	if err := w.requirePrivate(); err != nil {
@@ -270,7 +274,7 @@ func (w *WSClient) PlaceOrders(ctx context.Context, args ...WSPlaceOrderArg) ([]
 		}
 	}
 
-	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpOrder, args)
+	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpBatchOrders, args)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +327,7 @@ func (w *WSClient) CancelOrder(ctx context.Context, arg WSCancelOrderArg) (*Trad
 	return &acks[0], nil
 }
 
-// CancelOrders 通过 WS 批量撤单（op=cancel-order，args 为数组）。
+// CancelOrders 通过 WS 批量撤单（op=batch-cancel-orders，args 为数组）。
 // 注意：该方法会真实撤销订单（建议在模拟盘验证，且调用方务必设置超时 ctx）。
 func (w *WSClient) CancelOrders(ctx context.Context, args ...WSCancelOrderArg) ([]TradeOrderAck, error) {
 	if err := w.requirePrivate(); err != nil {
@@ -341,7 +345,7 @@ func (w *WSClient) CancelOrders(ctx context.Context, args ...WSCancelOrderArg) (
 		}
 	}
 
-	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpCancelOrder, args)
+	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpBatchCancelOrders, args)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +398,7 @@ func (w *WSClient) AmendOrder(ctx context.Context, arg WSAmendOrderArg) (*TradeO
 	return &acks[0], nil
 }
 
-// AmendOrders 通过 WS 批量改单（op=amend-order，args 为数组）。
+// AmendOrders 通过 WS 批量改单（op=batch-amend-orders，args 为数组）。
 // 注意：该方法会真实修改订单（建议在模拟盘验证，且调用方务必设置超时 ctx）。
 func (w *WSClient) AmendOrders(ctx context.Context, args ...WSAmendOrderArg) ([]TradeOrderAck, error) {
 	if err := w.requirePrivate(); err != nil {
@@ -412,7 +416,7 @@ func (w *WSClient) AmendOrders(ctx context.Context, args ...WSAmendOrderArg) ([]
 		}
 	}
 
-	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpAmendOrder, args)
+	reply, raw, err := w.doOpAndWaitRaw(ctx, wsOpBatchAmendOrders, args)
 	if err != nil {
 		return nil, err
 	}
