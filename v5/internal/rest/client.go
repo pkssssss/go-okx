@@ -3,6 +3,7 @@ package rest
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -34,6 +35,48 @@ func (e *ResponseBodyTooLargeError) Error() string {
 		return "rest: response body too large"
 	}
 	return "rest: response body too large"
+}
+
+var (
+	errRedirectBlockedSignedRequest = errors.New("rest: redirect blocked for signed request")
+	errRedirectBlockedCrossHost     = errors.New("rest: redirect to different host blocked")
+)
+
+var defaultHTTPClient = &http.Client{
+	CheckRedirect: checkRedirect,
+}
+
+func checkRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		return nil
+	}
+	from := via[0]
+	if from != nil && hasOKAccessHeaders(from.Header) {
+		return errRedirectBlockedSignedRequest
+	}
+	if from != nil && from.URL != nil && req != nil && req.URL != nil {
+		if !sameSchemeAndHost(from.URL, req.URL) {
+			return errRedirectBlockedCrossHost
+		}
+	}
+	return nil
+}
+
+func hasOKAccessHeaders(h http.Header) bool {
+	if h == nil {
+		return false
+	}
+	return h.Get("OK-ACCESS-KEY") != "" ||
+		h.Get("OK-ACCESS-PASSPHRASE") != "" ||
+		h.Get("OK-ACCESS-TIMESTAMP") != "" ||
+		h.Get("OK-ACCESS-SIGN") != ""
+}
+
+func sameSchemeAndHost(a, b *url.URL) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	return a.Scheme == b.Scheme && a.Host == b.Host
 }
 
 // ContextWithDefaultTimeout 在 ctx 未设置 deadline 时，为其附加 DefaultTimeout（Fail-Fast）。
@@ -85,12 +128,20 @@ func (c *Client) Do(ctx context.Context, method, requestPath string, body []byte
 	}
 
 	hc := c.HTTPClient
-	if hc == nil {
-		hc = http.DefaultClient
+	switch {
+	case hc == nil:
+		hc = defaultHTTPClient
+	case hc.CheckRedirect == nil:
+		hcCopy := *hc
+		hcCopy.CheckRedirect = checkRedirect
+		hc = &hcCopy
 	}
 
 	res, err := hc.Do(req)
 	if err != nil {
+		if res != nil && res.Body != nil {
+			_ = res.Body.Close()
+		}
 		return 0, nil, nil, err
 	}
 	defer func() {

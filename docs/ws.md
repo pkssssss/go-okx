@@ -32,6 +32,17 @@
 
 `Subscribe(args...)` 仅记录并尝试发送（不等待 ACK），适合你自己另有“订阅确认机制”的场景。
 
+### 2.3 WS 交易 op（下单/撤单/改单）
+
+WS 交易 op 仅支持 `client.NewWSPrivate()`（public/business/business-private 都不支持）。
+
+为减少限频风暴风险，SDK 在首次触发 WS 交易 op（`order/cancel-order/amend-order`）前会做一次 preflight：
+
+- 通过 REST 拉取 `GET /api/v5/trade/account-rate-limit` 并更新 request gate 的路由限速；
+- 若 preflight 失败，默认 **Fail-Closed**：直接返回 `*okx.RequestStateError{Stage: preflight, Dispatched: false}`，不会发送 WS op。
+
+建议：在启动阶段显式调用一次 `c.NewTradeAccountRateLimitService().Do(ctx)`，避免首单/首撤额外 RTT，也避免把 preflight 失败暴露到交易链路上（详见 `docs/runbook.md` 的限频章节）。
+
 ## 3. 心跳与断线（SDK 内置）
 
 ### 3.1 控制帧 ping/pong

@@ -42,12 +42,17 @@ _, _ = c.SyncTime(ctx)
 
 ### 2.3 生产环境建议：设置 HTTP 超时
 
-SDK 默认使用 `http.DefaultClient`（无超时）。生产环境强烈建议显式配置超时，避免网络异常导致请求悬挂：
+SDK 默认使用“无超时”的 HTTP client（等价于 `Timeout=0`），生产环境强烈建议显式配置超时，避免网络异常导致请求悬挂：
 
 ```go
 hc := &http.Client{Timeout: 10 * time.Second}
 c := okx.NewClient(okx.WithHTTPClient(hc))
 ```
+
+安全提示（redirect）：
+
+- SDK 默认会**拒绝跨 scheme/host 的 redirect**，并且**签名请求不会跟随 redirect**（避免 `OK-ACCESS-*` 自定义头在跳转时被转发导致凭证泄露）。
+- 若你自定义 `http.Client` 且显式设置了 `CheckRedirect`，请确保同样的安全策略。
 
 ## 3. 常用入口（你大概率只需要这些）
 

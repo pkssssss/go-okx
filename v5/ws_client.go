@@ -625,7 +625,13 @@ func (w *WSClient) doOpAndWaitRaw(ctx context.Context, op string, args any) (*WS
 
 	if w.c != nil && (op == wsOpOrder || op == wsOpCancelOrder || op == wsOpAmendOrder) {
 		if err := w.c.ensureTradeAccountRateLimit(ctx); err != nil {
-			w.onError(fmt.Errorf("okx: ws trade account-rate-limit prime failed: %w", err))
+			return nil, nil, &RequestStateError{
+				Stage:       RequestStagePreflight,
+				Dispatched:  false,
+				Method:      requestGateMethodWS,
+				RequestPath: wsOpGateKey(op),
+				Err:         err,
+			}
 		}
 	}
 

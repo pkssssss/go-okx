@@ -525,22 +525,21 @@ func (c *Client) ensureTradeAccountRateLimit(ctx context.Context) error {
 		ctx = context.Background()
 	}
 
-	now := time.Now()
-	if last := c.tradeAccountRateLimitLastAttempt.Load(); last != 0 {
-		if now.Sub(time.Unix(0, last)) < tradeAccountRateLimitPrimeMinInterval {
-			return nil
-		}
-	}
-
 	c.tradeAccountRateLimitMu.Lock()
 	defer c.tradeAccountRateLimitMu.Unlock()
 
 	if c.tradeAccountRateLimitPrimed.Load() {
 		return nil
 	}
-	now = time.Now()
+
+	now := time.Now()
 	if last := c.tradeAccountRateLimitLastAttempt.Load(); last != 0 {
 		if now.Sub(time.Unix(0, last)) < tradeAccountRateLimitPrimeMinInterval {
+			if v := c.tradeAccountRateLimitLastErr.Load(); v != nil {
+				if msg, ok := v.(string); ok && msg != "" {
+					return fmt.Errorf("okx: trade account-rate-limit prime failed recently: %s", msg)
+				}
+			}
 			return nil
 		}
 	}

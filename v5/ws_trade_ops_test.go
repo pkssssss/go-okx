@@ -103,6 +103,9 @@ func TestWSClient_PlaceOrder_WSOpReply(t *testing.T) {
 		opReqCh := make(chan opReq, 1)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			c, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
 				t.Fatalf("upgrade error: %v", err)
@@ -139,11 +142,15 @@ func TestWSClient_PlaceOrder_WSOpReply(t *testing.T) {
 
 		wsURL := "ws" + srv.URL[len("http"):]
 
-		client := NewClient(WithCredentials(Credentials{
-			APIKey:     "mykey",
-			SecretKey:  "mysecret",
-			Passphrase: "mypass",
-		}))
+		client := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+		)
 		ws := client.NewWSPrivate(WithWSURL(wsURL))
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -190,6 +197,9 @@ func TestWSClient_PlaceOrder_WSOpReply(t *testing.T) {
 
 	t.Run("top_level_code_error", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			c, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
 				t.Fatalf("upgrade error: %v", err)
@@ -223,11 +233,15 @@ func TestWSClient_PlaceOrder_WSOpReply(t *testing.T) {
 
 		wsURL := "ws" + srv.URL[len("http"):]
 
-		client := NewClient(WithCredentials(Credentials{
-			APIKey:     "mykey",
-			SecretKey:  "mysecret",
-			Passphrase: "mypass",
-		}))
+		client := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+		)
 		ws := client.NewWSPrivate(WithWSURL(wsURL))
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -258,6 +272,9 @@ func TestWSClient_PlaceOrder_WSOpReply(t *testing.T) {
 
 	t.Run("data_sCode_error", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			c, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
 				t.Fatalf("upgrade error: %v", err)
@@ -291,11 +308,15 @@ func TestWSClient_PlaceOrder_WSOpReply(t *testing.T) {
 
 		wsURL := "ws" + srv.URL[len("http"):]
 
-		client := NewClient(WithCredentials(Credentials{
-			APIKey:     "mykey",
-			SecretKey:  "mysecret",
-			Passphrase: "mypass",
-		}))
+		client := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+		)
 		ws := client.NewWSPrivate(WithWSURL(wsURL))
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -342,6 +363,9 @@ func TestWSClient_CancelOrder_WSOpReply(t *testing.T) {
 	opReqCh := make(chan opReq, 1)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			t.Fatalf("upgrade error: %v", err)
@@ -376,11 +400,15 @@ func TestWSClient_CancelOrder_WSOpReply(t *testing.T) {
 
 	wsURL := "ws" + srv.URL[len("http"):]
 
-	client := NewClient(WithCredentials(Credentials{
-		APIKey:     "mykey",
-		SecretKey:  "mysecret",
-		Passphrase: "mypass",
-	}))
+	client := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+	)
 	ws := client.NewWSPrivate(WithWSURL(wsURL))
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -435,6 +463,9 @@ func TestWSClient_AmendOrder_WSOpReply(t *testing.T) {
 	opReqCh := make(chan opReq, 1)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			t.Fatalf("upgrade error: %v", err)
@@ -469,11 +500,15 @@ func TestWSClient_AmendOrder_WSOpReply(t *testing.T) {
 
 	wsURL := "ws" + srv.URL[len("http"):]
 
-	client := NewClient(WithCredentials(Credentials{
-		APIKey:     "mykey",
-		SecretKey:  "mysecret",
-		Passphrase: "mypass",
-	}))
+	client := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+	)
 	ws := client.NewWSPrivate(WithWSURL(wsURL))
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -528,6 +563,9 @@ func TestWSClient_TradeOp_EventError(t *testing.T) {
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			t.Fatalf("upgrade error: %v", err)
@@ -560,11 +598,15 @@ func TestWSClient_TradeOp_EventError(t *testing.T) {
 
 	wsURL := "ws" + srv.URL[len("http"):]
 
-	client := NewClient(WithCredentials(Credentials{
-		APIKey:     "mykey",
-		SecretKey:  "mysecret",
-		Passphrase: "mypass",
-	}))
+	client := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+	)
 	ws := client.NewWSPrivate(WithWSURL(wsURL))
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -607,6 +649,9 @@ func TestWSClient_PlaceOrders_WSOpReply(t *testing.T) {
 		opReqCh := make(chan opReq, 1)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			c, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
 				t.Fatalf("upgrade error: %v", err)
@@ -641,11 +686,15 @@ func TestWSClient_PlaceOrders_WSOpReply(t *testing.T) {
 
 		wsURL := "ws" + srv.URL[len("http"):]
 
-		client := NewClient(WithCredentials(Credentials{
-			APIKey:     "mykey",
-			SecretKey:  "mysecret",
-			Passphrase: "mypass",
-		}))
+		client := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+		)
 		ws := client.NewWSPrivate(WithWSURL(wsURL))
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -688,6 +737,9 @@ func TestWSClient_PlaceOrders_WSOpReply(t *testing.T) {
 
 	t.Run("partial_failure", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
 			c, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
 				t.Fatalf("upgrade error: %v", err)
@@ -721,11 +773,15 @@ func TestWSClient_PlaceOrders_WSOpReply(t *testing.T) {
 
 		wsURL := "ws" + srv.URL[len("http"):]
 
-		client := NewClient(WithCredentials(Credentials{
-			APIKey:     "mykey",
-			SecretKey:  "mysecret",
-			Passphrase: "mypass",
-		}))
+		client := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+		)
 		ws := client.NewWSPrivate(WithWSURL(wsURL))
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -756,4 +812,83 @@ func TestWSClient_PlaceOrders_WSOpReply(t *testing.T) {
 			t.Fatalf("raw = %q", string(be.Raw))
 		}
 	})
+}
+
+func TestWSClient_TradeOp_AccountRateLimitPrimeFailure_FailClosed(t *testing.T) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	opRecvCh := make(chan []byte, 1)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/api/v5/trade/account-rate-limit" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"code":"1","msg":"fail","data":[]}`))
+			return
+		}
+
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("upgrade error: %v", err)
+		}
+		defer c.Close()
+
+		if _, _, err := c.ReadMessage(); err != nil {
+			t.Fatalf("server read login: %v", err)
+		}
+		_ = c.WriteMessage(websocket.TextMessage, []byte(`{"event":"login","code":"0","msg":"","connId":"x"}`))
+
+		_ = c.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+		_, msg, err := c.ReadMessage()
+		if err == nil {
+			opRecvCh <- msg
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	wsURL := "ws" + srv.URL[len("http"):]
+
+	client := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+	)
+	ws := client.NewWSPrivate(WithWSURL(wsURL), WithWSHeartbeat(0))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	if err := ws.Start(ctx, nil, nil); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	t.Cleanup(ws.Close)
+
+	opCtx, opCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	t.Cleanup(opCancel)
+
+	_, err := ws.PlaceOrder(opCtx, WSPlaceOrderArg{
+		InstId:  "BTC-USDT",
+		TdMode:  "cash",
+		Side:    "buy",
+		OrdType: "market",
+		Sz:      "1",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	var rse *RequestStateError
+	if !errors.As(err, &rse) || rse.Stage != RequestStagePreflight || rse.Dispatched {
+		t.Fatalf("error = %#v, want *RequestStateError{Stage:preflight, Dispatched:false}", err)
+	}
+
+	select {
+	case msg := <-opRecvCh:
+		t.Fatalf("unexpected op message dispatched: %s", string(msg))
+	case <-time.After(250 * time.Millisecond):
+	}
 }
