@@ -1,6 +1,7 @@
 .DS_Store
 .idea/
 .vscode/
+.serena/
 
 # 参考代码（不纳入 SDK 仓库）
 参考/
