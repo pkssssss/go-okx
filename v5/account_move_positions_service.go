@@ -139,11 +139,16 @@ func (s *AccountMovePositionsService) Do(ctx context.Context) (*AccountMovePosit
 	}
 
 	var data []AccountMovePositionsAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/move-positions", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/move-positions", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountMovePositions
 	}
-	return &data[0], nil
+	ack := &data[0]
+	if err := accountCheckMovePositionsAck(http.MethodPost, "/api/v5/account/move-positions", requestID, ack); err != nil {
+		return ack, err
+	}
+	return ack, nil
 }

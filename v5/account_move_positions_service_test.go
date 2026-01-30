@@ -2,6 +2,7 @@ package okx
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -87,6 +88,102 @@ func TestAccountMovePositionsService_Do(t *testing.T) {
 		}
 		if len(got.Legs) != 1 || got.Legs[0].From.PosId != "2065471111340792832" || got.Legs[0].To.TdMode != "cross" {
 			t.Fatalf("legs = %#v", got.Legs)
+		}
+	})
+
+	t.Run("partial_failure_state", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("x-request-id", "req-123")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clientId":"test","blockTdId":"2065832911119076864","state":"failed","ts":"1734069018526","fromAcct":"0","toAcct":"test","legs":[{"from":{"posId":"2065471111340792832","instId":"BTC-USD-SWAP","px":"100042.7","side":"sell","sz":"1","sCode":"0","sMsg":""},"to":{"instId":"BTC-USD-SWAP","px":"100042.7","side":"buy","sz":"1","tdMode":"cross","posSide":"net","ccy":"","sCode":"0","sMsg":""}}]}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		ack, err := c.NewAccountMovePositionsService().
+			FromAcct("0").
+			ToAcct("test").
+			ClientId("test").
+			Legs([]AccountMovePositionsLeg{
+				{
+					From: AccountMovePositionsLegFrom{PosId: "2065471111340792832", Sz: "1", Side: "sell"},
+					To:   AccountMovePositionsLegTo{TdMode: "cross", PosSide: "net"},
+				},
+			}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if ack == nil {
+			t.Fatalf("expected ack returned")
+		}
+		var mpErr *AccountMovePositionsError
+		if !errors.As(err, &mpErr) {
+			t.Fatalf("error = %T, want *AccountMovePositionsError", err)
+		}
+		if mpErr.RequestID != "req-123" {
+			t.Fatalf("RequestID = %q, want %q", mpErr.RequestID, "req-123")
+		}
+		if mpErr.Ack == nil || mpErr.Ack.State != "failed" {
+			t.Fatalf("mpErr.Ack = %#v", mpErr.Ack)
+		}
+	})
+
+	t.Run("partial_failure_leg_scode", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("x-request-id", "req-456")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clientId":"test","blockTdId":"2065832911119076864","state":"filled","ts":"1734069018526","fromAcct":"0","toAcct":"test","legs":[{"from":{"posId":"2065471111340792832","instId":"BTC-USD-SWAP","px":"100042.7","side":"sell","sz":"1","sCode":"51000","sMsg":"partial failed"},"to":{"instId":"BTC-USD-SWAP","px":"100042.7","side":"buy","sz":"1","tdMode":"cross","posSide":"net","ccy":"","sCode":"0","sMsg":""}}]}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		ack, err := c.NewAccountMovePositionsService().
+			FromAcct("0").
+			ToAcct("test").
+			ClientId("test").
+			Legs([]AccountMovePositionsLeg{
+				{
+					From: AccountMovePositionsLegFrom{PosId: "2065471111340792832", Sz: "1", Side: "sell"},
+					To:   AccountMovePositionsLegTo{TdMode: "cross", PosSide: "net"},
+				},
+			}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if ack == nil {
+			t.Fatalf("expected ack returned")
+		}
+		var mpErr *AccountMovePositionsError
+		if !errors.As(err, &mpErr) {
+			t.Fatalf("error = %T, want *AccountMovePositionsError", err)
+		}
+		if mpErr.RequestID != "req-456" {
+			t.Fatalf("RequestID = %q, want %q", mpErr.RequestID, "req-456")
+		}
+		if mpErr.Ack == nil || len(mpErr.Ack.Legs) != 1 || mpErr.Ack.Legs[0].From.SCode != "51000" {
+			t.Fatalf("mpErr.Ack = %#v", mpErr.Ack)
 		}
 	})
 
