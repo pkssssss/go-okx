@@ -60,6 +60,22 @@ SDK 默认启用（25s），可配置：
 
 > 注意：`"ping"`/`"pong"` 文本消息会被 SDK 消费，不会进入 raw handler，避免业务侧误解析。
 
+### 3.3 写超时（SDK 内置，重要）
+
+WS 的写操作在异常网络/半开连接下可能长时间阻塞（默认无超时），并持有写互斥锁；一旦写阻塞，会连带阻塞：
+
+- ping/pong 回复
+- 文本心跳 `"ping"` / `"pong"`
+- subscribe/unsubscribe
+- 交易 op（下单/撤单/改单等）
+
+SDK 默认启用写超时（5s），可配置：
+
+- `WithWSWriteTimeout(5*time.Second)`：调整写超时
+- `WithWSWriteTimeout(0)`：禁用写超时（不建议）
+
+当写超时/写失败时，SDK 会主动断开连接并触发重连（Fail-Fast），以避免“写卡住导致整条链路停滞”。
+
 ## 4. Typed handler（推荐）
 
 ### 4.1 为什么推荐 typed handler

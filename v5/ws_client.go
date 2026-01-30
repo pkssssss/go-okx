@@ -27,6 +27,7 @@ const (
 )
 
 const defaultWSReadLimitBytes int64 = 16 << 20 // 16MiB：避免过小上限导致 "read limit exceeded" 断线
+const defaultWSWriteTimeout = 5 * time.Second  // 写超时：避免异常网络下写阻塞拖垮 WS 链路
 
 type wsKind uint8
 
@@ -184,6 +185,21 @@ func WithWSReadLimitBytes(limit int64) WSOption {
 	}
 }
 
+// WithWSWriteTimeout 设置 WebSocket 写超时（write deadline）。
+//
+// 说明：
+// - gorilla/websocket 的写操作在异常网络/半开连接下可能长时间阻塞（默认无超时），并持有写互斥锁；
+// - 一旦写阻塞，会连带阻塞 ping/pong、心跳、订阅与业务 op 写入，放大为整条 WS 运行链路停滞；
+// - SDK 默认 5s；若 timeout<=0 则禁用（不建议）。
+func WithWSWriteTimeout(timeout time.Duration) WSOption {
+	return func(c *WSClient) {
+		if timeout < 0 {
+			timeout = 0
+		}
+		c.writeTimeout = timeout
+	}
+}
+
 // WithWSResubscribeWaitTimeout 设置断线重连后自动重订阅的确认超时。
 //
 // 默认 5s。若传入 timeout<=0，将回退到默认值。
@@ -280,6 +296,7 @@ type WSClient struct {
 	heartbeat       time.Duration
 	resubscribeWait time.Duration
 	readLimitBytes  int64
+	writeTimeout    time.Duration
 	lastRecv        atomic.Int64
 	lastPing        atomic.Int64
 	dialAttempts    atomic.Uint64
@@ -395,6 +412,7 @@ func (c *Client) NewWSPublic(opts ...WSOption) *WSClient {
 		backoff:              250 * time.Millisecond,
 		heartbeat:            25 * time.Second,
 		resubscribeWait:      5 * time.Second,
+		writeTimeout:         defaultWSWriteTimeout,
 		typedAsync:           true,
 		typedBuffer:          1024,
 		typedQueueFullPolicy: WSQueueFullBlock,
@@ -426,6 +444,7 @@ func (c *Client) NewWSPrivate(opts ...WSOption) *WSClient {
 		backoff:              250 * time.Millisecond,
 		heartbeat:            25 * time.Second,
 		resubscribeWait:      5 * time.Second,
+		writeTimeout:         defaultWSWriteTimeout,
 		typedAsync:           true,
 		typedBuffer:          1024,
 		typedQueueFullPolicy: WSQueueFullBlock,
@@ -456,6 +475,7 @@ func (c *Client) NewWSBusiness(opts ...WSOption) *WSClient {
 		backoff:              250 * time.Millisecond,
 		heartbeat:            25 * time.Second,
 		resubscribeWait:      5 * time.Second,
+		writeTimeout:         defaultWSWriteTimeout,
 		typedAsync:           true,
 		typedBuffer:          1024,
 		typedQueueFullPolicy: WSQueueFullBlock,
@@ -489,6 +509,7 @@ func (c *Client) NewWSBusinessPrivate(opts ...WSOption) *WSClient {
 		backoff:              250 * time.Millisecond,
 		heartbeat:            25 * time.Second,
 		resubscribeWait:      5 * time.Second,
+		writeTimeout:         defaultWSWriteTimeout,
 		typedAsync:           true,
 		typedBuffer:          1024,
 		typedQueueFullPolicy: WSQueueFullBlock,
@@ -1632,15 +1653,39 @@ func (w *WSClient) wsParseGuard(channel string, ok bool, err error) bool {
 }
 
 func (w *WSClient) writeJSON(conn *websocket.Conn, v any) error {
+	if w == nil || conn == nil {
+		return errors.New("okx: ws write requires conn")
+	}
+	timeout := w.writeTimeout
+
 	w.writeMu.Lock()
-	defer w.writeMu.Unlock()
-	return conn.WriteJSON(v)
+	if timeout > 0 {
+		_ = conn.SetWriteDeadline(time.Now().Add(timeout))
+	}
+	err := conn.WriteJSON(v)
+	w.writeMu.Unlock()
+	if err != nil {
+		w.closeConn()
+	}
+	return err
 }
 
 func (w *WSClient) writeText(conn *websocket.Conn, message string) error {
+	if w == nil || conn == nil {
+		return errors.New("okx: ws write requires conn")
+	}
+	timeout := w.writeTimeout
+
 	w.writeMu.Lock()
-	defer w.writeMu.Unlock()
-	return conn.WriteMessage(websocket.TextMessage, []byte(message))
+	if timeout > 0 {
+		_ = conn.SetWriteDeadline(time.Now().Add(timeout))
+	}
+	err := conn.WriteMessage(websocket.TextMessage, []byte(message))
+	w.writeMu.Unlock()
+	if err != nil {
+		w.closeConn()
+	}
+	return err
 }
 
 func (w *WSClient) writeControl(conn *websocket.Conn, messageType int, data []byte, timeout time.Duration) error {
