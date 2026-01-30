@@ -232,8 +232,9 @@ v0.1 路由策略：
 
 高可用建议：
 
-- 若 handler 逻辑较重，建议启用 `WithWSTypedHandlerAsync(buffer)` 将 typed handler 移到独立 worker goroutine 执行（避免阻塞 read goroutine）。
-- 队列满时会丢弃该条 typed 回调，并通过 `errHandler` 报错；调用方可调大 buffer 或优化 handler。
+- SDK 默认启用 typed handler 的异步分发（buffer=1024），回调在独立 worker goroutine 中执行；如需调整 buffer 可用 `WithWSTypedHandlerAsync(buffer)`。
+- 如需在 WS read goroutine 中执行（不推荐，仅适合极轻 handler），可使用 `WithWSTypedHandlerInline()`。
+- 队列满默认阻塞等待入队（`WSQueueFullBlock`），并通过 `errHandler` 上报队列满事件；可用 `WithWSQueueFullPolicy(WSQueueFullDrop|WSQueueFullDisconnect)` 调整策略。
 
 ### 8.5 业务 op 请求/响应（交易链路闭环）
 

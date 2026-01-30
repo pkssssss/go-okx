@@ -1,7 +1,7 @@
 package okx
 
 // WithWSOrdersHandler 设置 orders 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSOrdersHandler(handler func(order TradeOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnOrders(handler)
@@ -9,7 +9,7 @@ func WithWSOrdersHandler(handler func(order TradeOrder)) WSOption {
 }
 
 // WithWSFillsHandler 设置 fills 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSFillsHandler(handler func(fill WSFill)) WSOption {
 	return func(c *WSClient) {
 		c.OnFills(handler)
@@ -17,7 +17,7 @@ func WithWSFillsHandler(handler func(fill WSFill)) WSOption {
 }
 
 // WithWSAccountHandler 设置 account 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSAccountHandler(handler func(balance AccountBalance)) WSOption {
 	return func(c *WSClient) {
 		c.OnAccount(handler)
@@ -25,7 +25,7 @@ func WithWSAccountHandler(handler func(balance AccountBalance)) WSOption {
 }
 
 // WithWSPositionsHandler 设置 positions 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSPositionsHandler(handler func(position AccountPosition)) WSOption {
 	return func(c *WSClient) {
 		c.OnPositions(handler)
@@ -33,7 +33,7 @@ func WithWSPositionsHandler(handler func(position AccountPosition)) WSOption {
 }
 
 // WithWSBalanceAndPositionHandler 设置 balance_and_position 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSBalanceAndPositionHandler(handler func(data WSBalanceAndPosition)) WSOption {
 	return func(c *WSClient) {
 		c.OnBalanceAndPosition(handler)
@@ -41,7 +41,7 @@ func WithWSBalanceAndPositionHandler(handler func(data WSBalanceAndPosition)) WS
 }
 
 // WithWSLiquidationWarningHandler 设置 liquidation-warning 推送的逐条回调（private WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSLiquidationWarningHandler(handler func(warning WSLiquidationWarning)) WSOption {
 	return func(c *WSClient) {
 		c.OnLiquidationWarning(handler)
@@ -49,7 +49,7 @@ func WithWSLiquidationWarningHandler(handler func(warning WSLiquidationWarning))
 }
 
 // WithWSAccountGreeksHandler 设置 account-greeks 推送的逐条回调（private WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSAccountGreeksHandler(handler func(greeks AccountGreeks)) WSOption {
 	return func(c *WSClient) {
 		c.OnAccountGreeks(handler)
@@ -57,7 +57,7 @@ func WithWSAccountGreeksHandler(handler func(greeks AccountGreeks)) WSOption {
 }
 
 // WithWSOrdersAlgoHandler 设置 orders-algo 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSOrdersAlgoHandler(handler func(order TradeAlgoOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnOrdersAlgo(handler)
@@ -65,7 +65,7 @@ func WithWSOrdersAlgoHandler(handler func(order TradeAlgoOrder)) WSOption {
 }
 
 // WithWSAlgoAdvanceHandler 设置 algo-advance 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSAlgoAdvanceHandler(handler func(order TradeAlgoOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnAlgoAdvance(handler)
@@ -73,7 +73,7 @@ func WithWSAlgoAdvanceHandler(handler func(order TradeAlgoOrder)) WSOption {
 }
 
 // WithWSGridOrdersSpotHandler 设置 grid-orders-spot 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSGridOrdersSpotHandler(handler func(order WSGridOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnGridOrdersSpot(handler)
@@ -81,7 +81,7 @@ func WithWSGridOrdersSpotHandler(handler func(order WSGridOrder)) WSOption {
 }
 
 // WithWSGridOrdersContractHandler 设置 grid-orders-contract 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSGridOrdersContractHandler(handler func(order WSGridOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnGridOrdersContract(handler)
@@ -89,7 +89,7 @@ func WithWSGridOrdersContractHandler(handler func(order WSGridOrder)) WSOption {
 }
 
 // WithWSGridPositionsHandler 设置 grid-positions 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSGridPositionsHandler(handler func(position WSGridPosition)) WSOption {
 	return func(c *WSClient) {
 		c.OnGridPositions(handler)
@@ -97,7 +97,7 @@ func WithWSGridPositionsHandler(handler func(position WSGridPosition)) WSOption 
 }
 
 // WithWSGridSubOrdersHandler 设置 grid-sub-orders 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSGridSubOrdersHandler(handler func(order WSGridSubOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnGridSubOrders(handler)
@@ -105,7 +105,7 @@ func WithWSGridSubOrdersHandler(handler func(order WSGridSubOrder)) WSOption {
 }
 
 // WithWSAlgoRecurringBuyHandler 设置 algo-recurring-buy 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSAlgoRecurringBuyHandler(handler func(order WSRecurringBuyOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnAlgoRecurringBuy(handler)
@@ -113,7 +113,7 @@ func WithWSAlgoRecurringBuyHandler(handler func(order WSRecurringBuyOrder)) WSOp
 }
 
 // WithWSCopyTradingLeadNotificationHandler 设置 copytrading-lead-notification 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSCopyTradingLeadNotificationHandler(handler func(note WSCopyTradingLeadNotification)) WSOption {
 	return func(c *WSClient) {
 		c.OnCopyTradingLeadNotification(handler)
@@ -121,7 +121,7 @@ func WithWSCopyTradingLeadNotificationHandler(handler func(note WSCopyTradingLea
 }
 
 // WithWSRFQsHandler 设置 rfqs 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSRFQsHandler(handler func(rfq WSRFQ)) WSOption {
 	return func(c *WSClient) {
 		c.OnRFQs(handler)
@@ -129,7 +129,7 @@ func WithWSRFQsHandler(handler func(rfq WSRFQ)) WSOption {
 }
 
 // WithWSQuotesHandler 设置 quotes 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSQuotesHandler(handler func(quote WSQuote)) WSOption {
 	return func(c *WSClient) {
 		c.OnQuotes(handler)
@@ -137,7 +137,7 @@ func WithWSQuotesHandler(handler func(quote WSQuote)) WSOption {
 }
 
 // WithWSStrucBlockTradesHandler 设置 struc-block-trades 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSStrucBlockTradesHandler(handler func(trade WSStrucBlockTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnStrucBlockTrades(handler)
@@ -145,7 +145,7 @@ func WithWSStrucBlockTradesHandler(handler func(trade WSStrucBlockTrade)) WSOpti
 }
 
 // WithWSPublicStrucBlockTradesHandler 设置 public-struc-block-trades 推送的逐条回调（business WS，无需登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSPublicStrucBlockTradesHandler(handler func(trade WSPublicStrucBlockTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnPublicStrucBlockTrades(handler)
@@ -153,7 +153,7 @@ func WithWSPublicStrucBlockTradesHandler(handler func(trade WSPublicStrucBlockTr
 }
 
 // WithWSPublicBlockTradesHandler 设置 public-block-trades 推送的逐条回调（business WS，无需登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSPublicBlockTradesHandler(handler func(trade BlockTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnPublicBlockTrades(handler)
@@ -161,7 +161,7 @@ func WithWSPublicBlockTradesHandler(handler func(trade BlockTrade)) WSOption {
 }
 
 // WithWSBlockTickersHandler 设置 block-tickers 推送的逐条回调（business WS，无需登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSBlockTickersHandler(handler func(ticker WSBlockTicker)) WSOption {
 	return func(c *WSClient) {
 		c.OnBlockTickers(handler)
@@ -169,7 +169,7 @@ func WithWSBlockTickersHandler(handler func(ticker WSBlockTicker)) WSOption {
 }
 
 // WithWSDepositInfoHandler 设置 deposit-info 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
 	return func(c *WSClient) {
 		c.OnDepositInfo(handler)
@@ -177,7 +177,7 @@ func WithWSDepositInfoHandler(handler func(info WSDepositInfo)) WSOption {
 }
 
 // WithWSWithdrawalInfoHandler 设置 withdrawal-info 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSWithdrawalInfoHandler(handler func(info WSWithdrawalInfo)) WSOption {
 	return func(c *WSClient) {
 		c.OnWithdrawalInfo(handler)
@@ -185,7 +185,7 @@ func WithWSWithdrawalInfoHandler(handler func(info WSWithdrawalInfo)) WSOption {
 }
 
 // WithWSSprdOrdersHandler 设置 sprd-orders 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSSprdOrdersHandler(handler func(order SprdOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnSprdOrders(handler)
@@ -193,7 +193,7 @@ func WithWSSprdOrdersHandler(handler func(order SprdOrder)) WSOption {
 }
 
 // WithWSSprdTradesHandler 设置 sprd-trades 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSSprdTradesHandler(handler func(trade WSSprdTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnSprdTrades(handler)
@@ -201,7 +201,7 @@ func WithWSSprdTradesHandler(handler func(trade WSSprdTrade)) WSOption {
 }
 
 // WithWSTickersHandler 设置 tickers 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSTickersHandler(handler func(ticker MarketTicker)) WSOption {
 	return func(c *WSClient) {
 		c.OnTickers(handler)
@@ -209,7 +209,7 @@ func WithWSTickersHandler(handler func(ticker MarketTicker)) WSOption {
 }
 
 // WithWSTradesHandler 设置 trades 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSTradesHandler(handler func(trade MarketTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnTrades(handler)
@@ -217,7 +217,7 @@ func WithWSTradesHandler(handler func(trade MarketTrade)) WSOption {
 }
 
 // WithWSTradesAllHandler 设置 trades-all 推送的逐条回调（business WS）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSTradesAllHandler(handler func(trade MarketTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnTradesAll(handler)
@@ -225,7 +225,7 @@ func WithWSTradesAllHandler(handler func(trade MarketTrade)) WSOption {
 }
 
 // WithWSStatusHandler 设置 status 推送的逐条回调（public WS）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSStatusHandler(handler func(status SystemStatus)) WSOption {
 	return func(c *WSClient) {
 		c.OnStatus(handler)
@@ -233,7 +233,7 @@ func WithWSStatusHandler(handler func(status SystemStatus)) WSOption {
 }
 
 // WithWSOrderBookHandler 设置深度（order book）推送回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 // 建议配合 WSOrderBookStore 合并 snapshot/update 并校验 seqId/checksum。
 func WithWSOrderBookHandler(handler func(data WSData[WSOrderBook])) WSOption {
 	return func(c *WSClient) {
@@ -242,7 +242,7 @@ func WithWSOrderBookHandler(handler func(data WSData[WSOrderBook])) WSOption {
 }
 
 // WithWSOpenInterestHandler 设置 open-interest 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSOpenInterestHandler(handler func(oi OpenInterest)) WSOption {
 	return func(c *WSClient) {
 		c.OnOpenInterest(handler)
@@ -250,7 +250,7 @@ func WithWSOpenInterestHandler(handler func(oi OpenInterest)) WSOption {
 }
 
 // WithWSFundingRateHandler 设置 funding-rate 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSFundingRateHandler(handler func(rate FundingRate)) WSOption {
 	return func(c *WSClient) {
 		c.OnFundingRate(handler)
@@ -258,7 +258,7 @@ func WithWSFundingRateHandler(handler func(rate FundingRate)) WSOption {
 }
 
 // WithWSMarkPriceHandler 设置 mark-price 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSMarkPriceHandler(handler func(price MarkPrice)) WSOption {
 	return func(c *WSClient) {
 		c.OnMarkPrice(handler)
@@ -266,7 +266,7 @@ func WithWSMarkPriceHandler(handler func(price MarkPrice)) WSOption {
 }
 
 // WithWSIndexTickersHandler 设置 index-tickers 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSIndexTickersHandler(handler func(ticker IndexTicker)) WSOption {
 	return func(c *WSClient) {
 		c.OnIndexTickers(handler)
@@ -274,7 +274,7 @@ func WithWSIndexTickersHandler(handler func(ticker IndexTicker)) WSOption {
 }
 
 // WithWSPriceLimitHandler 设置 price-limit 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSPriceLimitHandler(handler func(limit PriceLimit)) WSOption {
 	return func(c *WSClient) {
 		c.OnPriceLimit(handler)
@@ -282,7 +282,7 @@ func WithWSPriceLimitHandler(handler func(limit PriceLimit)) WSOption {
 }
 
 // WithWSOptSummaryHandler 设置 opt-summary 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSOptSummaryHandler(handler func(summary OptSummary)) WSOption {
 	return func(c *WSClient) {
 		c.OnOptSummary(handler)
@@ -290,7 +290,7 @@ func WithWSOptSummaryHandler(handler func(summary OptSummary)) WSOption {
 }
 
 // WithWSInstrumentsHandler 设置 instruments 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSInstrumentsHandler(handler func(instrument Instrument)) WSOption {
 	return func(c *WSClient) {
 		c.OnInstruments(handler)
@@ -298,7 +298,7 @@ func WithWSInstrumentsHandler(handler func(instrument Instrument)) WSOption {
 }
 
 // WithWSEstimatedPriceHandler 设置 estimated-price 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSEstimatedPriceHandler(handler func(price EstimatedPrice)) WSOption {
 	return func(c *WSClient) {
 		c.OnEstimatedPrice(handler)
@@ -306,7 +306,7 @@ func WithWSEstimatedPriceHandler(handler func(price EstimatedPrice)) WSOption {
 }
 
 // WithWSADLWarningHandler 设置 adl-warning 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSADLWarningHandler(handler func(warning WSADLWarning)) WSOption {
 	return func(c *WSClient) {
 		c.OnADLWarning(handler)
@@ -314,7 +314,7 @@ func WithWSADLWarningHandler(handler func(warning WSADLWarning)) WSOption {
 }
 
 // WithWSEconomicCalendarHandler 设置 economic-calendar 推送的逐条回调（business WS，需要登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSEconomicCalendarHandler(handler func(event EconomicCalendarEvent)) WSOption {
 	return func(c *WSClient) {
 		c.OnEconomicCalendar(handler)
@@ -322,7 +322,7 @@ func WithWSEconomicCalendarHandler(handler func(event EconomicCalendarEvent)) WS
 }
 
 // WithWSLiquidationOrdersHandler 设置 liquidation-orders 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSLiquidationOrdersHandler(handler func(order LiquidationOrder)) WSOption {
 	return func(c *WSClient) {
 		c.OnLiquidationOrders(handler)
@@ -330,7 +330,7 @@ func WithWSLiquidationOrdersHandler(handler func(order LiquidationOrder)) WSOpti
 }
 
 // WithWSOptionTradesHandler 设置 option-trades 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSOptionTradesHandler(handler func(trade WSOptionTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnOptionTrades(handler)
@@ -338,7 +338,7 @@ func WithWSOptionTradesHandler(handler func(trade WSOptionTrade)) WSOption {
 }
 
 // WithWSCallAuctionDetailsHandler 设置 call-auction-details 推送的逐条回调。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSCallAuctionDetailsHandler(handler func(detail WSCallAuctionDetails)) WSOption {
 	return func(c *WSClient) {
 		c.OnCallAuctionDetails(handler)
@@ -346,7 +346,7 @@ func WithWSCallAuctionDetailsHandler(handler func(detail WSCallAuctionDetails)) 
 }
 
 // WithWSCandlesHandler 设置 K线推送的逐条回调（candle* / sprd-candle*，business WS）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSCandlesHandler(handler func(candle WSCandle)) WSOption {
 	return func(c *WSClient) {
 		c.OnCandles(handler)
@@ -354,7 +354,7 @@ func WithWSCandlesHandler(handler func(candle WSCandle)) WSOption {
 }
 
 // WithWSPriceCandlesHandler 设置指数/标记价格K线推送的逐条回调（mark-price-candle* / index-candle*，business WS）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSPriceCandlesHandler(handler func(candle WSPriceCandle)) WSOption {
 	return func(c *WSClient) {
 		c.OnPriceCandles(handler)
@@ -362,7 +362,7 @@ func WithWSPriceCandlesHandler(handler func(candle WSPriceCandle)) WSOption {
 }
 
 // WithWSSprdPublicTradesHandler 设置 sprd-public-trades 推送的逐条回调（business WS，无需登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSSprdPublicTradesHandler(handler func(trade WSSprdPublicTrade)) WSOption {
 	return func(c *WSClient) {
 		c.OnSprdPublicTrades(handler)
@@ -370,7 +370,7 @@ func WithWSSprdPublicTradesHandler(handler func(trade WSSprdPublicTrade)) WSOpti
 }
 
 // WithWSSprdTickersHandler 设置 sprd-tickers 推送的逐条回调（business WS，无需登录）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSSprdTickersHandler(handler func(ticker MarketSprdTicker)) WSOption {
 	return func(c *WSClient) {
 		c.OnSprdTickers(handler)
@@ -378,7 +378,7 @@ func WithWSSprdTickersHandler(handler func(ticker MarketSprdTicker)) WSOption {
 }
 
 // WithWSOpReplyHandler 设置 WS 业务 op 回包回调（order/cancel-order/amend-order 等）。
-// 注意：默认在 WS read goroutine 中执行；若启用 WithWSTypedHandlerAsync，则在独立 worker goroutine 中执行。
+// 注意：默认在独立 worker goroutine 中执行（typed handler async 默认开启）；如需在 WS read goroutine 中执行，可使用 WithWSTypedHandlerInline。
 func WithWSOpReplyHandler(handler func(reply WSOpReply, raw []byte)) WSOption {
 	return func(c *WSClient) {
 		c.OnOpReply(handler)

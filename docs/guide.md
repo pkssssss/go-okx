@@ -102,14 +102,16 @@ ticker, err := c.NewMarketTickerService().InstId("BTC-USDT").Do(ctx)
 
 ### 5.2 typed handler（推荐）
 
-默认 typed handler 在 WS read goroutine 中执行；若 handler 较重，建议启用异步队列：
+SDK 默认启用 typed handler 的异步分发（buffer=1024），回调在独立 worker goroutine 中执行（降低 handler 阻塞导致断流的概率）。
+
+如需在 WS read goroutine 中执行（不推荐，仅适合极轻 handler），可显式启用 inline：
 
 ```go
-ws := c.NewWSPrivate(okx.WithWSTypedHandlerAsync(1024))
+ws := c.NewWSPrivate(okx.WithWSTypedHandlerInline())
 ```
 
 深度（books 系列）建议配合 `WSOrderBookStore` 做 snapshot/update 合并与 seq/checksum 校验，见示例 `examples/ws_public_books_store_typed`。
-（`WSOrderBookStore` 非并发安全，建议单 goroutine 串行应用。）
+（`WSOrderBookStore` 并发安全；为减少锁竞争，建议单 goroutine 串行 `Apply`，其他 goroutine 只读 `Snapshot`。）
 
 ## 6. 类型/精度约定（字段策略）
 
