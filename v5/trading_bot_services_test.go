@@ -2,9 +2,11 @@ package okx
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -731,4 +733,131 @@ func TestTradingBotSignalSubOrderService_Do_Validation(t *testing.T) {
 	if apiErr.Code != "51000" {
 		t.Fatalf("apiErr.Code = %q, want %q", apiErr.Code, "51000")
 	}
+}
+
+func TestTradingBotStopOrderAlgoServices_Do_PartialFailure(t *testing.T) {
+	fixedNow := time.Date(2020, 6, 30, 12, 34, 56, 789_000_000, time.UTC)
+
+	t.Run("grid_stop_order_algo_partial_failure", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodPost; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/tradingBot/grid/stop-order-algo"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("x-request-id", "rid-grid-stop")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"51000","sMsg":"stop failed","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"0","sMsg":"","tag":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewTradingBotGridStopOrderAlgoService().
+			Orders([]TradingBotGridStopOrder{
+				{AlgoId: "1", InstId: "BTC-USDT", AlgoOrdType: "grid", StopType: "1"},
+				{AlgoId: "2", InstId: "BTC-USDT", AlgoOrdType: "grid", StopType: "1"},
+			}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var batchErr *TradingBotBatchError
+		if !errors.As(err, &batchErr) {
+			t.Fatalf("expected *TradingBotBatchError, got %T: %v", err, err)
+		}
+		if got, want := batchErr.RequestID, "rid-grid-stop"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if !strings.Contains(err.Error(), "requestId=rid-grid-stop") {
+			t.Fatalf("err.Error() = %q", err.Error())
+		}
+		if len(acks) != 2 || acks[0].SCode != "51000" {
+			t.Fatalf("acks = %#v", acks)
+		}
+	})
+
+	t.Run("recurring_stop_order_algo_partial_failure", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodPost; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/tradingBot/recurring/stop-order-algo"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("x-request-id", "rid-recurring-stop")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"51000","sMsg":"stop failed","tag":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewTradingBotRecurringStopOrderAlgoService().
+			Orders([]TradingBotRecurringStopOrder{{AlgoId: "1"}}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var batchErr *TradingBotBatchError
+		if !errors.As(err, &batchErr) {
+			t.Fatalf("expected *TradingBotBatchError, got %T: %v", err, err)
+		}
+		if got, want := batchErr.RequestID, "rid-recurring-stop"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if len(acks) != 1 || acks[0].SCode != "51000" {
+			t.Fatalf("acks = %#v", acks)
+		}
+	})
+
+	t.Run("signal_stop_order_algo_partial_failure", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodPost; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/tradingBot/signal/stop-order-algo"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("x-request-id", "rid-signal-stop")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"51000","sMsg":"stop failed","tag":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewTradingBotSignalStopOrderAlgoService().
+			Orders([]TradingBotSignalStopOrder{{AlgoId: "1"}}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var batchErr *TradingBotBatchError
+		if !errors.As(err, &batchErr) {
+			t.Fatalf("expected *TradingBotBatchError, got %T: %v", err, err)
+		}
+		if got, want := batchErr.RequestID, "rid-signal-stop"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if len(acks) != 1 || acks[0].SCode != "51000" {
+			t.Fatalf("acks = %#v", acks)
+		}
+	})
 }

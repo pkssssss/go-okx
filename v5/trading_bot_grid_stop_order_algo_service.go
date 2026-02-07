@@ -58,8 +58,12 @@ func (s *TradingBotGridStopOrderAlgoService) Do(ctx context.Context) ([]TradingB
 	}
 
 	var data []TradingBotOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/grid/stop-order-algo", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/grid/stop-order-algo", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
+	}
+	if err := tradingBotCheckBatchAcks(http.MethodPost, "/api/v5/tradingBot/grid/stop-order-algo", requestID, data); err != nil {
+		return data, err
 	}
 	return data, nil
 }
