@@ -2,6 +2,7 @@ package okx
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -20,6 +21,7 @@ func TestCopyTradingServices_Do(t *testing.T) {
 		rawQuery     string
 		signed       bool
 		bodyContains []string
+		response     string
 		call         func(c *Client) error
 	}
 
@@ -157,6 +159,7 @@ func TestCopyTradingServices_Do(t *testing.T) {
 			path:     "/api/v5/copytrading/amend-profit-sharing-ratio",
 			rawQuery: "",
 			signed:   true,
+			response: `{"code":"0","msg":"","data":[{"result":true}]}`,
 			bodyContains: []string{
 				`"instType":"SWAP"`,
 				`"profitSharingRatio":"0.1"`,
@@ -186,6 +189,7 @@ func TestCopyTradingServices_Do(t *testing.T) {
 			path:     "/api/v5/copytrading/stop-copy-trading",
 			rawQuery: "",
 			signed:   true,
+			response: `{"code":"0","msg":"","data":[{"result":true}]}`,
 			bodyContains: []string{
 				`"uniqueCode":"UC"`,
 				`"subPosCloseType":"manual_close"`,
@@ -230,6 +234,7 @@ func TestCopyTradingServices_Do(t *testing.T) {
 			path:     "/api/v5/copytrading/first-copy-settings",
 			rawQuery: "",
 			signed:   true,
+			response: `{"code":"0","msg":"","data":[{"result":true}]}`,
 			bodyContains: []string{
 				`"uniqueCode":"UC"`,
 				`"copyMgnMode":"cross"`,
@@ -257,6 +262,7 @@ func TestCopyTradingServices_Do(t *testing.T) {
 			path:     "/api/v5/copytrading/amend-copy-settings",
 			rawQuery: "",
 			signed:   true,
+			response: `{"code":"0","msg":"","data":[{"result":true}]}`,
 			bodyContains: []string{
 				`"uniqueCode":"UC"`,
 				`"copyMgnMode":"cross"`,
@@ -440,7 +446,11 @@ func TestCopyTradingServices_Do(t *testing.T) {
 				}
 
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+				resp := tt.response
+				if resp == "" {
+					resp = `{"code":"0","msg":"","data":[{}]}`
+				}
+				_, _ = w.Write([]byte(resp))
 			}))
 			t.Cleanup(srv.Close)
 
@@ -515,6 +525,150 @@ func TestCopyTradingServices_Validation(t *testing.T) {
 		}
 		if err != errCopyTradingPublicWeeklyPnlMissingUniqueCode {
 			t.Fatalf("error = %v, want %v", err, errCopyTradingPublicWeeklyPnlMissingUniqueCode)
+		}
+	})
+}
+
+func TestCopyTradingServices_FailCloseOnResultFalse(t *testing.T) {
+	fixedNow := time.Date(2020, 12, 8, 9, 8, 57, 715_000_000, time.UTC)
+
+	t.Run("amend_profit_sharing_ratio_result_false", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.URL.Path, "/api/v5/copytrading/amend-profit-sharing-ratio"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("x-request-id", "rid-copy-amend-profit")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"result":false}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewCopyTradingAmendProfitSharingRatioService().InstType("SWAP").ProfitSharingRatio("0.1").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-copy-amend-profit"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("stop_copy_trading_result_false", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.URL.Path, "/api/v5/copytrading/stop-copy-trading"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("x-request-id", "rid-copy-stop")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"result":false}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewCopyTradingStopCopyTradingService().InstType("SWAP").UniqueCode("UC").SubPosCloseType("manual_close").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-copy-stop"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("first_copy_settings_result_false", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.URL.Path, "/api/v5/copytrading/first-copy-settings"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("x-request-id", "rid-copy-first-settings")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"result":false}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewCopyTradingFirstCopySettingsService().
+			InstType("SWAP").
+			UniqueCode("UC").
+			CopyMgnMode("cross").
+			CopyInstIdType("copy").
+			CopyTotalAmt("500").
+			CopyAmt("20").
+			SubPosCloseType("copy_close").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-copy-first-settings"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("amend_copy_settings_result_false", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.URL.Path, "/api/v5/copytrading/amend-copy-settings"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("x-request-id", "rid-copy-amend-settings")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"result":false}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewCopyTradingAmendCopySettingsService().
+			InstType("SWAP").
+			UniqueCode("UC").
+			CopyMgnMode("cross").
+			CopyInstIdType("copy").
+			CopyTotalAmt("500").
+			CopyAmt("20").
+			SubPosCloseType("copy_close").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-copy-amend-settings"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
 }

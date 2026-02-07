@@ -53,11 +53,22 @@ func (s *CopyTradingAmendProfitSharingRatioService) Do(ctx context.Context) (*Co
 	}
 
 	var data []CopyTradingResult
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/copytrading/amend-profit-sharing-ratio", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/copytrading/amend-profit-sharing-ratio", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyCopyTradingAmendProfitSharingRatioResponse
+	}
+	if !data[0].Result {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: "/api/v5/copytrading/amend-profit-sharing-ratio",
+			RequestID:   requestID,
+			Code:        "0",
+			Message:     "copytrading amend profit sharing ratio result is false",
+		}
 	}
 	return &data[0], nil
 }

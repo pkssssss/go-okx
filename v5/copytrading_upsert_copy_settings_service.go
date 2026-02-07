@@ -196,11 +196,22 @@ func (s *CopyTradingUpsertCopySettingsService) Do(ctx context.Context) (*CopyTra
 	}
 
 	var data []CopyTradingResult
-	if err := s.c.do(ctx, http.MethodPost, s.endpoint, nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, s.endpoint, nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyCopyTradingUpsertCopySettingsResponse
+	}
+	if !data[0].Result {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: s.endpoint,
+			RequestID:   requestID,
+			Code:        "0",
+			Message:     "copytrading upsert copy settings result is false",
+		}
 	}
 	return &data[0], nil
 }

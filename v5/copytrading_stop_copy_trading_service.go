@@ -62,11 +62,22 @@ func (s *CopyTradingStopCopyTradingService) Do(ctx context.Context) (*CopyTradin
 	}
 
 	var data []CopyTradingResult
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/copytrading/stop-copy-trading", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/copytrading/stop-copy-trading", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyCopyTradingStopCopyTradingResponse
+	}
+	if !data[0].Result {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: "/api/v5/copytrading/stop-copy-trading",
+			RequestID:   requestID,
+			Code:        "0",
+			Message:     "copytrading stop copy trading result is false",
+		}
 	}
 	return &data[0], nil
 }
