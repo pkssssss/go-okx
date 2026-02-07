@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 )
 
 type accountBillsHistoryArchiveApplyRequest struct {
@@ -52,11 +53,22 @@ func (s *AccountBillsHistoryArchiveApplyService) Do(ctx context.Context) (*Accou
 	}
 
 	var data []AccountBillsHistoryArchiveApplyAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/bills-history-archive", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/bills-history-archive", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountBillsHistoryArchiveApply
+	}
+	if !strings.EqualFold(data[0].Result, "true") {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: "/api/v5/account/bills-history-archive",
+			RequestID:   requestID,
+			Code:        "0",
+			Message:     "bills history archive apply result is false",
+		}
 	}
 	return &data[0], nil
 }

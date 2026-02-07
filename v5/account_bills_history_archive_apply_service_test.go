@@ -102,6 +102,54 @@ func TestAccountBillsHistoryArchiveApplyService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("result_false_returns_api_error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Request-Id", "rid-bills-archive-apply")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"result":"false","ts":"1646892328000"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewAccountBillsHistoryArchiveApplyService().Year("2023").Quarter("Q1").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error type = %T, want *APIError", err)
+		}
+		if got, want := apiErr.HTTPStatus, http.StatusOK; got != want {
+			t.Fatalf("apiErr.HTTPStatus = %d, want %d", got, want)
+		}
+		if got, want := apiErr.Method, http.MethodPost; got != want {
+			t.Fatalf("apiErr.Method = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/account/bills-history-archive"; got != want {
+			t.Fatalf("apiErr.RequestPath = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestID, "rid-bills-archive-apply"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("apiErr.Code = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Message, "bills history archive apply result is false"; got != want {
+			t.Fatalf("apiErr.Message = %q, want %q", got, want)
+		}
+	})
+
 	t.Run("missing_credentials", func(t *testing.T) {
 		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
 		_, err := c.NewAccountBillsHistoryArchiveApplyService().Year("2023").Quarter("Q1").Do(context.Background())
