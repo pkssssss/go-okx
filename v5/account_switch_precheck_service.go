@@ -97,5 +97,14 @@ func (s *AccountSwitchPrecheckService) Do(ctx context.Context) (*AccountSwitchPr
 	if len(data) == 0 {
 		return nil, errEmptyAccountSwitchPrecheck
 	}
+	if data[0].SCode != "" && data[0].SCode != "0" {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodGet,
+			RequestPath: "/api/v5/account/set-account-switch-precheck",
+			Code:        data[0].SCode,
+			Message:     "account switch precheck failed",
+		}
+	}
 	return &data[0], nil
 }
