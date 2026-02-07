@@ -50,5 +50,14 @@ func (s *TradingBotGridOrderInstantTriggerService) Do(ctx context.Context) (*Tra
 	if len(data) == 0 {
 		return nil, errEmptyTradingBotGridOrderInstantTriggerResponse
 	}
+	if data[0].SCode != "" && data[0].SCode != "0" {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: "/api/v5/tradingBot/grid/order-instant-trigger",
+			Code:        data[0].SCode,
+			Message:     data[0].SMsg,
+		}
+	}
 	return &data[0], nil
 }

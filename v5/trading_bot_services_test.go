@@ -861,3 +861,79 @@ func TestTradingBotStopOrderAlgoServices_Do_PartialFailure(t *testing.T) {
 		}
 	})
 }
+
+func TestTradingBotSingleAckServices_Do_FailCloseOnSCode(t *testing.T) {
+	fixedNow := time.Date(2020, 6, 30, 12, 34, 56, 789_000_000, time.UTC)
+
+	t.Run("grid_margin_balance_scode_error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodPost; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/tradingBot/grid/margin-balance"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"51000","sMsg":"adjust failed","tag":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewTradingBotGridMarginBalanceService().AlgoId("1").Type("add").Amt("1").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.Code, "51000"; got != want {
+			t.Fatalf("apiErr.Code = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/tradingBot/grid/margin-balance"; got != want {
+			t.Fatalf("apiErr.RequestPath = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("grid_order_instant_trigger_scode_error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got, want := r.Method, http.MethodPost; got != want {
+				t.Fatalf("method = %q, want %q", got, want)
+			}
+			if got, want := r.URL.Path, "/api/v5/tradingBot/grid/order-instant-trigger"; got != want {
+				t.Fatalf("path = %q, want %q", got, want)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"51000","sMsg":"trigger failed","tag":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewTradingBotGridOrderInstantTriggerService().AlgoId("1").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.Code, "51000"; got != want {
+			t.Fatalf("apiErr.Code = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/tradingBot/grid/order-instant-trigger"; got != want {
+			t.Fatalf("apiErr.RequestPath = %q, want %q", got, want)
+		}
+	})
+}
