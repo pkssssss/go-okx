@@ -56,11 +56,22 @@ func (s *RFQSetMakerInstrumentSettingsService) Do(ctx context.Context) (*RFQSetM
 	}
 
 	var data []RFQSetMakerInstrumentSettingsAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/rfq/maker-instrument-settings", nil, s.settings, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/rfq/maker-instrument-settings", nil, s.settings, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyRFQSetMakerInstrumentSettingsResponse
+	}
+	if !data[0].Result {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: "/api/v5/rfq/maker-instrument-settings",
+			RequestID:   requestID,
+			Code:        "0",
+			Message:     "rfq maker instrument settings result is false",
+		}
 	}
 	return &data[0], nil
 }

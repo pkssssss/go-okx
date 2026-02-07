@@ -61,4 +61,39 @@ func TestSprdMassCancelService_Do(t *testing.T) {
 	if ack == nil || !ack.Result {
 		t.Fatalf("ack = %#v", ack)
 	}
+
+	t.Run("result_false_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-sprd-mass-cancel")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"result":false}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewSprdMassCancelService().SprdId("BTC-USDT_BTC-USDT-SWAP").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-sprd-mass-cancel"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/sprd/mass-cancel"; got != want {
+			t.Fatalf("apiErr.RequestPath = %q, want %q", got, want)
+		}
+	})
 }

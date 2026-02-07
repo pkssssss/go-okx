@@ -51,11 +51,22 @@ func (s *AccountMMPResetService) Do(ctx context.Context) (*AccountMMPResetAck, e
 	}
 
 	var data []AccountMMPResetAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/mmp-reset", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/mmp-reset", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountMMPReset
+	}
+	if !data[0].Result {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: "/api/v5/account/mmp-reset",
+			RequestID:   requestID,
+			Code:        "0",
+			Message:     "account mmp reset result is false",
+		}
 	}
 	return &data[0], nil
 }

@@ -40,11 +40,22 @@ func (s *SprdMassCancelService) Do(ctx context.Context) (*SprdMassCancelAck, err
 	req := sprdMassCancelRequest{SprdId: s.sprdId}
 
 	var data []SprdMassCancelAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/sprd/mass-cancel", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/sprd/mass-cancel", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptySprdMassCancelResponse
+	}
+	if !data[0].Result {
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: "/api/v5/sprd/mass-cancel",
+			RequestID:   requestID,
+			Code:        "0",
+			Message:     "sprd mass cancel result is false",
+		}
 	}
 	return &data[0], nil
 }
