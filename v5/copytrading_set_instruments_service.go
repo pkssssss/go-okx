@@ -31,7 +31,10 @@ func (s *CopyTradingSetInstrumentsService) InstId(instId string) *CopyTradingSet
 	return s
 }
 
-var errCopyTradingSetInstrumentsMissingInstId = errors.New("okx: copytrading set instruments requires instId")
+var (
+	errCopyTradingSetInstrumentsMissingInstId = errors.New("okx: copytrading set instruments requires instId")
+	errEmptyCopyTradingSetInstrumentsResponse = errors.New("okx: empty copytrading set instruments response")
+)
 
 type copyTradingSetInstrumentsRequest struct {
 	InstType string `json:"instType,omitempty"`
@@ -52,6 +55,9 @@ func (s *CopyTradingSetInstrumentsService) Do(ctx context.Context) ([]CopyTradin
 	var data []CopyTradingInstrument
 	if err := s.c.do(ctx, http.MethodPost, "/api/v5/copytrading/set-instruments", nil, req, true, &data); err != nil {
 		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, errEmptyCopyTradingSetInstrumentsResponse
 	}
 	return data, nil
 }

@@ -11,30 +11,30 @@ import (
 	"github.com/pkssssss/go-okx/v5/internal/sign"
 )
 
-func TestUsersSubaccountSetTransferOutService_Do(t *testing.T) {
+func TestCopyTradingSetInstrumentsService_Do(t *testing.T) {
 	fixedNow := time.Date(2020, 12, 8, 9, 8, 57, 715_000_000, time.UTC)
 
-	t.Run("missing_sub_acct", func(t *testing.T) {
+	t.Run("missing_inst_id", func(t *testing.T) {
 		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
-		_, err := c.NewUsersSubaccountSetTransferOutService().Do(context.Background())
+		_, err := c.NewCopyTradingSetInstrumentsService().Do(context.Background())
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errUsersSubaccountSetTransferOutMissingSubAcct {
-			t.Fatalf("error = %v, want %v", err, errUsersSubaccountSetTransferOutMissingSubAcct)
+		if err != errCopyTradingSetInstrumentsMissingInstId {
+			t.Fatalf("error = %v, want %v", err, errCopyTradingSetInstrumentsMissingInstId)
 		}
 	})
 
 	t.Run("signed_request_and_body", func(t *testing.T) {
 		timestamp := sign.TimestampISO8601Millis(fixedNow)
-		wantBody := `{"subAcct":"Test001,Test002","canTransOut":false}`
-		wantSig := sign.SignHMACSHA256Base64("mysecret", sign.PrehashREST(timestamp, http.MethodPost, "/api/v5/users/subaccount/set-transfer-out", wantBody))
+		wantBody := `{"instType":"SWAP","instId":"BTC-USDT-SWAP,ETH-USDT-SWAP"}`
+		wantSig := sign.SignHMACSHA256Base64("mysecret", sign.PrehashREST(timestamp, http.MethodPost, "/api/v5/copytrading/set-instruments", wantBody))
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if got, want := r.Method, http.MethodPost; got != want {
 				t.Fatalf("method = %q, want %q", got, want)
 			}
-			if got, want := r.URL.Path, "/api/v5/users/subaccount/set-transfer-out"; got != want {
+			if got, want := r.URL.Path, "/api/v5/copytrading/set-instruments"; got != want {
 				t.Fatalf("path = %q, want %q", got, want)
 			}
 
@@ -51,7 +51,7 @@ func TestUsersSubaccountSetTransferOutService_Do(t *testing.T) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"subAcct":"Test001","canTransOut":false},{"subAcct":"Test002","canTransOut":false}]}`))
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"enabled":true,"instId":"BTC-USDT-SWAP"}]}`))
 		}))
 		t.Cleanup(srv.Close)
 
@@ -66,11 +66,11 @@ func TestUsersSubaccountSetTransferOutService_Do(t *testing.T) {
 			WithNowFunc(func() time.Time { return fixedNow }),
 		)
 
-		got, err := c.NewUsersSubaccountSetTransferOutService().SubAcct("Test001,Test002").CanTransOut(false).Do(context.Background())
+		got, err := c.NewCopyTradingSetInstrumentsService().InstType("SWAP").InstId("BTC-USDT-SWAP,ETH-USDT-SWAP").Do(context.Background())
 		if err != nil {
 			t.Fatalf("Do() error = %v", err)
 		}
-		if len(got) != 2 || got[0].SubAcct != "Test001" || got[0].CanTransOut != false {
+		if len(got) != 1 || got[0].InstId != "BTC-USDT-SWAP" || !got[0].Enabled {
 			t.Fatalf("data = %#v", got)
 		}
 	})
@@ -93,20 +93,18 @@ func TestUsersSubaccountSetTransferOutService_Do(t *testing.T) {
 			WithNowFunc(func() time.Time { return fixedNow }),
 		)
 
-		_, err := c.NewUsersSubaccountSetTransferOutService().SubAcct("Test001").Do(context.Background())
+		_, err := c.NewCopyTradingSetInstrumentsService().InstId("BTC-USDT-SWAP").Do(context.Background())
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyUsersSubaccountSetTransferOutResponse {
-			t.Fatalf("error = %v, want %v", err, errEmptyUsersSubaccountSetTransferOutResponse)
+		if err != errEmptyCopyTradingSetInstrumentsResponse {
+			t.Fatalf("error = %v, want %v", err, errEmptyCopyTradingSetInstrumentsResponse)
 		}
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {
-		c := NewClient(
-			WithNowFunc(func() time.Time { return fixedNow }),
-		)
-		_, err := c.NewUsersSubaccountSetTransferOutService().SubAcct("Test001").Do(context.Background())
+		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
+		_, err := c.NewCopyTradingSetInstrumentsService().InstId("BTC-USDT-SWAP").Do(context.Background())
 		if err == nil {
 			t.Fatalf("expected error")
 		}

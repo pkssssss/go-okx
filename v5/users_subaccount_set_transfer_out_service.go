@@ -31,7 +31,10 @@ func (s *UsersSubaccountSetTransferOutService) CanTransOut(enable bool) *UsersSu
 	return s
 }
 
-var errUsersSubaccountSetTransferOutMissingSubAcct = errors.New("okx: users set transfer out requires subAcct")
+var (
+	errUsersSubaccountSetTransferOutMissingSubAcct = errors.New("okx: users set transfer out requires subAcct")
+	errEmptyUsersSubaccountSetTransferOutResponse  = errors.New("okx: empty users set transfer out response")
+)
 
 type usersSubaccountSetTransferOutRequest struct {
 	SubAcct     string `json:"subAcct"`
@@ -52,6 +55,9 @@ func (s *UsersSubaccountSetTransferOutService) Do(ctx context.Context) ([]UsersS
 	var data []UsersSubaccountTransferOutPermission
 	if err := s.c.do(ctx, http.MethodPost, "/api/v5/users/subaccount/set-transfer-out", nil, req, true, &data); err != nil {
 		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, errEmptyUsersSubaccountSetTransferOutResponse
 	}
 	return data, nil
 }
