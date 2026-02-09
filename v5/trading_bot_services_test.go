@@ -125,10 +125,11 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 			},
 		},
 		{
-			name:   "grid_amend_algo_basic_param",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/grid/amend-algo-basic-param",
-			signed: true,
+			name:     "grid_amend_algo_basic_param",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/grid/amend-algo-basic-param",
+			signed:   true,
+			response: `{"code":"0","msg":"","data":[{"algoId":"1","requiredTopupAmount":"0"}]}`,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotGridAmendAlgoBasicParamService().
 					AlgoId("1").

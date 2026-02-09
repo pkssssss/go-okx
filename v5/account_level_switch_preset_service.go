@@ -54,7 +54,18 @@ func (s *AccountLevelSwitchPresetService) RiskOffsetType(riskOffsetType string) 
 var (
 	errAccountLevelSwitchPresetMissingAcctLv = errors.New("okx: account level switch preset requires acctLv")
 	errEmptyAccountLevelSwitchPreset         = errors.New("okx: empty account level switch preset response")
+	errInvalidAccountLevelSwitchPreset       = errors.New("okx: invalid account level switch preset response")
 )
+
+func validateAccountLevelSwitchPresetAck(ack *AccountLevelSwitchPresetAck) error {
+	if ack == nil {
+		return errInvalidAccountLevelSwitchPreset
+	}
+	if ack.AcctLv == "" || ack.CurAcctLv == "" {
+		return errInvalidAccountLevelSwitchPreset
+	}
+	return nil
+}
 
 // Do 预设置账户模式切换（POST /api/v5/account/account-level-switch-preset）。
 func (s *AccountLevelSwitchPresetService) Do(ctx context.Context) (*AccountLevelSwitchPresetAck, error) {
@@ -81,14 +92,20 @@ func (s *AccountLevelSwitchPresetService) Do(ctx context.Context) (*AccountLevel
 		if len(data) == 0 {
 			return nil, errEmptyAccountLevelSwitchPreset
 		}
+		if err := validateAccountLevelSwitchPresetAck(&data[0]); err != nil {
+			return nil, err
+		}
 		return &data[0], nil
 	case '{':
 		var data AccountLevelSwitchPresetAck
 		if err := json.Unmarshal(raw, &data); err != nil {
 			return nil, err
 		}
+		if err := validateAccountLevelSwitchPresetAck(&data); err != nil {
+			return nil, err
+		}
 		return &data, nil
 	default:
-		return nil, errors.New("okx: invalid account level switch preset response")
+		return nil, errInvalidAccountLevelSwitchPreset
 	}
 }
