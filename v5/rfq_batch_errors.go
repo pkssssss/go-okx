@@ -44,6 +44,16 @@ func (e *RFQCancelBatchRFQsError) Error() string {
 }
 
 func rfqCheckCancelBatchRFQs(method, requestPath, requestID string, acks []RFQCancelAck) error {
+	if len(acks) == 0 {
+		return &RFQCancelBatchRFQsError{
+			HTTPStatus:  200,
+			Method:      method,
+			RequestPath: requestPath,
+			RequestID:   requestID,
+			Acks:        acks,
+		}
+	}
+
 	for _, ack := range acks {
 		if ack.SCode != "" && ack.SCode != "0" {
 			return &RFQCancelBatchRFQsError{
@@ -100,6 +110,16 @@ func (e *RFQCancelBatchQuotesError) Error() string {
 }
 
 func rfqCheckCancelBatchQuotes(method, requestPath, requestID string, acks []RFQCancelQuoteAck) error {
+	if len(acks) == 0 {
+		return &RFQCancelBatchQuotesError{
+			HTTPStatus:  200,
+			Method:      method,
+			RequestPath: requestPath,
+			RequestID:   requestID,
+			Acks:        acks,
+		}
+	}
+
 	for _, ack := range acks {
 		if ack.SCode != "" && ack.SCode != "0" {
 			return &RFQCancelBatchQuotesError{

@@ -47,6 +47,16 @@ func (e *TradeBatchError) Error() string {
 }
 
 func tradeCheckBatchAcks(method, requestPath, requestID string, acks []TradeOrderAck) error {
+	if len(acks) == 0 {
+		return &TradeBatchError{
+			HTTPStatus:  200,
+			Method:      method,
+			RequestPath: requestPath,
+			RequestID:   requestID,
+			Acks:        acks,
+		}
+	}
+
 	for _, ack := range acks {
 		if ack.SCode != "" && ack.SCode != "0" {
 			return &TradeBatchError{
