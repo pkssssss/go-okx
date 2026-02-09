@@ -78,6 +78,7 @@ func (s *ClosePositionsService) Tag(tag string) *ClosePositionsService {
 var (
 	errClosePositionsMissingRequired = errors.New("okx: close positions requires instId/mgnMode")
 	errEmptyClosePositionsResponse   = errors.New("okx: empty close positions response")
+	errInvalidClosePositionsResponse = errors.New("okx: invalid close positions response")
 )
 
 type closePositionsRequest struct {
@@ -88,6 +89,25 @@ type closePositionsRequest struct {
 	AutoCxl *bool  `json:"autoCxl,omitempty"`
 	ClOrdId string `json:"clOrdId,omitempty"`
 	Tag     string `json:"tag,omitempty"`
+}
+
+func validateClosePositionsAck(ack *TradeClosePositionAck, req closePositionsRequest) error {
+	if ack == nil || ack.InstId == "" {
+		return errInvalidClosePositionsResponse
+	}
+	if ack.InstId != req.InstId {
+		return errInvalidClosePositionsResponse
+	}
+	if req.PosSide != "" && ack.PosSide != req.PosSide {
+		return errInvalidClosePositionsResponse
+	}
+	if req.ClOrdId != "" && ack.ClOrdId != req.ClOrdId {
+		return errInvalidClosePositionsResponse
+	}
+	if req.Tag != "" && ack.Tag != req.Tag {
+		return errInvalidClosePositionsResponse
+	}
+	return nil
 }
 
 // Do 市价仓位全平（POST /api/v5/trade/close-position）。
@@ -112,6 +132,11 @@ func (s *ClosePositionsService) Do(ctx context.Context) ([]TradeClosePositionAck
 	}
 	if len(data) == 0 {
 		return nil, errEmptyClosePositionsResponse
+	}
+	for i := range data {
+		if err := validateClosePositionsAck(&data[i], req); err != nil {
+			return nil, err
+		}
 	}
 	return data, nil
 }

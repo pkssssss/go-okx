@@ -40,14 +40,25 @@ func (s *CancelAllAfterService) Tag(tag string) *CancelAllAfterService {
 }
 
 var (
-	errCancelAllAfterMissingTimeOut = errors.New("okx: cancel all after requires timeOut")
-	errCancelAllAfterInvalidTimeOut = errors.New("okx: cancel all after requires timeOut=0 or 10-120")
-	errEmptyCancelAllAfterResponse  = errors.New("okx: empty cancel all after response")
+	errCancelAllAfterMissingTimeOut  = errors.New("okx: cancel all after requires timeOut")
+	errCancelAllAfterInvalidTimeOut  = errors.New("okx: cancel all after requires timeOut=0 or 10-120")
+	errEmptyCancelAllAfterResponse   = errors.New("okx: empty cancel all after response")
+	errInvalidCancelAllAfterResponse = errors.New("okx: invalid cancel all after response")
 )
 
 type cancelAllAfterRequest struct {
 	TimeOut string `json:"timeOut"`
 	Tag     string `json:"tag,omitempty"`
+}
+
+func validateCancelAllAfterAck(ack *TradeCancelAllAfterAck, req cancelAllAfterRequest) error {
+	if ack == nil || ack.TriggerTime <= 0 || ack.TS <= 0 {
+		return errInvalidCancelAllAfterResponse
+	}
+	if req.Tag != "" && ack.Tag != req.Tag {
+		return errInvalidCancelAllAfterResponse
+	}
+	return nil
 }
 
 // Do 设置倒计时全部撤单（POST /api/v5/trade/cancel-all-after）。
@@ -72,6 +83,9 @@ func (s *CancelAllAfterService) Do(ctx context.Context) (*TradeCancelAllAfterAck
 	}
 	if len(data) == 0 {
 		return nil, errEmptyCancelAllAfterResponse
+	}
+	if err := validateCancelAllAfterAck(&data[0], req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

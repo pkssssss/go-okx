@@ -68,6 +68,33 @@ func TestCancelAllAfterService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid_ack_response", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewCancelAllAfterService().TimeOut("60").Tag("t1").Do(context.Background())
+		if !errors.Is(err, errInvalidCancelAllAfterResponse) {
+			t.Fatalf("expected errInvalidCancelAllAfterResponse, got %T: %v", err, err)
+		}
+	})
+
 	t.Run("validate_missing_timeout", func(t *testing.T) {
 		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
 		_, err := c.NewCancelAllAfterService().Do(context.Background())
