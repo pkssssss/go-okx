@@ -707,7 +707,14 @@ func decodeEnvelope(status int, resp []byte, respHeader http.Header, method, req
 			}
 		}
 		if out == nil {
-			return nil
+			return &APIError{
+				HTTPStatus:  status,
+				Method:      method,
+				RequestPath: requestPath,
+				Message:     "invalid response envelope",
+				Raw:         resp,
+				RequestID:   respHeader.Get("x-request-id"),
+			}
 		}
 		if err := json.Unmarshal(resp, out); err == nil {
 			return nil
