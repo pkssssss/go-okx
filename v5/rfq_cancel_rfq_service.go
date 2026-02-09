@@ -61,7 +61,8 @@ func (s *RFQCancelRFQService) Do(ctx context.Context) (*RFQCancelAck, error) {
 	}
 
 	var data []RFQCancelAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/rfq/cancel-rfq", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/rfq/cancel-rfq", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -72,6 +73,7 @@ func (s *RFQCancelRFQService) Do(ctx context.Context) (*RFQCancelAck, error) {
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/rfq/cancel-rfq",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

@@ -91,7 +91,8 @@ func (s *AccountSwitchPrecheckService) Do(ctx context.Context) (*AccountSwitchPr
 	q.Set("acctLv", s.acctLv)
 
 	var data []AccountSwitchPrecheckResult
-	if err := s.c.do(ctx, http.MethodGet, "/api/v5/account/set-account-switch-precheck", q, nil, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodGet, "/api/v5/account/set-account-switch-precheck", q, nil, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -102,6 +103,7 @@ func (s *AccountSwitchPrecheckService) Do(ctx context.Context) (*AccountSwitchPr
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodGet,
 			RequestPath: "/api/v5/account/set-account-switch-precheck",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     "account switch precheck failed",
 		}

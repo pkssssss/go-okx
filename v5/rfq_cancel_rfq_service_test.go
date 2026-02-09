@@ -65,6 +65,44 @@ func TestRFQCancelRFQService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("item_scode_error_includes_request_id", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Request-Id", "rid-rfq-cancel-rfq")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"rfqId":"22535","clRfqId":"rfq001","sCode":"51000","sMsg":"rfq failed"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewRFQCancelRFQService().RfqId("22535").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.Code, "51000"; got != want {
+			t.Fatalf("apiErr.Code = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/rfq/cancel-rfq"; got != want {
+			t.Fatalf("apiErr.RequestPath = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestID, "rid-rfq-cancel-rfq"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+	})
 	t.Run("missing_id", func(t *testing.T) {
 		c := NewClient()
 		_, err := c.NewRFQCancelRFQService().Do(context.Background())

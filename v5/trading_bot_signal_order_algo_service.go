@@ -103,7 +103,8 @@ func (s *TradingBotSignalOrderAlgoService) Do(ctx context.Context) (*TradingBotO
 	}
 
 	var data []TradingBotOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/order-algo", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/signal/order-algo", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -114,6 +115,7 @@ func (s *TradingBotSignalOrderAlgoService) Do(ctx context.Context) (*TradingBotO
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/tradingBot/signal/order-algo",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

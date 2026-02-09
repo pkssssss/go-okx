@@ -60,7 +60,8 @@ func (s *TradingBotGridMarginBalanceService) Do(ctx context.Context) (*TradingBo
 	}
 
 	var data []TradingBotOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/grid/margin-balance", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/grid/margin-balance", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -71,6 +72,7 @@ func (s *TradingBotGridMarginBalanceService) Do(ctx context.Context) (*TradingBo
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/tradingBot/grid/margin-balance",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

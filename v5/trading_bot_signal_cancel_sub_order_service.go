@@ -50,7 +50,8 @@ func (s *TradingBotSignalCancelSubOrderService) Do(ctx context.Context) (*Tradin
 	}
 
 	var data []TradingBotSignalCancelSubOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/cancel-sub-order", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/signal/cancel-sub-order", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -61,6 +62,7 @@ func (s *TradingBotSignalCancelSubOrderService) Do(ctx context.Context) (*Tradin
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/tradingBot/signal/cancel-sub-order",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}

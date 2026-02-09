@@ -44,7 +44,8 @@ func (s *TradingBotRecurringAmendOrderAlgoService) Do(ctx context.Context) (*Tra
 	}
 
 	var data []TradingBotOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/recurring/amend-order-algo", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/recurring/amend-order-algo", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
@@ -55,6 +56,7 @@ func (s *TradingBotRecurringAmendOrderAlgoService) Do(ctx context.Context) (*Tra
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
 			RequestPath: "/api/v5/tradingBot/recurring/amend-order-algo",
+			RequestID:   requestID,
 			Code:        data[0].SCode,
 			Message:     data[0].SMsg,
 		}
