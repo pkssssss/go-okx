@@ -42,6 +42,42 @@ func TestTradeCheckAlgoAcks_EmptyAcksFailClose(t *testing.T) {
 	}
 }
 
+func TestTradeCheckBatchAcks_EmptySCodeFailClose(t *testing.T) {
+	err := tradeCheckBatchAcks(http.MethodPost, "/api/v5/trade/batch-orders", "rid-trade-empty-scode", []TradeOrderAck{{}})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	var batchErr *TradeBatchError
+	if !errors.As(err, &batchErr) {
+		t.Fatalf("error = %T, want *TradeBatchError", err)
+	}
+	if got, want := batchErr.RequestID, "rid-trade-empty-scode"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := len(batchErr.Acks), 1; got != want {
+		t.Fatalf("Acks len = %d, want %d", got, want)
+	}
+}
+
+func TestTradeCheckAlgoAcks_EmptySCodeFailClose(t *testing.T) {
+	err := tradeCheckAlgoAcks(http.MethodPost, "/api/v5/trade/cancel-algos", "rid-trade-algo-empty-scode", []TradeAlgoOrderAck{{}})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	var batchErr *TradeAlgoBatchError
+	if !errors.As(err, &batchErr) {
+		t.Fatalf("error = %T, want *TradeAlgoBatchError", err)
+	}
+	if got, want := batchErr.RequestID, "rid-trade-algo-empty-scode"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := len(batchErr.Acks), 1; got != want {
+		t.Fatalf("Acks len = %d, want %d", got, want)
+	}
+}
+
 func TestTradingBotCheckBatchAcks_EmptyAcksFailClose(t *testing.T) {
 	err := tradingBotCheckBatchAcks(http.MethodPost, "/api/v5/tradingBot/signal/stop-order-algo", "rid-bot-empty", nil)
 	if err == nil {

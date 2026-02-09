@@ -21,11 +21,19 @@ func (e *TradeAlgoBatchError) Error() string {
 	firstCode := ""
 	firstMsg := ""
 	for _, ack := range e.Acks {
-		if ack.SCode != "" && ack.SCode != "0" {
+		if ack.SCode != "0" {
 			failed++
 			if firstCode == "" {
 				firstCode = ack.SCode
-				firstMsg = ack.SMsg
+				if firstCode == "" {
+					firstCode = "<empty>"
+					if firstMsg == "" {
+						firstMsg = "missing sCode"
+					}
+				}
+				if firstMsg == "" {
+					firstMsg = ack.SMsg
+				}
 			}
 		}
 	}
@@ -56,7 +64,7 @@ func tradeCheckAlgoAcks(method, requestPath, requestID string, acks []TradeAlgoO
 	}
 
 	for _, ack := range acks {
-		if ack.SCode != "" && ack.SCode != "0" {
+		if ack.SCode != "0" {
 			return &TradeAlgoBatchError{
 				HTTPStatus:  200,
 				Method:      method,
