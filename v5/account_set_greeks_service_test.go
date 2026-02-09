@@ -102,6 +102,33 @@ func TestAccountSetGreeksService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid_ack_response", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewAccountSetGreeksService().GreeksType("PA").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errInvalidAccountSetGreeks {
+			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetGreeks)
+		}
+	})
+
 	t.Run("missing_credentials", func(t *testing.T) {
 		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
 		_, err := c.NewAccountSetGreeksService().GreeksType("PA").Do(context.Background())

@@ -35,7 +35,15 @@ func (s *AccountSetAccountLevelService) AcctLv(acctLv string) *AccountSetAccount
 var (
 	errAccountSetAccountLevelMissingAcctLv = errors.New("okx: set account level requires acctLv")
 	errEmptyAccountSetAccountLevel         = errors.New("okx: empty set account level response")
+	errInvalidAccountSetAccountLevel       = errors.New("okx: invalid set account level response")
 )
+
+func validateAccountSetAccountLevelAck(ack *AccountSetAccountLevelAck, req accountSetAccountLevelRequest) error {
+	if ack == nil || ack.AcctLv == "" || ack.AcctLv != req.AcctLv {
+		return errInvalidAccountSetAccountLevel
+	}
+	return nil
+}
 
 // Do 设置账户模式（POST /api/v5/account/set-account-level）。
 func (s *AccountSetAccountLevelService) Do(ctx context.Context) (*AccountSetAccountLevelAck, error) {
@@ -49,6 +57,9 @@ func (s *AccountSetAccountLevelService) Do(ctx context.Context) (*AccountSetAcco
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetAccountLevel
+	}
+	if err := validateAccountSetAccountLevelAck(&data[0], s.r); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

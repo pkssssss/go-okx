@@ -42,7 +42,15 @@ func (s *AccountSetIsolatedModeService) Type(typ string) *AccountSetIsolatedMode
 var (
 	errAccountSetIsolatedModeMissingRequired = errors.New("okx: set isolated mode requires isoMode and type")
 	errEmptyAccountSetIsolatedMode           = errors.New("okx: empty set isolated mode response")
+	errInvalidAccountSetIsolatedMode         = errors.New("okx: invalid set isolated mode response")
 )
+
+func validateAccountSetIsolatedModeAck(ack *AccountSetIsolatedModeAck, req accountSetIsolatedModeRequest) error {
+	if ack == nil || ack.IsoMode == "" || ack.IsoMode != req.IsoMode {
+		return errInvalidAccountSetIsolatedMode
+	}
+	return nil
+}
 
 // Do 设置逐仓保证金划转模式（POST /api/v5/account/set-isolated-mode）。
 func (s *AccountSetIsolatedModeService) Do(ctx context.Context) (*AccountSetIsolatedModeAck, error) {
@@ -56,6 +64,9 @@ func (s *AccountSetIsolatedModeService) Do(ctx context.Context) (*AccountSetIsol
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetIsolatedMode
+	}
+	if err := validateAccountSetIsolatedModeAck(&data[0], s.req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

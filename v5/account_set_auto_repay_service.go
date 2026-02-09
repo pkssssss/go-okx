@@ -15,6 +15,10 @@ type AccountSetAutoRepayAck struct {
 	AutoRepay bool `json:"autoRepay"`
 }
 
+type accountSetAutoRepayAckRaw struct {
+	AutoRepay *bool `json:"autoRepay"`
+}
+
 // AccountSetAutoRepayService 设置自动还币（现货模式）。
 type AccountSetAutoRepayService struct {
 	c *Client
@@ -35,7 +39,18 @@ func (s *AccountSetAutoRepayService) AutoRepay(autoRepay bool) *AccountSetAutoRe
 var (
 	errAccountSetAutoRepayMissingRequired = errors.New("okx: set auto repay requires autoRepay")
 	errEmptyAccountSetAutoRepay           = errors.New("okx: empty set auto repay response")
+	errInvalidAccountSetAutoRepay         = errors.New("okx: invalid set auto repay response")
 )
+
+func validateAccountSetAutoRepayAck(ack *accountSetAutoRepayAckRaw, req accountSetAutoRepayRequest) error {
+	if ack == nil || ack.AutoRepay == nil || req.AutoRepay == nil {
+		return errInvalidAccountSetAutoRepay
+	}
+	if *ack.AutoRepay != *req.AutoRepay {
+		return errInvalidAccountSetAutoRepay
+	}
+	return nil
+}
 
 // Do 设置自动还币（POST /api/v5/account/set-auto-repay）。
 func (s *AccountSetAutoRepayService) Do(ctx context.Context) (*AccountSetAutoRepayAck, error) {
@@ -43,12 +58,15 @@ func (s *AccountSetAutoRepayService) Do(ctx context.Context) (*AccountSetAutoRep
 		return nil, errAccountSetAutoRepayMissingRequired
 	}
 
-	var data []AccountSetAutoRepayAck
+	var data []accountSetAutoRepayAckRaw
 	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-auto-repay", nil, s.r, true, &data); err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetAutoRepay
 	}
-	return &data[0], nil
+	if err := validateAccountSetAutoRepayAck(&data[0], s.r); err != nil {
+		return nil, err
+	}
+	return &AccountSetAutoRepayAck{AutoRepay: *data[0].AutoRepay}, nil
 }

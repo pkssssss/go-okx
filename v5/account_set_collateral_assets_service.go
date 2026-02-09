@@ -54,7 +54,21 @@ var (
 	errAccountSetCollateralAssetsMissingRequired = errors.New("okx: set collateral assets requires type/collateralEnabled")
 	errAccountSetCollateralAssetsMissingCcyList  = errors.New("okx: set collateral assets with type=custom requires ccyList")
 	errEmptyAccountSetCollateralAssets           = errors.New("okx: empty set collateral assets response")
+	errInvalidAccountSetCollateralAssets         = errors.New("okx: invalid set collateral assets response")
 )
+
+func validateAccountSetCollateralAssetsAck(ack *AccountSetCollateralAssetsAck, req accountSetCollateralAssetsRequest) error {
+	if ack == nil || ack.Type == "" {
+		return errInvalidAccountSetCollateralAssets
+	}
+	if ack.Type != req.Type {
+		return errInvalidAccountSetCollateralAssets
+	}
+	if req.Type == "custom" && len(ack.CcyList) == 0 {
+		return errInvalidAccountSetCollateralAssets
+	}
+	return nil
+}
 
 // Do 设置质押币种（POST /api/v5/account/set-collateral-assets）。
 func (s *AccountSetCollateralAssetsService) Do(ctx context.Context) (*AccountSetCollateralAssetsAck, error) {
@@ -71,6 +85,9 @@ func (s *AccountSetCollateralAssetsService) Do(ctx context.Context) (*AccountSet
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetCollateralAssets
+	}
+	if err := validateAccountSetCollateralAssetsAck(&data[0], s.r); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

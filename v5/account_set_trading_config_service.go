@@ -44,7 +44,18 @@ var (
 	errAccountSetTradingConfigMissingType     = errors.New("okx: set trading config requires type")
 	errAccountSetTradingConfigMissingStgyType = errors.New("okx: set trading config type=stgyType requires stgyType")
 	errEmptyAccountSetTradingConfig           = errors.New("okx: empty set trading config response")
+	errInvalidAccountSetTradingConfig         = errors.New("okx: invalid set trading config response")
 )
+
+func validateAccountSetTradingConfigAck(ack *AccountSetTradingConfigAck, req accountSetTradingConfigRequest) error {
+	if ack == nil || ack.Type == "" || ack.Type != req.Type {
+		return errInvalidAccountSetTradingConfig
+	}
+	if req.Type == "stgyType" && (ack.StgyType == "" || ack.StgyType != req.StgyType) {
+		return errInvalidAccountSetTradingConfig
+	}
+	return nil
+}
 
 // Do 设置交易配置（POST /api/v5/account/set-trading-config）。
 func (s *AccountSetTradingConfigService) Do(ctx context.Context) (*AccountSetTradingConfigAck, error) {
@@ -61,6 +72,9 @@ func (s *AccountSetTradingConfigService) Do(ctx context.Context) (*AccountSetTra
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetTradingConfig
+	}
+	if err := validateAccountSetTradingConfigAck(&data[0], s.req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

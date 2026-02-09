@@ -35,7 +35,15 @@ func (s *AccountSetSettleCurrencyService) SettleCcy(settleCcy string) *AccountSe
 var (
 	errAccountSetSettleCurrencyMissingSettleCcy = errors.New("okx: set settle currency requires settleCcy")
 	errEmptyAccountSetSettleCurrency            = errors.New("okx: empty set settle currency response")
+	errInvalidAccountSetSettleCurrency          = errors.New("okx: invalid set settle currency response")
 )
+
+func validateAccountSetSettleCurrencyAck(ack *AccountSetSettleCurrencyAck, req accountSetSettleCurrencyRequest) error {
+	if ack == nil || ack.SettleCcy == "" || ack.SettleCcy != req.SettleCcy {
+		return errInvalidAccountSetSettleCurrency
+	}
+	return nil
+}
 
 // Do 设置结算币种（POST /api/v5/account/set-settle-currency）。
 func (s *AccountSetSettleCurrencyService) Do(ctx context.Context) (*AccountSetSettleCurrencyAck, error) {
@@ -49,6 +57,9 @@ func (s *AccountSetSettleCurrencyService) Do(ctx context.Context) (*AccountSetSe
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetSettleCurrency
+	}
+	if err := validateAccountSetSettleCurrencyAck(&data[0], s.req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

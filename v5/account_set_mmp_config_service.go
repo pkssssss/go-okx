@@ -61,7 +61,18 @@ var (
 	errAccountSetMMPConfigMissingRequired = errors.New("okx: set mmp config requires instFamily/timeInterval/frozenInterval/qtyLimit")
 	errAccountSetMMPConfigInvalidQtyLimit = errors.New("okx: set mmp config requires qtyLimit > 0")
 	errEmptyAccountSetMMPConfig           = errors.New("okx: empty set mmp config response")
+	errInvalidAccountSetMMPConfig         = errors.New("okx: invalid set mmp config response")
 )
+
+func validateAccountSetMMPConfigAck(ack *AccountSetMMPConfigAck, req accountSetMMPConfigRequest) error {
+	if ack == nil || ack.InstFamily == "" || ack.TimeInterval == "" || ack.FrozenInterval == "" || ack.QtyLimit == "" {
+		return errInvalidAccountSetMMPConfig
+	}
+	if ack.InstFamily != req.InstFamily || ack.TimeInterval != req.TimeInterval || ack.FrozenInterval != req.FrozenInterval || ack.QtyLimit != req.QtyLimit {
+		return errInvalidAccountSetMMPConfig
+	}
+	return nil
+}
 
 // Do 设置 MMP 配置（POST /api/v5/account/mmp-config）。
 func (s *AccountSetMMPConfigService) Do(ctx context.Context) (*AccountSetMMPConfigAck, error) {
@@ -80,6 +91,9 @@ func (s *AccountSetMMPConfigService) Do(ctx context.Context) (*AccountSetMMPConf
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetMMPConfig
+	}
+	if err := validateAccountSetMMPConfigAck(&data[0], s.r); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

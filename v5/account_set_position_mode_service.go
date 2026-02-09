@@ -34,6 +34,14 @@ func (s *AccountSetPositionModeService) PosMode(posMode string) *AccountSetPosit
 
 var errAccountSetPositionModeMissingPosMode = errors.New("okx: set position mode requires posMode")
 var errEmptyAccountSetPositionMode = errors.New("okx: empty set position mode response")
+var errInvalidAccountSetPositionMode = errors.New("okx: invalid set position mode response")
+
+func validateAccountSetPositionModeAck(ack *AccountSetPositionModeAck, req accountSetPositionModeRequest) error {
+	if ack == nil || ack.PosMode == "" || ack.PosMode != req.PosMode {
+		return errInvalidAccountSetPositionMode
+	}
+	return nil
+}
 
 // Do 设置持仓模式（POST /api/v5/account/set-position-mode）。
 func (s *AccountSetPositionModeService) Do(ctx context.Context) (*AccountSetPositionModeAck, error) {
@@ -49,6 +57,9 @@ func (s *AccountSetPositionModeService) Do(ctx context.Context) (*AccountSetPosi
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetPositionMode
+	}
+	if err := validateAccountSetPositionModeAck(&data[0], req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

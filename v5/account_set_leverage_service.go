@@ -69,7 +69,24 @@ var (
 	errAccountSetLeverageInvalidMgnModeForCcy  = errors.New("okx: set leverage with ccy requires mgnMode=cross")
 	errAccountSetLeverageInvalidPosSideMgnMode = errors.New("okx: set leverage with posSide requires mgnMode=isolated")
 	errEmptyAccountSetLeverage                 = errors.New("okx: empty set leverage response")
+	errInvalidAccountSetLeverage               = errors.New("okx: invalid set leverage response")
 )
+
+func validateAccountSetLeverageAck(ack *AccountSetLeverageAck, req accountSetLeverageRequest) error {
+	if ack == nil || ack.Lever == "" || ack.MgnMode == "" {
+		return errInvalidAccountSetLeverage
+	}
+	if ack.Lever != req.Lever || ack.MgnMode != req.MgnMode {
+		return errInvalidAccountSetLeverage
+	}
+	if req.InstId != "" && ack.InstId != req.InstId {
+		return errInvalidAccountSetLeverage
+	}
+	if req.PosSide != "" && ack.PosSide != req.PosSide {
+		return errInvalidAccountSetLeverage
+	}
+	return nil
+}
 
 // Do 设置杠杆倍数（POST /api/v5/account/set-leverage）。
 func (s *AccountSetLeverageService) Do(ctx context.Context) (*AccountSetLeverageAck, error) {
@@ -92,6 +109,9 @@ func (s *AccountSetLeverageService) Do(ctx context.Context) (*AccountSetLeverage
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetLeverage
+	}
+	if err := validateAccountSetLeverageAck(&data[0], s.req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

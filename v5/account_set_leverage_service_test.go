@@ -137,6 +137,37 @@ func TestAccountSetLeverageService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid_ack_response", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewAccountSetLeverageService().
+			InstId("BTC-USDT-SWAP").
+			Lever("5").
+			MgnMode("cross").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if err != errInvalidAccountSetLeverage {
+			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetLeverage)
+		}
+	})
+
 	t.Run("missing_credentials", func(t *testing.T) {
 		c := NewClient(
 			WithNowFunc(func() time.Time { return fixedNow }),

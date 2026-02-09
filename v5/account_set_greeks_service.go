@@ -35,7 +35,15 @@ func (s *AccountSetGreeksService) GreeksType(greeksType string) *AccountSetGreek
 var (
 	errAccountSetGreeksMissingGreeksType = errors.New("okx: set greeks requires greeksType")
 	errEmptyAccountSetGreeks             = errors.New("okx: empty set greeks response")
+	errInvalidAccountSetGreeks           = errors.New("okx: invalid set greeks response")
 )
+
+func validateAccountSetGreeksAck(ack *AccountSetGreeksAck, req accountSetGreeksRequest) error {
+	if ack == nil || ack.GreeksType == "" || ack.GreeksType != req.GreeksType {
+		return errInvalidAccountSetGreeks
+	}
+	return nil
+}
 
 // Do 切换期权 greeks 展示方式（POST /api/v5/account/set-greeks）。
 func (s *AccountSetGreeksService) Do(ctx context.Context) (*AccountSetGreeksAck, error) {
@@ -49,6 +57,9 @@ func (s *AccountSetGreeksService) Do(ctx context.Context) (*AccountSetGreeksAck,
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetGreeks
+	}
+	if err := validateAccountSetGreeksAck(&data[0], s.req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

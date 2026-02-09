@@ -35,7 +35,15 @@ func (s *AccountSetFeeTypeService) FeeType(feeType string) *AccountSetFeeTypeSer
 var (
 	errAccountSetFeeTypeMissingFeeType = errors.New("okx: set fee type requires feeType")
 	errEmptyAccountSetFeeType          = errors.New("okx: empty set fee type response")
+	errInvalidAccountSetFeeType        = errors.New("okx: invalid set fee type response")
 )
+
+func validateAccountSetFeeTypeAck(ack *AccountSetFeeTypeAck, req accountSetFeeTypeRequest) error {
+	if ack == nil || ack.FeeType == "" || ack.FeeType != req.FeeType {
+		return errInvalidAccountSetFeeType
+	}
+	return nil
+}
 
 // Do 设置手续费计价方式（POST /api/v5/account/set-fee-type）。
 func (s *AccountSetFeeTypeService) Do(ctx context.Context) (*AccountSetFeeTypeAck, error) {
@@ -49,6 +57,9 @@ func (s *AccountSetFeeTypeService) Do(ctx context.Context) (*AccountSetFeeTypeAc
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetFeeType
+	}
+	if err := validateAccountSetFeeTypeAck(&data[0], s.req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

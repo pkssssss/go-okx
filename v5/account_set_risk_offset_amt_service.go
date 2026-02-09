@@ -43,7 +43,18 @@ func (s *AccountSetRiskOffsetAmtService) ClSpotInUseAmt(amt string) *AccountSetR
 var (
 	errAccountSetRiskOffsetAmtMissingRequired = errors.New("okx: set risk offset amt requires ccy and clSpotInUseAmt")
 	errEmptyAccountSetRiskOffsetAmt           = errors.New("okx: empty set risk offset amt response")
+	errInvalidAccountSetRiskOffsetAmt         = errors.New("okx: invalid set risk offset amt response")
 )
+
+func validateAccountSetRiskOffsetAmtAck(ack *AccountSetRiskOffsetAmtAck, req accountSetRiskOffsetAmtRequest) error {
+	if ack == nil || ack.Ccy == "" || ack.ClSpotInUseAmt == "" {
+		return errInvalidAccountSetRiskOffsetAmt
+	}
+	if ack.Ccy != req.Ccy || ack.ClSpotInUseAmt != req.ClSpotInUseAmt {
+		return errInvalidAccountSetRiskOffsetAmt
+	}
+	return nil
+}
 
 // Do 设置现货对冲占用（POST /api/v5/account/set-riskOffset-amt）。
 func (s *AccountSetRiskOffsetAmtService) Do(ctx context.Context) (*AccountSetRiskOffsetAmtAck, error) {
@@ -57,6 +68,9 @@ func (s *AccountSetRiskOffsetAmtService) Do(ctx context.Context) (*AccountSetRis
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetRiskOffsetAmt
+	}
+	if err := validateAccountSetRiskOffsetAmtAck(&data[0], s.req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }

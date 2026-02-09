@@ -15,6 +15,10 @@ type AccountSetAutoLoanAck struct {
 	AutoLoan bool `json:"autoLoan"`
 }
 
+type accountSetAutoLoanAckRaw struct {
+	AutoLoan *bool `json:"autoLoan"`
+}
+
 // AccountSetAutoLoanService 设置自动借币。
 type AccountSetAutoLoanService struct {
 	c *Client
@@ -32,16 +36,32 @@ func (s *AccountSetAutoLoanService) AutoLoan(autoLoan bool) *AccountSetAutoLoanS
 	return s
 }
 
-var errEmptyAccountSetAutoLoan = errors.New("okx: empty set auto loan response")
+var (
+	errEmptyAccountSetAutoLoan   = errors.New("okx: empty set auto loan response")
+	errInvalidAccountSetAutoLoan = errors.New("okx: invalid set auto loan response")
+)
+
+func validateAccountSetAutoLoanAck(ack *accountSetAutoLoanAckRaw, req accountSetAutoLoanRequest) error {
+	if ack == nil || ack.AutoLoan == nil {
+		return errInvalidAccountSetAutoLoan
+	}
+	if req.AutoLoan != nil && *ack.AutoLoan != *req.AutoLoan {
+		return errInvalidAccountSetAutoLoan
+	}
+	return nil
+}
 
 // Do 设置自动借币（POST /api/v5/account/set-auto-loan）。
 func (s *AccountSetAutoLoanService) Do(ctx context.Context) (*AccountSetAutoLoanAck, error) {
-	var data []AccountSetAutoLoanAck
+	var data []accountSetAutoLoanAckRaw
 	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-auto-loan", nil, s.r, true, &data); err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetAutoLoan
 	}
-	return &data[0], nil
+	if err := validateAccountSetAutoLoanAck(&data[0], s.r); err != nil {
+		return nil, err
+	}
+	return &AccountSetAutoLoanAck{AutoLoan: *data[0].AutoLoan}, nil
 }

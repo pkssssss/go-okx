@@ -59,7 +59,21 @@ func (s *AccountSetAutoEarnService) Apr(apr string) *AccountSetAutoEarnService {
 var (
 	errAccountSetAutoEarnMissingRequired = errors.New("okx: set auto earn requires ccy and action")
 	errEmptyAccountSetAutoEarn           = errors.New("okx: empty set auto earn response")
+	errInvalidAccountSetAutoEarn         = errors.New("okx: invalid set auto earn response")
 )
+
+func validateAccountSetAutoEarnAck(ack *AccountSetAutoEarnAck, req accountSetAutoEarnRequest) error {
+	if ack == nil || ack.Ccy == "" || ack.Action == "" {
+		return errInvalidAccountSetAutoEarn
+	}
+	if ack.Ccy != req.Ccy || ack.Action != req.Action {
+		return errInvalidAccountSetAutoEarn
+	}
+	if req.EarnType != "" && ack.EarnType != req.EarnType {
+		return errInvalidAccountSetAutoEarn
+	}
+	return nil
+}
 
 // Do 设置自动赚币（POST /api/v5/account/set-auto-earn）。
 func (s *AccountSetAutoEarnService) Do(ctx context.Context) (*AccountSetAutoEarnAck, error) {
@@ -73,6 +87,9 @@ func (s *AccountSetAutoEarnService) Do(ctx context.Context) (*AccountSetAutoEarn
 	}
 	if len(data) == 0 {
 		return nil, errEmptyAccountSetAutoEarn
+	}
+	if err := validateAccountSetAutoEarnAck(&data[0], s.req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }
