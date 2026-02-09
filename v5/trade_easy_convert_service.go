@@ -44,12 +44,31 @@ var (
 	errEasyConvertEmptyFromCcy    = errors.New("okx: easy convert requires non-empty fromCcy items")
 	errEasyConvertSameCurrency    = errors.New("okx: easy convert requires toCcy not in fromCcy")
 	errEmptyEasyConvertResponse   = errors.New("okx: empty easy convert response")
+	errInvalidEasyConvertResponse = errors.New("okx: invalid easy convert response")
 )
 
 type easyConvertRequest struct {
 	FromCcy []string `json:"fromCcy"`
 	ToCcy   string   `json:"toCcy"`
 	Source  string   `json:"source,omitempty"`
+}
+
+func validateEasyConvertAck(ack *EasyConvertAck, req easyConvertRequest) error {
+	if ack == nil || ack.FromCcy == "" || ack.ToCcy == "" || ack.Status == "" {
+		return errInvalidEasyConvertResponse
+	}
+	if ack.ToCcy != req.ToCcy {
+		return errInvalidEasyConvertResponse
+	}
+
+	allowedFromCcy := make(map[string]struct{}, len(req.FromCcy))
+	for _, ccy := range req.FromCcy {
+		allowedFromCcy[ccy] = struct{}{}
+	}
+	if _, ok := allowedFromCcy[ack.FromCcy]; !ok {
+		return errInvalidEasyConvertResponse
+	}
+	return nil
 }
 
 // Do 一键兑换主流币交易（POST /api/v5/trade/easy-convert）。
@@ -81,6 +100,11 @@ func (s *EasyConvertService) Do(ctx context.Context) ([]EasyConvertAck, error) {
 	}
 	if len(data) == 0 {
 		return nil, errEmptyEasyConvertResponse
+	}
+	for i := range data {
+		if err := validateEasyConvertAck(&data[i], req); err != nil {
+			return nil, err
+		}
 	}
 	return data, nil
 }

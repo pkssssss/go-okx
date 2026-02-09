@@ -37,11 +37,30 @@ var (
 	errOneClickRepayEmptyDebtCcy    = errors.New("okx: one-click repay requires non-empty debtCcy items")
 	errOneClickRepaySameCurrency    = errors.New("okx: one-click repay requires repayCcy not in debtCcy")
 	errEmptyOneClickRepayResponse   = errors.New("okx: empty one-click repay response")
+	errInvalidOneClickRepayResponse = errors.New("okx: invalid one-click repay response")
 )
 
 type oneClickRepayRequest struct {
 	DebtCcy  []string `json:"debtCcy"`
 	RepayCcy string   `json:"repayCcy"`
+}
+
+func validateOneClickRepayAck(ack *OneClickRepayAck, req oneClickRepayRequest) error {
+	if ack == nil || ack.DebtCcy == "" || ack.RepayCcy == "" || ack.Status == "" {
+		return errInvalidOneClickRepayResponse
+	}
+	if ack.RepayCcy != req.RepayCcy {
+		return errInvalidOneClickRepayResponse
+	}
+
+	allowedDebtCcy := make(map[string]struct{}, len(req.DebtCcy))
+	for _, ccy := range req.DebtCcy {
+		allowedDebtCcy[ccy] = struct{}{}
+	}
+	if _, ok := allowedDebtCcy[ack.DebtCcy]; !ok {
+		return errInvalidOneClickRepayResponse
+	}
+	return nil
 }
 
 // Do 一键还债交易（跨币种保证金/组合保证金）（POST /api/v5/trade/one-click-repay）。
@@ -72,6 +91,11 @@ func (s *OneClickRepayService) Do(ctx context.Context) ([]OneClickRepayAck, erro
 	}
 	if len(data) == 0 {
 		return nil, errEmptyOneClickRepayResponse
+	}
+	for i := range data {
+		if err := validateOneClickRepayAck(&data[i], req); err != nil {
+			return nil, err
+		}
 	}
 	return data, nil
 }

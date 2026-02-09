@@ -35,11 +35,43 @@ var (
 	errOneClickRepayV2MissingRequired = errors.New("okx: one-click repay v2 requires debtCcy/repayCcyList")
 	errOneClickRepayV2InvalidCcy      = errors.New("okx: one-click repay v2 requires non-empty repayCcyList items")
 	errEmptyOneClickRepayV2Response   = errors.New("okx: empty one-click repay v2 response")
+	errInvalidOneClickRepayV2Response = errors.New("okx: invalid one-click repay v2 response")
 )
 
 type oneClickRepayV2Request struct {
 	DebtCcy      string   `json:"debtCcy"`
 	RepayCcyList []string `json:"repayCcyList"`
+}
+
+func validateOneClickRepayV2Ack(ack *OneClickRepayV2Ack, req oneClickRepayV2Request) error {
+	if ack == nil || ack.DebtCcy == "" || len(ack.RepayCcyList) == 0 || ack.TS <= 0 {
+		return errInvalidOneClickRepayV2Response
+	}
+	if ack.DebtCcy != req.DebtCcy || len(ack.RepayCcyList) != len(req.RepayCcyList) {
+		return errInvalidOneClickRepayV2Response
+	}
+
+	repayCcyCount := make(map[string]int, len(req.RepayCcyList))
+	for _, ccy := range req.RepayCcyList {
+		repayCcyCount[ccy]++
+	}
+	for _, ccy := range ack.RepayCcyList {
+		if ccy == "" {
+			return errInvalidOneClickRepayV2Response
+		}
+		count := repayCcyCount[ccy]
+		if count == 0 {
+			return errInvalidOneClickRepayV2Response
+		}
+		repayCcyCount[ccy] = count - 1
+	}
+
+	for _, count := range repayCcyCount {
+		if count != 0 {
+			return errInvalidOneClickRepayV2Response
+		}
+	}
+	return nil
 }
 
 // Do 一键还债交易（新）（POST /api/v5/trade/one-click-repay-v2）。
@@ -64,6 +96,9 @@ func (s *OneClickRepayV2Service) Do(ctx context.Context) (*OneClickRepayV2Ack, e
 	}
 	if len(data) == 0 {
 		return nil, errEmptyOneClickRepayV2Response
+	}
+	if err := validateOneClickRepayV2Ack(&data[0], req); err != nil {
+		return nil, err
 	}
 	return &data[0], nil
 }
