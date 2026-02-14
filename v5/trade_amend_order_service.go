@@ -152,7 +152,14 @@ func (s *AmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAmendOrderResponse
+		return nil, &APIError{
+			HTTPStatus:  http.StatusOK,
+			Method:      http.MethodPost,
+			RequestPath: "/api/v5/trade/amend-order",
+			RequestID:   requestID,
+			Code:        "0",
+			Message:     errEmptyAmendOrderResponse.Error(),
+		}
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{
