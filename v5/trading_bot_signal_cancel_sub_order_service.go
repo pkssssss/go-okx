@@ -57,7 +57,7 @@ func (s *TradingBotSignalCancelSubOrderService) Do(ctx context.Context) (*Tradin
 	if len(data) == 0 {
 		return nil, errEmptyTradingBotSignalCancelSubOrderResponse
 	}
-	if data[0].SCode != "" && data[0].SCode != "0" {
+	if data[0].SCode != "0" {
 		return nil, &APIError{
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,

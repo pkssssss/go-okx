@@ -21,11 +21,19 @@ func (e *RFQCancelBatchRFQsError) Error() string {
 	firstCode := ""
 	firstMsg := ""
 	for _, ack := range e.Acks {
-		if ack.SCode != "" && ack.SCode != "0" {
+		if ack.SCode != "0" {
 			failed++
 			if firstCode == "" {
 				firstCode = ack.SCode
-				firstMsg = ack.SMsg
+				if firstCode == "" {
+					firstCode = "<empty>"
+					if firstMsg == "" {
+						firstMsg = "missing sCode"
+					}
+				}
+				if firstMsg == "" {
+					firstMsg = ack.SMsg
+				}
 			}
 		}
 	}
@@ -55,7 +63,7 @@ func rfqCheckCancelBatchRFQs(method, requestPath, requestID string, acks []RFQCa
 	}
 
 	for _, ack := range acks {
-		if ack.SCode != "" && ack.SCode != "0" {
+		if ack.SCode != "0" {
 			return &RFQCancelBatchRFQsError{
 				HTTPStatus:  200,
 				Method:      method,
@@ -87,11 +95,19 @@ func (e *RFQCancelBatchQuotesError) Error() string {
 	firstCode := ""
 	firstMsg := ""
 	for _, ack := range e.Acks {
-		if ack.SCode != "" && ack.SCode != "0" {
+		if ack.SCode != "0" {
 			failed++
 			if firstCode == "" {
 				firstCode = ack.SCode
-				firstMsg = ack.SMsg
+				if firstCode == "" {
+					firstCode = "<empty>"
+					if firstMsg == "" {
+						firstMsg = "missing sCode"
+					}
+				}
+				if firstMsg == "" {
+					firstMsg = ack.SMsg
+				}
 			}
 		}
 	}
@@ -121,7 +137,7 @@ func rfqCheckCancelBatchQuotes(method, requestPath, requestID string, acks []RFQ
 	}
 
 	for _, ack := range acks {
-		if ack.SCode != "" && ack.SCode != "0" {
+		if ack.SCode != "0" {
 			return &RFQCancelBatchQuotesError{
 				HTTPStatus:  200,
 				Method:      method,

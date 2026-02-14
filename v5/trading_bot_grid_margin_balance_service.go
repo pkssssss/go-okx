@@ -67,7 +67,7 @@ func (s *TradingBotGridMarginBalanceService) Do(ctx context.Context) (*TradingBo
 	if len(data) == 0 {
 		return nil, errEmptyTradingBotGridMarginBalanceResponse
 	}
-	if data[0].SCode != "" && data[0].SCode != "0" {
+	if data[0].SCode != "0" {
 		return nil, &APIError{
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,

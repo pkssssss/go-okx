@@ -38,7 +38,7 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 		invokeDo func(c *Client) error
 	}
 
-	okResp := `{"code":"0","msg":"","data":[{}]}`
+	okResp := `{"code":"0","msg":"","data":[{"sCode":"0","sMsg":""}]}`
 
 	cases := []tc{
 		// TradingBot Grid - public
@@ -640,6 +640,177 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 			c := mkClient(srv)
 			if err := tc.invokeDo(c); err != nil {
 				t.Fatalf("Do() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestTradingBotServices_InvalidAckResponse(t *testing.T) {
+	fixedNow := time.Date(2020, 6, 30, 12, 34, 56, 789_000_000, time.UTC)
+
+	mkClient := func(srv *httptest.Server) *Client {
+		return NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+	}
+
+	type tc struct {
+		name     string
+		method   string
+		path     string
+		invokeDo func(c *Client) error
+	}
+
+	cases := []tc{
+		{
+			name:   "grid_order_algo",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/order-algo",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridOrderAlgoService().
+					InstId("BTC-USDT").
+					AlgoOrdType("grid").
+					MaxPx("1").
+					MinPx("0").
+					GridNum("10").
+					QuoteSz("100").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "grid_amend_order_algo",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/amend-order-algo",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridAmendOrderAlgoService().
+					AlgoId("1").
+					InstId("BTC-USDT").
+					SlTriggerPx("0.9").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "grid_margin_balance",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/margin-balance",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "grid_order_instant_trigger",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/order-instant-trigger",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridOrderInstantTriggerService().
+					AlgoId("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "recurring_order_algo",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/recurring/order-algo",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotRecurringOrderAlgoService().
+					StgyName("stgy").
+					RecurringList([]TradingBotRecurringListItem{{Ccy: "BTC", Ratio: "1"}}).
+					Period("daily").
+					RecurringTime("00:00").
+					TimeZone("UTC").
+					Amt("1").
+					InvestmentCcy("USDT").
+					TdMode("cash").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "recurring_amend_order_algo",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/recurring/amend-order-algo",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotRecurringAmendOrderAlgoService().
+					AlgoId("1").
+					StgyName("stgy").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "signal_order_algo",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/signal/order-algo",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalOrderAlgoService().
+					SignalChanId("1").
+					IncludeAll(true).
+					Lever("1").
+					InvestAmt("1").
+					SubOrdType("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "signal_cancel_sub_order",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/signal/cancel-sub-order",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalCancelSubOrderService().
+					AlgoId("1").
+					InstId("BTC-USDT-SWAP").
+					SignalOrdId("O1").
+					Do(context.Background())
+				return err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got, want := r.Method, tc.method; got != want {
+					t.Fatalf("method = %q, want %q", got, want)
+				}
+				if got, want := r.URL.Path, tc.path; got != want {
+					t.Fatalf("path = %q, want %q", got, want)
+				}
+				w.Header().Set("X-Request-Id", "rid-bot-invalid")
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+			}))
+			t.Cleanup(srv.Close)
+
+			c := mkClient(srv)
+			err := tc.invokeDo(c)
+			if err == nil {
+				t.Fatalf("expected error")
+			}
+			apiErr, ok := err.(*APIError)
+			if !ok {
+				t.Fatalf("error = %T, want *APIError", err)
+			}
+			if got, want := apiErr.RequestPath, tc.path; got != want {
+				t.Fatalf("RequestPath = %q, want %q", got, want)
+			}
+			if got, want := apiErr.RequestID, "rid-bot-invalid"; got != want {
+				t.Fatalf("RequestID = %q, want %q", got, want)
 			}
 		})
 	}

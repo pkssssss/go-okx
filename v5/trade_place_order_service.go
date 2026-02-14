@@ -222,7 +222,7 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 	if len(data) == 0 {
 		return nil, errEmptyPlaceOrderResponse
 	}
-	if data[0].SCode != "" && data[0].SCode != "0" {
+	if data[0].SCode != "0" {
 		return nil, &APIError{
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,

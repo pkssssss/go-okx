@@ -249,6 +249,47 @@ func TestPlaceOrderService_Do(t *testing.T) {
 			t.Fatalf("Code = %q, want %q", apiErr.Code, "51000")
 		}
 	})
+
+	t.Run("invalid_ack_response", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("x-request-id", "rid-place-invalid")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewPlaceOrderService().
+			InstId("BTC-USDT").
+			TdMode("isolated").
+			Side("buy").
+			OrdType("market").
+			Sz("1").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("expected *APIError, got %T: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-place-invalid"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+	})
 }
 
 func TestBatchPlaceOrdersService_Do(t *testing.T) {
@@ -493,6 +534,46 @@ func TestCancelOrderService_Do_AckError_IncludesRequestID(t *testing.T) {
 		t.Fatalf("error = %T, want *APIError", err)
 	}
 	if got, want := apiErr.RequestID, "rid-cancel-1"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+}
+
+func TestCancelOrderService_Do_InvalidAckResponse(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
+		w.Header().Set("x-request-id", "rid-cancel-invalid")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewCancelOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-cancel-invalid"; got != want {
 		t.Fatalf("RequestID = %q, want %q", got, want)
 	}
 }
@@ -776,6 +857,47 @@ func TestAmendOrderService_Do_AckError_IncludesRequestID(t *testing.T) {
 		t.Fatalf("error = %T, want *APIError", err)
 	}
 	if got, want := apiErr.RequestID, "rid-amend-1"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+}
+
+func TestAmendOrderService_Do_InvalidAckResponse(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
+		w.Header().Set("x-request-id", "rid-amend-invalid")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewAmendOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		NewSz("2").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-amend-invalid"; got != want {
 		t.Fatalf("RequestID = %q, want %q", got, want)
 	}
 }

@@ -130,6 +130,45 @@ func TestAmendAlgoOrderService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid_ack_response", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("x-request-id", "rid-amend-algo-invalid")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewAmendAlgoOrderService().
+			InstId("BTC-USDT").
+			AlgoId("1").
+			NewSz("2").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-amend-algo-invalid"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+	})
+
 	t.Run("missing_credentials", func(t *testing.T) {
 		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
 		_, err := c.NewAmendAlgoOrderService().InstId("BTC-USDT").AlgoId("1").NewSz("2").Do(context.Background())

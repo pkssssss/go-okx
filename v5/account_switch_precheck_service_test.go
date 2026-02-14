@@ -127,4 +127,36 @@ func TestAccountSwitchPrecheckService_Do(t *testing.T) {
 			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
+
+	t.Run("invalid_ack_response", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Request-Id", "rid-account-switch-precheck-invalid")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewAccountSwitchPrecheckService().AcctLv("3").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-account-switch-precheck-invalid"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+	})
 }

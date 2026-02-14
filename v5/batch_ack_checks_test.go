@@ -96,6 +96,24 @@ func TestTradingBotCheckBatchAcks_EmptyAcksFailClose(t *testing.T) {
 	}
 }
 
+func TestTradingBotCheckBatchAcks_EmptySCodeFailClose(t *testing.T) {
+	err := tradingBotCheckBatchAcks(http.MethodPost, "/api/v5/tradingBot/signal/stop-order-algo", "rid-bot-empty-scode", []TradingBotOrderAck{{}})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	var batchErr *TradingBotBatchError
+	if !errors.As(err, &batchErr) {
+		t.Fatalf("error = %T, want *TradingBotBatchError", err)
+	}
+	if got, want := batchErr.RequestID, "rid-bot-empty-scode"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := len(batchErr.Acks), 1; got != want {
+		t.Fatalf("Acks len = %d, want %d", got, want)
+	}
+}
+
 func TestRFQCheckCancelBatchRFQs_EmptyAcksFailClose(t *testing.T) {
 	err := rfqCheckCancelBatchRFQs(http.MethodPost, "/api/v5/rfq/cancel-batch-rfqs", "rid-rfq-empty", nil)
 	if err == nil {
@@ -114,6 +132,24 @@ func TestRFQCheckCancelBatchRFQs_EmptyAcksFailClose(t *testing.T) {
 	}
 }
 
+func TestRFQCheckCancelBatchRFQs_EmptySCodeFailClose(t *testing.T) {
+	err := rfqCheckCancelBatchRFQs(http.MethodPost, "/api/v5/rfq/cancel-batch-rfqs", "rid-rfq-empty-scode", []RFQCancelAck{{}})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	var batchErr *RFQCancelBatchRFQsError
+	if !errors.As(err, &batchErr) {
+		t.Fatalf("error = %T, want *RFQCancelBatchRFQsError", err)
+	}
+	if got, want := batchErr.RequestID, "rid-rfq-empty-scode"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := len(batchErr.Acks), 1; got != want {
+		t.Fatalf("Acks len = %d, want %d", got, want)
+	}
+}
+
 func TestRFQCheckCancelBatchQuotes_EmptyAcksFailClose(t *testing.T) {
 	err := rfqCheckCancelBatchQuotes(http.MethodPost, "/api/v5/rfq/cancel-batch-quotes", "rid-quote-empty", nil)
 	if err == nil {
@@ -129,5 +165,23 @@ func TestRFQCheckCancelBatchQuotes_EmptyAcksFailClose(t *testing.T) {
 	}
 	if len(batchErr.Acks) != 0 {
 		t.Fatalf("Acks len = %d, want 0", len(batchErr.Acks))
+	}
+}
+
+func TestRFQCheckCancelBatchQuotes_EmptySCodeFailClose(t *testing.T) {
+	err := rfqCheckCancelBatchQuotes(http.MethodPost, "/api/v5/rfq/cancel-batch-quotes", "rid-quote-empty-scode", []RFQCancelQuoteAck{{}})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	var batchErr *RFQCancelBatchQuotesError
+	if !errors.As(err, &batchErr) {
+		t.Fatalf("error = %T, want *RFQCancelBatchQuotesError", err)
+	}
+	if got, want := batchErr.RequestID, "rid-quote-empty-scode"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := len(batchErr.Acks), 1; got != want {
+		t.Fatalf("Acks len = %d, want %d", got, want)
 	}
 }

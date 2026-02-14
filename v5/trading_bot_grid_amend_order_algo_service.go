@@ -110,7 +110,7 @@ func (s *TradingBotGridAmendOrderAlgoService) Do(ctx context.Context) (*TradingB
 	if len(data) == 0 {
 		return nil, errEmptyTradingBotGridAmendOrderAlgoResponse
 	}
-	if data[0].SCode != "" && data[0].SCode != "0" {
+	if data[0].SCode != "0" {
 		return nil, &APIError{
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,

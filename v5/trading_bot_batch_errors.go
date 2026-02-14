@@ -21,11 +21,19 @@ func (e *TradingBotBatchError) Error() string {
 	firstCode := ""
 	firstMsg := ""
 	for _, ack := range e.Acks {
-		if ack.SCode != "" && ack.SCode != "0" {
+		if ack.SCode != "0" {
 			failed++
 			if firstCode == "" {
 				firstCode = ack.SCode
-				firstMsg = ack.SMsg
+				if firstCode == "" {
+					firstCode = "<empty>"
+					if firstMsg == "" {
+						firstMsg = "missing sCode"
+					}
+				}
+				if firstMsg == "" {
+					firstMsg = ack.SMsg
+				}
 			}
 		}
 	}
@@ -52,7 +60,7 @@ func tradingBotCheckBatchAcks(method, requestPath, requestID string, acks []Trad
 	}
 
 	for _, ack := range acks {
-		if ack.SCode != "" && ack.SCode != "0" {
+		if ack.SCode != "0" {
 			return &TradingBotBatchError{
 				HTTPStatus:  200,
 				Method:      method,

@@ -68,7 +68,7 @@ func (s *RFQCancelRFQService) Do(ctx context.Context) (*RFQCancelAck, error) {
 	if len(data) == 0 {
 		return nil, errEmptyRFQCancelRFQ
 	}
-	if data[0].SCode != "" && data[0].SCode != "0" {
+	if data[0].SCode != "0" {
 		return nil, &APIError{
 			HTTPStatus:  http.StatusOK,
 			Method:      http.MethodPost,
