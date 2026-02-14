@@ -80,11 +80,12 @@ func (s *CopyTradingCloseSubpositionService) Do(ctx context.Context) (*CopyTradi
 	}
 
 	var data []CopyTradingSubPositionAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/copytrading/close-subposition", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/copytrading/close-subposition", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyCopyTradingCloseSubpositionResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/copytrading/close-subposition", requestID, errEmptyCopyTradingCloseSubpositionResponse)
 	}
 	return &data[0], nil
 }

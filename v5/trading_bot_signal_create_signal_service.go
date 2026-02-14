@@ -44,11 +44,12 @@ func (s *TradingBotSignalCreateSignalService) Do(ctx context.Context) (*TradingB
 	}
 
 	var data []TradingBotSignalCreateAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/create-signal", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/signal/create-signal", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotSignalCreateSignalResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/create-signal", requestID, errEmptyTradingBotSignalCreateSignalResponse)
 	}
 	return &data[0], nil
 }

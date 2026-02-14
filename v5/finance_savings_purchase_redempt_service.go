@@ -60,11 +60,12 @@ func (s *FinanceSavingsPurchaseRedemptService) Do(ctx context.Context) (*Finance
 	}
 
 	var data []FinanceSavingsPurchaseRedemptAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/finance/savings/purchase-redempt", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/finance/savings/purchase-redempt", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyFinanceSavingsPurchaseRedempt
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/finance/savings/purchase-redempt", requestID, errEmptyFinanceSavingsPurchaseRedempt)
 	}
 	return &data[0], nil
 }

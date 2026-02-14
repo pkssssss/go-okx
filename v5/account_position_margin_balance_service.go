@@ -77,11 +77,12 @@ func (s *AccountPositionMarginBalanceService) Do(ctx context.Context) (*AccountP
 	}
 
 	var data []AccountPositionMarginBalanceAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/position/margin-balance", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/position/margin-balance", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountPositionMarginBalance
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/position/margin-balance", requestID, errEmptyAccountPositionMarginBalance)
 	}
 	return &data[0], nil
 }

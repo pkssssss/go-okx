@@ -52,11 +52,12 @@ func (s *AccountSetPositionModeService) Do(ctx context.Context) (*AccountSetPosi
 	req := accountSetPositionModeRequest{PosMode: s.posMode}
 
 	var data []AccountSetPositionModeAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-position-mode", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-position-mode", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetPositionMode
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-position-mode", requestID, errEmptyAccountSetPositionMode)
 	}
 	if err := validateAccountSetPositionModeAck(&data[0], req); err != nil {
 		return nil, err

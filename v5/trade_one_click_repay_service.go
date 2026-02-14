@@ -86,11 +86,12 @@ func (s *OneClickRepayService) Do(ctx context.Context) ([]OneClickRepayAck, erro
 	}
 
 	var data []OneClickRepayAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/one-click-repay", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/one-click-repay", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyOneClickRepayResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/one-click-repay", requestID, errEmptyOneClickRepayResponse)
 	}
 	for i := range data {
 		if err := validateOneClickRepayAck(&data[i], req); err != nil {

@@ -88,11 +88,12 @@ func (s *UsersSubaccountCreateAPIKeyService) Do(ctx context.Context) (*UsersSuba
 	}
 
 	var data []UsersSubaccountAPIKeyCreateResult
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/users/subaccount/apikey", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/users/subaccount/apikey", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyUsersSubaccountCreateAPIKeyResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/users/subaccount/apikey", requestID, errEmptyUsersSubaccountCreateAPIKeyResponse)
 	}
 	return &data[0], nil
 }

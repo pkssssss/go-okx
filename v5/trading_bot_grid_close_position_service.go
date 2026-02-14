@@ -60,11 +60,12 @@ func (s *TradingBotGridClosePositionService) Do(ctx context.Context) (*TradingBo
 	}
 
 	var data []TradingBotGridCloseOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/grid/close-position", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/grid/close-position", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotGridClosePositionResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/close-position", requestID, errEmptyTradingBotGridClosePositionResponse)
 	}
 	return &data[0], nil
 }

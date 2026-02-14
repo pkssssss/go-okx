@@ -92,11 +92,12 @@ func (s *AssetSubaccountTransferService) Do(ctx context.Context) (*AssetSubaccou
 	}
 
 	var data []AssetSubaccountTransferAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/asset/subaccount/transfer", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/asset/subaccount/transfer", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAssetSubaccountTransfer
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/asset/subaccount/transfer", requestID, errEmptyAssetSubaccountTransfer)
 	}
 	return &data[0], nil
 }

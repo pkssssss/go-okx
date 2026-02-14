@@ -80,11 +80,12 @@ func (s *FiatBuySellQuoteService) Do(ctx context.Context) (*FiatBuySellQuote, er
 	}
 
 	var data []FiatBuySellQuote
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/fiat/buy-sell/quote", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/fiat/buy-sell/quote", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyFiatBuySellQuoteResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/fiat/buy-sell/quote", requestID, errEmptyFiatBuySellQuoteResponse)
 	}
 	return &data[0], nil
 }

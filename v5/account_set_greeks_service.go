@@ -52,11 +52,12 @@ func (s *AccountSetGreeksService) Do(ctx context.Context) (*AccountSetGreeksAck,
 	}
 
 	var data []AccountSetGreeksAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-greeks", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-greeks", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetGreeks
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-greeks", requestID, errEmptyAccountSetGreeks)
 	}
 	if err := validateAccountSetGreeksAck(&data[0], s.req); err != nil {
 		return nil, err

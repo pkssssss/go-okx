@@ -97,9 +97,7 @@ func TestAccountSetSettleCurrencyService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountSetSettleCurrency {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountSetSettleCurrency)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountSetSettleCurrency)
 	})
 
 	t.Run("invalid_ack_response", func(t *testing.T) {

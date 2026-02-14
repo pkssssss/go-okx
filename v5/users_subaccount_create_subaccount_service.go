@@ -79,11 +79,12 @@ func (s *UsersSubaccountCreateSubaccountService) Do(ctx context.Context) (*Users
 	}
 
 	var data []UsersSubaccountCreateSubaccountResult
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/users/subaccount/create-subaccount", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/users/subaccount/create-subaccount", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyUsersSubaccountCreateSubaccountResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/users/subaccount/create-subaccount", requestID, errEmptyUsersSubaccountCreateSubaccountResponse)
 	}
 	return &data[0], nil
 }

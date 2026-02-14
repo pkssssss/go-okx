@@ -106,9 +106,7 @@ func TestAccountSpotManualBorrowRepayService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountSpotManualBorrowRepay {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountSpotManualBorrowRepay)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountSpotManualBorrowRepay)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

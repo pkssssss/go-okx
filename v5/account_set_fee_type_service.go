@@ -52,11 +52,12 @@ func (s *AccountSetFeeTypeService) Do(ctx context.Context) (*AccountSetFeeTypeAc
 	}
 
 	var data []AccountSetFeeTypeAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-fee-type", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-fee-type", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetFeeType
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-fee-type", requestID, errEmptyAccountSetFeeType)
 	}
 	if err := validateAccountSetFeeTypeAck(&data[0], s.req); err != nil {
 		return nil, err

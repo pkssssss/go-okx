@@ -63,11 +63,12 @@ func (s *AccountSetRiskOffsetAmtService) Do(ctx context.Context) (*AccountSetRis
 	}
 
 	var data []AccountSetRiskOffsetAmtAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-riskOffset-amt", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-riskOffset-amt", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetRiskOffsetAmt
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-riskOffset-amt", requestID, errEmptyAccountSetRiskOffsetAmt)
 	}
 	if err := validateAccountSetRiskOffsetAmtAck(&data[0], s.req); err != nil {
 		return nil, err

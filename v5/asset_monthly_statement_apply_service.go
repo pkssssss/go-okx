@@ -39,11 +39,12 @@ func (s *AssetMonthlyStatementApplyService) Do(ctx context.Context) (*AssetMonth
 	req := assetMonthlyStatementApplyRequest{Month: s.month}
 
 	var data []AssetMonthlyStatementApplyAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/asset/monthly-statement", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/asset/monthly-statement", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAssetMonthlyStatementApply
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/asset/monthly-statement", requestID, errEmptyAssetMonthlyStatementApply)
 	}
 	return &data[0], nil
 }

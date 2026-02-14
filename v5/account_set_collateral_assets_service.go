@@ -80,11 +80,12 @@ func (s *AccountSetCollateralAssetsService) Do(ctx context.Context) (*AccountSet
 	}
 
 	var data []AccountSetCollateralAssetsAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-collateral-assets", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-collateral-assets", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetCollateralAssets
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-collateral-assets", requestID, errEmptyAccountSetCollateralAssets)
 	}
 	if err := validateAccountSetCollateralAssetsAck(&data[0], s.r); err != nil {
 		return nil, err

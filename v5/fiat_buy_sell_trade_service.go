@@ -107,11 +107,12 @@ func (s *FiatBuySellTradeService) Do(ctx context.Context) (*FiatBuySellOrder, er
 	}
 
 	var data []FiatBuySellOrder
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/fiat/buy-sell/trade", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/fiat/buy-sell/trade", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyFiatBuySellTradeResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/fiat/buy-sell/trade", requestID, errEmptyFiatBuySellTradeResponse)
 	}
 	return &data[0], nil
 }

@@ -53,11 +53,12 @@ func (s *CopyTradingSetInstrumentsService) Do(ctx context.Context) ([]CopyTradin
 	}
 
 	var data []CopyTradingInstrument
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/copytrading/set-instruments", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/copytrading/set-instruments", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyCopyTradingSetInstrumentsResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/copytrading/set-instruments", requestID, errEmptyCopyTradingSetInstrumentsResponse)
 	}
 	return data, nil
 }

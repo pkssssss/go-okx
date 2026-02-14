@@ -52,11 +52,12 @@ func (s *AccountSetAccountLevelService) Do(ctx context.Context) (*AccountSetAcco
 	}
 
 	var data []AccountSetAccountLevelAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-account-level", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-account-level", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetAccountLevel
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-account-level", requestID, errEmptyAccountSetAccountLevel)
 	}
 	if err := validateAccountSetAccountLevelAck(&data[0], s.r); err != nil {
 		return nil, err

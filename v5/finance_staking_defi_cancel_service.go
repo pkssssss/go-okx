@@ -46,11 +46,12 @@ func (s *FinanceStakingDefiCancelService) Do(ctx context.Context) (*FinanceStaki
 	}
 
 	var data []FinanceStakingDefiOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/finance/staking-defi/cancel", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/finance/staking-defi/cancel", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyFinanceStakingDefiCancelAck
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/finance/staking-defi/cancel", requestID, errEmptyFinanceStakingDefiCancelAck)
 	}
 	return &data[0], nil
 }

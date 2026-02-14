@@ -78,11 +78,12 @@ func (s *CancelAllAfterService) Do(ctx context.Context) (*TradeCancelAllAfterAck
 	}
 
 	var data []TradeCancelAllAfterAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/cancel-all-after", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/cancel-all-after", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyCancelAllAfterResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/cancel-all-after", requestID, errEmptyCancelAllAfterResponse)
 	}
 	if err := validateCancelAllAfterAck(&data[0], req); err != nil {
 		return nil, err

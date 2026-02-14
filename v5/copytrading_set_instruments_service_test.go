@@ -97,9 +97,7 @@ func TestCopyTradingSetInstrumentsService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyCopyTradingSetInstrumentsResponse {
-			t.Fatalf("error = %v, want %v", err, errEmptyCopyTradingSetInstrumentsResponse)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyCopyTradingSetInstrumentsResponse)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

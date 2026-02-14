@@ -53,11 +53,12 @@ func (s *RFQSetMMPConfigService) Do(ctx context.Context) (*RFQMMPConfig, error) 
 	}
 
 	var data []RFQMMPConfig
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/rfq/mmp-config", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/rfq/mmp-config", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyRFQSetMMPConfigResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/rfq/mmp-config", requestID, errEmptyRFQSetMMPConfigResponse)
 	}
 	return &data[0], nil
 }

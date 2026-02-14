@@ -44,11 +44,12 @@ func (s *TradingBotSignalClosePositionService) Do(ctx context.Context) (*Trading
 	}
 
 	var data []TradingBotAlgoIdAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/close-position", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/signal/close-position", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotSignalClosePositionResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/close-position", requestID, errEmptyTradingBotSignalClosePositionResponse)
 	}
 	return &data[0], nil
 }

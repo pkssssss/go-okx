@@ -108,9 +108,7 @@ func TestAccountSetTradingConfigService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountSetTradingConfig {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountSetTradingConfig)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountSetTradingConfig)
 	})
 
 	t.Run("invalid_ack_response", func(t *testing.T) {

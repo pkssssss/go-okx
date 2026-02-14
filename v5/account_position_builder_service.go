@@ -156,11 +156,12 @@ func (s *AccountPositionBuilderService) Do(ctx context.Context) (*AccountPositio
 	}
 
 	var data []AccountPositionBuilderResult
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/position-builder", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/position-builder", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountPositionBuilder
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/position-builder", requestID, errEmptyAccountPositionBuilder)
 	}
 	return &data[0], nil
 }

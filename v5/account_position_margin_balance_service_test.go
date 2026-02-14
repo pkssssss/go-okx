@@ -113,9 +113,7 @@ func TestAccountPositionMarginBalanceService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountPositionMarginBalance {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountPositionMarginBalance)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountPositionMarginBalance)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

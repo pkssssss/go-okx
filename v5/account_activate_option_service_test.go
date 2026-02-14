@@ -85,9 +85,7 @@ func TestAccountActivateOptionService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountActivateOption {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountActivateOption)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountActivateOption)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

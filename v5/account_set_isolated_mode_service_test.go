@@ -97,9 +97,7 @@ func TestAccountSetIsolatedModeService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountSetIsolatedMode {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountSetIsolatedMode)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountSetIsolatedMode)
 	})
 
 	t.Run("invalid_ack_response", func(t *testing.T) {

@@ -97,9 +97,7 @@ func TestAccountSetRiskOffsetAmtService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountSetRiskOffsetAmt {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountSetRiskOffsetAmt)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountSetRiskOffsetAmt)
 	})
 
 	t.Run("invalid_ack_response", func(t *testing.T) {

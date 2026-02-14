@@ -95,11 +95,12 @@ func (s *EasyConvertService) Do(ctx context.Context) ([]EasyConvertAck, error) {
 	}
 
 	var data []EasyConvertAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/easy-convert", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/easy-convert", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyEasyConvertResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/easy-convert", requestID, errEmptyEasyConvertResponse)
 	}
 	for i := range data {
 		if err := validateEasyConvertAck(&data[i], req); err != nil {

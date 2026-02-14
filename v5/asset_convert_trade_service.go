@@ -106,11 +106,12 @@ func (s *AssetConvertTradeService) Do(ctx context.Context) (*AssetConvertTrade, 
 	}
 
 	var data []AssetConvertTrade
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/asset/convert/trade", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/asset/convert/trade", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAssetConvertTrade
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/asset/convert/trade", requestID, errEmptyAssetConvertTrade)
 	}
 	return &data[0], nil
 }

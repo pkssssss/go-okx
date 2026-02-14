@@ -54,11 +54,12 @@ func (s *TradingBotSignalSetInstrumentsService) Do(ctx context.Context) (*Tradin
 	}
 
 	var data []TradingBotAlgoIdAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/set-instruments", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/signal/set-instruments", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotSignalSetInstrumentsResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/set-instruments", requestID, errEmptyTradingBotSignalSetInstrumentsResponse)
 	}
 	return &data[0], nil
 }

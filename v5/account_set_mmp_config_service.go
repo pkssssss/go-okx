@@ -86,11 +86,12 @@ func (s *AccountSetMMPConfigService) Do(ctx context.Context) (*AccountSetMMPConf
 	}
 
 	var data []AccountSetMMPConfigAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/mmp-config", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/mmp-config", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetMMPConfig
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/mmp-config", requestID, errEmptyAccountSetMMPConfig)
 	}
 	if err := validateAccountSetMMPConfigAck(&data[0], s.r); err != nil {
 		return nil, err

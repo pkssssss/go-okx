@@ -144,11 +144,12 @@ func (s *AssetWithdrawalService) Do(ctx context.Context) (*AssetWithdrawalAck, e
 	}
 
 	var data []AssetWithdrawalAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/asset/withdrawal", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/asset/withdrawal", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errors.New("okx: empty withdrawal response")
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/asset/withdrawal", requestID, errors.New("okx: empty withdrawal response"))
 	}
 	return &data[0], nil
 }

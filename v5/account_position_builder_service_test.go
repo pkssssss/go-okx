@@ -132,9 +132,7 @@ func TestAccountPositionBuilderService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountPositionBuilder {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountPositionBuilder)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountPositionBuilder)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

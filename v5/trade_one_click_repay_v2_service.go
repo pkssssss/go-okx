@@ -91,11 +91,12 @@ func (s *OneClickRepayV2Service) Do(ctx context.Context) (*OneClickRepayV2Ack, e
 	}
 
 	var data []OneClickRepayV2Ack
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/one-click-repay-v2", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/one-click-repay-v2", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyOneClickRepayV2Response
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/one-click-repay-v2", requestID, errEmptyOneClickRepayV2Response)
 	}
 	if err := validateOneClickRepayV2Ack(&data[0], req); err != nil {
 		return nil, err

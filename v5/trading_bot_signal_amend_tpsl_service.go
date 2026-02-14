@@ -44,11 +44,12 @@ func (s *TradingBotSignalAmendTPSLService) Do(ctx context.Context) (*TradingBotA
 	}
 
 	var data []TradingBotAlgoIdAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/amendTPSL", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/signal/amendTPSL", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotSignalAmendTPSLResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/amendTPSL", requestID, errEmptyTradingBotSignalAmendTPSLResponse)
 	}
 	return &data[0], nil
 }

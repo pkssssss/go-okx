@@ -54,11 +54,12 @@ func validateAccountSetAutoLoanAck(ack *accountSetAutoLoanAckRaw, req accountSet
 // Do 设置自动借币（POST /api/v5/account/set-auto-loan）。
 func (s *AccountSetAutoLoanService) Do(ctx context.Context) (*AccountSetAutoLoanAck, error) {
 	var data []accountSetAutoLoanAckRaw
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-auto-loan", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-auto-loan", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetAutoLoan
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-auto-loan", requestID, errEmptyAccountSetAutoLoan)
 	}
 	if err := validateAccountSetAutoLoanAck(&data[0], s.r); err != nil {
 		return nil, err

@@ -82,11 +82,12 @@ func (s *AccountSetAutoEarnService) Do(ctx context.Context) (*AccountSetAutoEarn
 	}
 
 	var data []AccountSetAutoEarnAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-auto-earn", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-auto-earn", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetAutoEarn
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-auto-earn", requestID, errEmptyAccountSetAutoEarn)
 	}
 	if err := validateAccountSetAutoEarnAck(&data[0], s.req); err != nil {
 		return nil, err

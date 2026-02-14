@@ -274,9 +274,7 @@ func TestFiatBuySellQuoteService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyFiatBuySellQuoteResponse {
-			t.Fatalf("error = %v, want %v", err, errEmptyFiatBuySellQuoteResponse)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyFiatBuySellQuoteResponse)
 	})
 }
 

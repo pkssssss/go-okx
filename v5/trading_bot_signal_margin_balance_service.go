@@ -57,11 +57,12 @@ func (s *TradingBotSignalMarginBalanceService) Do(ctx context.Context) (*Trading
 	}
 
 	var data []TradingBotAlgoIdAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/signal/margin-balance", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/signal/margin-balance", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotSignalMarginBalanceResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/margin-balance", requestID, errEmptyTradingBotSignalMarginBalanceResponse)
 	}
 	return &data[0], nil
 }

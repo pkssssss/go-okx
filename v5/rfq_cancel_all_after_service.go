@@ -55,11 +55,12 @@ func (s *RFQCancelAllAfterService) Do(ctx context.Context) (*RFQCancelAllAfterAc
 	req := rfqCancelAllAfterRequest{TimeOut: s.timeOut}
 
 	var data []RFQCancelAllAfterAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/rfq/cancel-all-after", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/rfq/cancel-all-after", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyRFQCancelAllAfterResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/rfq/cancel-all-after", requestID, errEmptyRFQCancelAllAfterResponse)
 	}
 	return &data[0], nil
 }

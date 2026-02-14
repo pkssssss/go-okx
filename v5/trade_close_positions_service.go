@@ -127,11 +127,12 @@ func (s *ClosePositionsService) Do(ctx context.Context) ([]TradeClosePositionAck
 	}
 
 	var data []TradeClosePositionAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/trade/close-position", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/close-position", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyClosePositionsResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/close-position", requestID, errEmptyClosePositionsResponse)
 	}
 	for i := range data {
 		if err := validateClosePositionsAck(&data[i], req); err != nil {

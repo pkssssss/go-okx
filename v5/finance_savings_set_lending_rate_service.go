@@ -46,11 +46,12 @@ func (s *FinanceSavingsSetLendingRateService) Do(ctx context.Context) (*FinanceS
 	}
 
 	var data []FinanceSavingsSetLendingRateAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/finance/savings/set-lending-rate", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/finance/savings/set-lending-rate", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyFinanceSavingsSetLendingRate
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/finance/savings/set-lending-rate", requestID, errEmptyFinanceSavingsSetLendingRate)
 	}
 	return &data[0], nil
 }

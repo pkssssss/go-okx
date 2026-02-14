@@ -38,11 +38,12 @@ func (s *TradingBotGridWithdrawIncomeService) Do(ctx context.Context) (*TradingB
 	}
 
 	var data []TradingBotGridWithdrawIncomeAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/grid/withdraw-income", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/grid/withdraw-income", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotGridWithdrawIncomeResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/withdraw-income", requestID, errEmptyTradingBotGridWithdrawIncomeResponse)
 	}
 	return &data[0], nil
 }

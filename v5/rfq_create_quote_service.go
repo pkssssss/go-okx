@@ -118,11 +118,12 @@ func (s *RFQCreateQuoteService) Do(ctx context.Context) (*Quote, error) {
 	}
 
 	var data []Quote
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/rfq/create-quote", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/rfq/create-quote", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyRFQCreateQuoteResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/rfq/create-quote", requestID, errEmptyRFQCreateQuoteResponse)
 	}
 	return &data[0], nil
 }

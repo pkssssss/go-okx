@@ -50,11 +50,12 @@ func (s *TradingBotGridComputeMarginBalanceService) Do(ctx context.Context) (*Tr
 	}
 
 	var data []TradingBotGridComputeMarginBalanceResult
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/grid/compute-margin-balance", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/grid/compute-margin-balance", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotGridComputeMarginBalanceResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/compute-margin-balance", requestID, errEmptyTradingBotGridComputeMarginBalanceResponse)
 	}
 	return &data[0], nil
 }

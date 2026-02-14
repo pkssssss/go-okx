@@ -97,9 +97,7 @@ func TestAccountSetFeeTypeService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountSetFeeType {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountSetFeeType)
-		}
+		assertEmptyDataAPIError(t, err, errEmptyAccountSetFeeType)
 	})
 
 	t.Run("invalid_ack_response", func(t *testing.T) {

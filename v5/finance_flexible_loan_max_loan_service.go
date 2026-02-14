@@ -52,11 +52,12 @@ func (s *FinanceFlexibleLoanMaxLoanService) Do(ctx context.Context) (*FinanceFle
 	}
 
 	var data []FinanceFlexibleLoanMaxLoan
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/finance/flexible-loan/max-loan", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/finance/flexible-loan/max-loan", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyFinanceFlexibleLoanMaxLoan
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/finance/flexible-loan/max-loan", requestID, errEmptyFinanceFlexibleLoanMaxLoan)
 	}
 	return &data[0], nil
 }

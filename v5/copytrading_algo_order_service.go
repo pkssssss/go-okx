@@ -129,11 +129,12 @@ func (s *CopyTradingAlgoOrderService) Do(ctx context.Context) (*CopyTradingSubPo
 	}
 
 	var data []CopyTradingSubPositionAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/copytrading/algo-order", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/copytrading/algo-order", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyCopyTradingAlgoOrderResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/copytrading/algo-order", requestID, errEmptyCopyTradingAlgoOrderResponse)
 	}
 	return &data[0], nil
 }

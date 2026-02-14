@@ -53,11 +53,12 @@ func (s *UsersSubaccountSetTransferOutService) Do(ctx context.Context) ([]UsersS
 	}
 
 	var data []UsersSubaccountTransferOutPermission
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/users/subaccount/set-transfer-out", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/users/subaccount/set-transfer-out", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyUsersSubaccountSetTransferOutResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/users/subaccount/set-transfer-out", requestID, errEmptyUsersSubaccountSetTransferOutResponse)
 	}
 	return data, nil
 }

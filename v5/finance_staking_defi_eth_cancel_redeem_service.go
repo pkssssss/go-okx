@@ -40,11 +40,12 @@ func (s *FinanceStakingDefiETHCancelRedeemService) Do(ctx context.Context) (*Fin
 
 	req := financeStakingDefiETHCancelRedeemRequest{OrdId: s.ordId}
 	var data []FinanceStakingDefiOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/finance/staking-defi/eth/cancel-redeem", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/finance/staking-defi/eth/cancel-redeem", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyFinanceStakingDefiETHCancelRedeemAck
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/finance/staking-defi/eth/cancel-redeem", requestID, errEmptyFinanceStakingDefiETHCancelRedeemAck)
 	}
 	return &data[0], nil
 }

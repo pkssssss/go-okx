@@ -70,11 +70,12 @@ func (s *FinanceStakingDefiPurchaseService) Do(ctx context.Context) (*FinanceSta
 	}
 
 	var data []FinanceStakingDefiOrderAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/finance/staking-defi/purchase", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/finance/staking-defi/purchase", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyFinanceStakingDefiPurchaseAck
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/finance/staking-defi/purchase", requestID, errEmptyFinanceStakingDefiPurchaseAck)
 	}
 	return &data[0], nil
 }

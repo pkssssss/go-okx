@@ -59,11 +59,12 @@ func (s *AccountSetAutoRepayService) Do(ctx context.Context) (*AccountSetAutoRep
 	}
 
 	var data []accountSetAutoRepayAckRaw
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-auto-repay", nil, s.r, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-auto-repay", nil, s.r, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetAutoRepay
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-auto-repay", requestID, errEmptyAccountSetAutoRepay)
 	}
 	if err := validateAccountSetAutoRepayAck(&data[0], s.r); err != nil {
 		return nil, err

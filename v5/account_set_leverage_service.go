@@ -104,11 +104,12 @@ func (s *AccountSetLeverageService) Do(ctx context.Context) (*AccountSetLeverage
 	}
 
 	var data []AccountSetLeverageAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/set-leverage", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/set-leverage", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSetLeverage
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-leverage", requestID, errEmptyAccountSetLeverage)
 	}
 	if err := validateAccountSetLeverageAck(&data[0], s.req); err != nil {
 		return nil, err

@@ -55,11 +55,12 @@ func (s *SprdCancelAllAfterService) Do(ctx context.Context) (*SprdCancelAllAfter
 	req := sprdCancelAllAfterRequest{TimeOut: s.timeOut}
 
 	var data []SprdCancelAllAfterAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/sprd/cancel-all-after", nil, req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/sprd/cancel-all-after", nil, req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptySprdCancelAllAfterResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/sprd/cancel-all-after", requestID, errEmptySprdCancelAllAfterResponse)
 	}
 	return &data[0], nil
 }

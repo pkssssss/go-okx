@@ -60,11 +60,12 @@ func (s *AccountSpotManualBorrowRepayService) Do(ctx context.Context) (*AccountS
 	}
 
 	var data []AccountSpotManualBorrowRepayAck
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/spot-manual-borrow-repay", nil, s.req, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/spot-manual-borrow-repay", nil, s.req, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSpotManualBorrowRepay
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/spot-manual-borrow-repay", requestID, errEmptyAccountSpotManualBorrowRepay)
 	}
 	return &data[0], nil
 }
