@@ -49,7 +49,7 @@ func (s *TradingBotRecurringAmendOrderAlgoService) Do(ctx context.Context) (*Tra
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotRecurringAmendOrderAlgoResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/recurring/amend-order-algo", requestID, errEmptyTradingBotRecurringAmendOrderAlgoResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

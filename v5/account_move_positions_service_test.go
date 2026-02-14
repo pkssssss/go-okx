@@ -91,6 +91,54 @@ func TestAccountMovePositionsService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("empty_data_response_returns_api_error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "req-empty")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewAccountMovePositionsService().
+			FromAcct("0").
+			ToAcct("test").
+			ClientId("test").
+			Legs([]AccountMovePositionsLeg{
+				{
+					From: AccountMovePositionsLegFrom{PosId: "2065471111340792832", Sz: "1", Side: "sell"},
+					To:   AccountMovePositionsLegTo{TdMode: "cross", PosSide: "net"},
+				},
+			}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "req-empty"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Message, errEmptyAccountMovePositions.Error(); got != want {
+			t.Fatalf("Message = %q, want %q", got, want)
+		}
+	})
+
 	t.Run("partial_failure_state", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

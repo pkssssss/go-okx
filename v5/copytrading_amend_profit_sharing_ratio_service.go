@@ -58,7 +58,7 @@ func (s *CopyTradingAmendProfitSharingRatioService) Do(ctx context.Context) (*Co
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyCopyTradingAmendProfitSharingRatioResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/copytrading/amend-profit-sharing-ratio", requestID, errEmptyCopyTradingAmendProfitSharingRatioResponse)
 	}
 	if !data[0].Result {
 		return nil, &APIError{

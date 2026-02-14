@@ -62,7 +62,7 @@ func (s *SprdCancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error)
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptySprdCancelOrderResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/sprd/cancel-order", requestID, errEmptySprdCancelOrderResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

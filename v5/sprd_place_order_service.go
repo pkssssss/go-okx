@@ -115,7 +115,7 @@ func (s *SprdPlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) 
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptySprdPlaceOrderResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/sprd/order", requestID, errEmptySprdPlaceOrderResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

@@ -195,7 +195,7 @@ func (s *TradingBotGridOrderAlgoService) Do(ctx context.Context) (*TradingBotOrd
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotGridOrderAlgoResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/order-algo", requestID, errEmptyTradingBotGridOrderAlgoResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

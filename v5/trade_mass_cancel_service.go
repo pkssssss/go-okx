@@ -80,7 +80,7 @@ func (s *MassCancelService) Do(ctx context.Context) (*TradeMassCancelAck, error)
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyMassCancelResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/mass-cancel", requestID, errEmptyMassCancelResponse)
 	}
 	if !data[0].Result {
 		return nil, &APIError{

@@ -125,7 +125,7 @@ func (s *TradingBotRecurringOrderAlgoService) Do(ctx context.Context) (*TradingB
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotRecurringOrderAlgoResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/recurring/order-algo", requestID, errEmptyTradingBotRecurringOrderAlgoResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

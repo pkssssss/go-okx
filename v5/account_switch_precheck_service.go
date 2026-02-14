@@ -96,7 +96,7 @@ func (s *AccountSwitchPrecheckService) Do(ctx context.Context) (*AccountSwitchPr
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountSwitchPrecheck
+		return nil, newEmptyDataAPIError(http.MethodGet, "/api/v5/account/set-account-switch-precheck", requestID, errEmptyAccountSwitchPrecheck)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

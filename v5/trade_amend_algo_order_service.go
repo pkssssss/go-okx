@@ -164,7 +164,7 @@ func (s *AmendAlgoOrderService) Do(ctx context.Context) (*TradeAlgoOrderAck, err
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAmendAlgoOrderResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/amend-algos", requestID, errEmptyAmendAlgoOrderResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

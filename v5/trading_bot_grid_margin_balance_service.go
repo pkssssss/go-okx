@@ -65,7 +65,7 @@ func (s *TradingBotGridMarginBalanceService) Do(ctx context.Context) (*TradingBo
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotGridMarginBalanceResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/margin-balance", requestID, errEmptyTradingBotGridMarginBalanceResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

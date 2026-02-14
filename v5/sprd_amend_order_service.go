@@ -89,7 +89,7 @@ func (s *SprdAmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) 
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptySprdAmendOrderResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/sprd/amend-order", requestID, errEmptySprdAmendOrderResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

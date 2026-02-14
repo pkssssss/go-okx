@@ -77,6 +77,7 @@ func TestAccountBillsHistoryArchiveApplyService_Do(t *testing.T) {
 
 	t.Run("empty_response", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-bills-archive-empty")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
 		}))
@@ -97,8 +98,18 @@ func TestAccountBillsHistoryArchiveApplyService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errEmptyAccountBillsHistoryArchiveApply {
-			t.Fatalf("error = %v, want %v", err, errEmptyAccountBillsHistoryArchiveApply)
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error type = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-bills-archive-empty"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("apiErr.Code = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Message, errEmptyAccountBillsHistoryArchiveApply.Error(); got != want {
+			t.Fatalf("apiErr.Message = %q, want %q", got, want)
 		}
 	})
 

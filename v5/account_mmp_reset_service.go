@@ -56,7 +56,7 @@ func (s *AccountMMPResetService) Do(ctx context.Context) (*AccountMMPResetAck, e
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountMMPReset
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/mmp-reset", requestID, errEmptyAccountMMPReset)
 	}
 	if !data[0].Result {
 		return nil, &APIError{

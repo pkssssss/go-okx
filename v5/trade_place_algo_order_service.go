@@ -276,7 +276,7 @@ func (s *PlaceAlgoOrderService) Do(ctx context.Context) (*TradeAlgoOrderAck, err
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyPlaceAlgoOrderResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/order-algo", requestID, errEmptyPlaceAlgoOrderResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

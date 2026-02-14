@@ -201,7 +201,7 @@ func (s *CopyTradingUpsertCopySettingsService) Do(ctx context.Context) (*CopyTra
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyCopyTradingUpsertCopySettingsResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, s.endpoint, requestID, errEmptyCopyTradingUpsertCopySettingsResponse)
 	}
 	if !data[0].Result {
 		return nil, &APIError{

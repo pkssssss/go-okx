@@ -45,7 +45,7 @@ func (s *SprdMassCancelService) Do(ctx context.Context) (*SprdMassCancelAck, err
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptySprdMassCancelResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/sprd/mass-cancel", requestID, errEmptySprdMassCancelResponse)
 	}
 	if !data[0].Result {
 		return nil, &APIError{

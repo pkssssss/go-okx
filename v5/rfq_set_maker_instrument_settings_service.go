@@ -61,7 +61,7 @@ func (s *RFQSetMakerInstrumentSettingsService) Do(ctx context.Context) (*RFQSetM
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyRFQSetMakerInstrumentSettingsResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/rfq/maker-instrument-settings", requestID, errEmptyRFQSetMakerInstrumentSettingsResponse)
 	}
 	if !data[0].Result {
 		return nil, &APIError{

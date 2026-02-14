@@ -58,7 +58,7 @@ func (s *AccountBillsHistoryArchiveApplyService) Do(ctx context.Context) (*Accou
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountBillsHistoryArchiveApply
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/bills-history-archive", requestID, errEmptyAccountBillsHistoryArchiveApply)
 	}
 	if !strings.EqualFold(data[0].Result, "true") {
 		return nil, &APIError{

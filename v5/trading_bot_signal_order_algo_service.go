@@ -108,7 +108,7 @@ func (s *TradingBotSignalOrderAlgoService) Do(ctx context.Context) (*TradingBotO
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyTradingBotSignalOrderAlgoResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/order-algo", requestID, errEmptyTradingBotSignalOrderAlgoResponse)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

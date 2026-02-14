@@ -67,7 +67,7 @@ func (s *CopyTradingStopCopyTradingService) Do(ctx context.Context) (*CopyTradin
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyCopyTradingStopCopyTradingResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/copytrading/stop-copy-trading", requestID, errEmptyCopyTradingStopCopyTradingResponse)
 	}
 	if !data[0].Result {
 		return nil, &APIError{

@@ -144,7 +144,7 @@ func (s *AccountMovePositionsService) Do(ctx context.Context) (*AccountMovePosit
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyAccountMovePositions
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/move-positions", requestID, errEmptyAccountMovePositions)
 	}
 	ack := &data[0]
 	if err := accountCheckMovePositionsAck(http.MethodPost, "/api/v5/account/move-positions", requestID, ack); err != nil {
