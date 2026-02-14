@@ -62,6 +62,18 @@ func checkRedirect(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
+func composeCheckRedirect(userCheckRedirect func(req *http.Request, via []*http.Request) error) func(req *http.Request, via []*http.Request) error {
+	return func(req *http.Request, via []*http.Request) error {
+		if err := checkRedirect(req, via); err != nil {
+			return err
+		}
+		if userCheckRedirect != nil {
+			return userCheckRedirect(req, via)
+		}
+		return nil
+	}
+}
+
 func hasOKAccessHeaders(h http.Header) bool {
 	if h == nil {
 		return false
@@ -131,9 +143,9 @@ func (c *Client) Do(ctx context.Context, method, requestPath string, body []byte
 	switch {
 	case hc == nil:
 		hc = defaultHTTPClient
-	case hc.CheckRedirect == nil:
+	default:
 		hcCopy := *hc
-		hcCopy.CheckRedirect = checkRedirect
+		hcCopy.CheckRedirect = composeCheckRedirect(hc.CheckRedirect)
 		hc = &hcCopy
 	}
 
