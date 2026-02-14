@@ -2,6 +2,7 @@ package okx
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -121,6 +122,37 @@ func TestAccountLevelSwitchPresetService_Do(t *testing.T) {
 		}
 		if got.AcctLv != "2" || got.CurAcctLv != "4" || got.Lever != "10" {
 			t.Fatalf("ack = %#v", got)
+		}
+	})
+
+	t.Run("empty_data_response_returns_api_error_with_request_id", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-account-level-switch-empty")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewAccountLevelSwitchPresetService().AcctLv("2").Do(context.Background())
+		assertEmptyDataAPIError(t, err, errEmptyAccountLevelSwitchPreset)
+
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-account-level-switch-empty"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
 

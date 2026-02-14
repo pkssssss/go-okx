@@ -74,13 +74,14 @@ func (s *AccountLevelSwitchPresetService) Do(ctx context.Context) (*AccountLevel
 	}
 
 	var raw json.RawMessage
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/account/account-level-switch-preset", nil, s.r, true, &raw); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/account/account-level-switch-preset", nil, s.r, true, nil, &raw)
+	if err != nil {
 		return nil, err
 	}
 
 	raw = bytes.TrimSpace(raw)
 	if len(raw) == 0 || string(raw) == "null" {
-		return nil, errEmptyAccountLevelSwitchPreset
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/account-level-switch-preset", requestID, errEmptyAccountLevelSwitchPreset)
 	}
 
 	switch raw[0] {
@@ -90,7 +91,7 @@ func (s *AccountLevelSwitchPresetService) Do(ctx context.Context) (*AccountLevel
 			return nil, err
 		}
 		if len(data) == 0 {
-			return nil, errEmptyAccountLevelSwitchPreset
+			return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/account-level-switch-preset", requestID, errEmptyAccountLevelSwitchPreset)
 		}
 		if err := validateAccountLevelSwitchPresetAck(&data[0]); err != nil {
 			return nil, err

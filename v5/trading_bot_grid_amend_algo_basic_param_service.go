@@ -71,12 +71,13 @@ func (s *TradingBotGridAmendAlgoBasicParamService) Do(ctx context.Context) (*Tra
 	}
 
 	var raw json.RawMessage
-	if err := s.c.do(ctx, http.MethodPost, "/api/v5/tradingBot/grid/amend-algo-basic-param", nil, s.r, true, &raw); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/tradingBot/grid/amend-algo-basic-param", nil, s.r, true, nil, &raw)
+	if err != nil {
 		return nil, err
 	}
 	b := bytes.TrimSpace(raw)
 	if len(b) == 0 || string(b) == "null" {
-		return nil, errEmptyTradingBotGridAmendAlgoBasicParamResponse
+		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/amend-algo-basic-param", requestID, errEmptyTradingBotGridAmendAlgoBasicParamResponse)
 	}
 
 	switch b[0] {
@@ -95,7 +96,7 @@ func (s *TradingBotGridAmendAlgoBasicParamService) Do(ctx context.Context) (*Tra
 			return nil, err
 		}
 		if len(vs) == 0 {
-			return nil, errEmptyTradingBotGridAmendAlgoBasicParamResponse
+			return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/amend-algo-basic-param", requestID, errEmptyTradingBotGridAmendAlgoBasicParamResponse)
 		}
 		if err := validateTradingBotGridAmendAlgoBasicParamResult(&vs[0]); err != nil {
 			return nil, err

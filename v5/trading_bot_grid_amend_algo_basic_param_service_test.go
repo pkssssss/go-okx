@@ -2,6 +2,7 @@ package okx
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -108,6 +109,42 @@ func TestTradingBotGridAmendAlgoBasicParamService_Do(t *testing.T) {
 		}
 		if got.AlgoId != "123" || got.RequiredTopupAmount != "1" {
 			t.Fatalf("result = %#v", got)
+		}
+	})
+
+	t.Run("empty_data_response_returns_api_error_with_request_id", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-grid-amend-basic-empty")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewTradingBotGridAmendAlgoBasicParamService().
+			AlgoId("123").
+			MinPx("1").
+			MaxPx("10").
+			GridNum("50").
+			Do(context.Background())
+		assertEmptyDataAPIError(t, err, errEmptyTradingBotGridAmendAlgoBasicParamResponse)
+
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-grid-amend-basic-empty"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
 
