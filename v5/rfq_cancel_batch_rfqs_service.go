@@ -62,7 +62,8 @@ func (s *RFQCancelBatchRFQsService) Do(ctx context.Context) ([]RFQCancelAck, err
 	if err != nil {
 		return nil, err
 	}
-	if err := rfqCheckCancelBatchRFQs(http.MethodPost, "/api/v5/rfq/cancel-batch-rfqs", requestID, data); err != nil {
+	expectedCount := len(req.RfqIds) + len(req.ClRfqIds)
+	if err := rfqCheckCancelBatchRFQs(http.MethodPost, "/api/v5/rfq/cancel-batch-rfqs", requestID, expectedCount, data); err != nil {
 		return data, err
 	}
 	return data, nil

@@ -115,6 +115,47 @@ func TestRFQCancelBatchRFQsService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("short_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-rfq-short")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"rfqId":"2201","clRfqId":"r1","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewRFQCancelBatchRFQsService().
+			RfqIds([]string{"2201"}).
+			ClRfqIds([]string{"r1"}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var batchErr *RFQCancelBatchRFQsError
+		if !errors.As(err, &batchErr) {
+			t.Fatalf("error = %T, want *RFQCancelBatchRFQsError", err)
+		}
+		if got, want := batchErr.RequestID, "rid-rfq-short"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := batchErr.Expected, 2; got != want {
+			t.Fatalf("Expected = %d, want %d", got, want)
+		}
+		if got, want := len(acks), 1; got != want {
+			t.Fatalf("acks len = %d, want %d", got, want)
+		}
+	})
+
 	t.Run("missing_ids", func(t *testing.T) {
 		c := NewClient()
 		_, err := c.NewRFQCancelBatchRFQsService().Do(context.Background())

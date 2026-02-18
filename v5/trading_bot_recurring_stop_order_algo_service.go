@@ -59,7 +59,7 @@ func (s *TradingBotRecurringStopOrderAlgoService) Do(ctx context.Context) ([]Tra
 	if err != nil {
 		return nil, err
 	}
-	if err := tradingBotCheckBatchAcks(http.MethodPost, "/api/v5/tradingBot/recurring/stop-order-algo", requestID, data); err != nil {
+	if err := tradingBotCheckBatchAcks(http.MethodPost, "/api/v5/tradingBot/recurring/stop-order-algo", requestID, len(req), data); err != nil {
 		return data, err
 	}
 	return data, nil

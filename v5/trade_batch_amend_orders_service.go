@@ -90,7 +90,7 @@ func (s *BatchAmendOrdersService) Do(ctx context.Context) ([]TradeOrderAck, erro
 	if err != nil {
 		return nil, err
 	}
-	if err := tradeCheckBatchAcks(http.MethodPost, "/api/v5/trade/amend-batch-orders", requestID, data); err != nil {
+	if err := tradeCheckBatchAcks(http.MethodPost, "/api/v5/trade/amend-batch-orders", requestID, len(req), data); err != nil {
 		return data, err
 	}
 	return data, nil

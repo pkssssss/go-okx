@@ -477,6 +477,50 @@ func TestBatchPlaceOrdersService_Do(t *testing.T) {
 			t.Fatalf("acks len = %d, want 1", len(acks))
 		}
 	})
+
+	t.Run("short_ack_length_mismatch", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("x-request-id", "rid-batch-short")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"b15","ordId":"1","tag":"","ts":"1695190491421","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewBatchPlaceOrdersService().Orders([]BatchPlaceOrder{
+			{InstId: "BTC-USDT", TdMode: "cash", ClOrdId: "b15", Side: "buy", OrdType: "limit", Px: "2.15", Sz: "2"},
+			{InstId: "BTC-USDT", TdMode: "cash", ClOrdId: "b16", Side: "buy", OrdType: "limit", Px: "2.15", Sz: "2"},
+		}).Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var batchErr *TradeBatchError
+		if !errors.As(err, &batchErr) {
+			t.Fatalf("expected *TradeBatchError, got %T: %v", err, err)
+		}
+		if got, want := batchErr.RequestID, "rid-batch-short"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := batchErr.Expected, 2; got != want {
+			t.Fatalf("Expected = %d, want %d", got, want)
+		}
+		if got, want := len(acks), 1; got != want {
+			t.Fatalf("acks len = %d, want %d", got, want)
+		}
+	})
 }
 
 func TestCancelOrderService_Do(t *testing.T) {
@@ -761,6 +805,52 @@ func TestBatchCancelOrdersService_Do_InvalidAckResponse(t *testing.T) {
 	}
 	if len(acks) != 1 {
 		t.Fatalf("acks len = %d, want 1", len(acks))
+	}
+}
+
+func TestBatchCancelOrdersService_Do_ShortAckResponse(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
+		w.Header().Set("x-request-id", "rid-cancel-batch-short")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"1","tag":"","ts":"1695190491421","sCode":"0","sMsg":""}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	acks, err := c.NewBatchCancelOrdersService().Orders([]BatchCancelOrder{
+		{InstId: "BTC-USDT", OrdId: "590908157585625111"},
+		{InstId: "BTC-USDT", OrdId: "590908544950571222"},
+	}).Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	var batchErr *TradeBatchError
+	if !errors.As(err, &batchErr) {
+		t.Fatalf("expected *TradeBatchError, got %T: %v", err, err)
+	}
+	if got, want := batchErr.RequestID, "rid-cancel-batch-short"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := batchErr.Expected, 2; got != want {
+		t.Fatalf("Expected = %d, want %d", got, want)
+	}
+	if got, want := len(acks), 1; got != want {
+		t.Fatalf("acks len = %d, want %d", got, want)
 	}
 }
 
@@ -1131,6 +1221,52 @@ func TestBatchAmendOrdersService_Do_InvalidAckResponse(t *testing.T) {
 	}
 	if len(acks) != 1 {
 		t.Fatalf("acks len = %d, want 1", len(acks))
+	}
+}
+
+func TestBatchAmendOrdersService_Do_ShortAckResponse(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
+		w.Header().Set("x-request-id", "rid-amend-batch-short")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"590909308792049444","reqId":"","ts":"1695190491421","sCode":"0","sMsg":""}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	acks, err := c.NewBatchAmendOrdersService().Orders([]BatchAmendOrder{
+		{InstId: "BTC-USDT", OrdId: "590909308792049444", NewSz: "2"},
+		{InstId: "BTC-USDT", OrdId: "590909308792049555", NewSz: "2"},
+	}).Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	var batchErr *TradeBatchError
+	if !errors.As(err, &batchErr) {
+		t.Fatalf("expected *TradeBatchError, got %T: %v", err, err)
+	}
+	if got, want := batchErr.RequestID, "rid-amend-batch-short"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := batchErr.Expected, 2; got != want {
+		t.Fatalf("Expected = %d, want %d", got, want)
+	}
+	if got, want := len(acks), 1; got != want {
+		t.Fatalf("acks len = %d, want %d", got, want)
 	}
 }
 
