@@ -71,7 +71,7 @@ func (s *AccountSetRiskOffsetAmtService) Do(ctx context.Context) (*AccountSetRis
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-riskOffset-amt", requestID, errEmptyAccountSetRiskOffsetAmt)
 	}
 	if err := validateAccountSetRiskOffsetAmtAck(&data[0], s.req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-riskOffset-amt", requestID, err)
 	}
 	return &data[0], nil
 }

@@ -19,6 +19,7 @@ type APIError struct {
 	Code    string
 	Message string
 	Raw     []byte
+	Err     error
 }
 
 func (e *APIError) Error() string {
@@ -33,6 +34,13 @@ func (e *APIError) Error() string {
 		return fmt.Sprintf("<OKX APIError> http=%d code=%s msg=%s method=%s path=%s%s", e.HTTPStatus, e.Code, e.Message, e.Method, e.RequestPath, requestIDPart)
 	}
 	return fmt.Sprintf("<OKX APIError> http=%d method=%s path=%s%s", e.HTTPStatus, e.Method, e.RequestPath, requestIDPart)
+}
+
+func (e *APIError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
 }
 
 // RequestStage 表示 REST 请求失败发生的阶段。

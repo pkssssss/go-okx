@@ -178,9 +178,7 @@ func TestAccountLevelSwitchPresetService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountLevelSwitchPreset {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountLevelSwitchPreset)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountLevelSwitchPreset)
 	})
 
 	t.Run("invalid_raw_response_missing_required_fields", func(t *testing.T) {
@@ -205,9 +203,7 @@ func TestAccountLevelSwitchPresetService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountLevelSwitchPreset {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountLevelSwitchPreset)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountLevelSwitchPreset)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

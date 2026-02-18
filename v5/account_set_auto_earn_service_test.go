@@ -122,9 +122,7 @@ func TestAccountSetAutoEarnService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetAutoEarn {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetAutoEarn)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetAutoEarn)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

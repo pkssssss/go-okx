@@ -136,7 +136,7 @@ func (s *ClosePositionsService) Do(ctx context.Context) ([]TradeClosePositionAck
 	}
 	for i := range data {
 		if err := validateClosePositionsAck(&data[i], req); err != nil {
-			return nil, err
+			return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/trade/close-position", requestID, err)
 		}
 	}
 	return data, nil

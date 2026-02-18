@@ -60,7 +60,7 @@ func (s *AccountSetFeeTypeService) Do(ctx context.Context) (*AccountSetFeeTypeAc
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-fee-type", requestID, errEmptyAccountSetFeeType)
 	}
 	if err := validateAccountSetFeeTypeAck(&data[0], s.req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-fee-type", requestID, err)
 	}
 	return &data[0], nil
 }

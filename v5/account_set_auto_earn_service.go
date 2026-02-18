@@ -90,7 +90,7 @@ func (s *AccountSetAutoEarnService) Do(ctx context.Context) (*AccountSetAutoEarn
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-auto-earn", requestID, errEmptyAccountSetAutoEarn)
 	}
 	if err := validateAccountSetAutoEarnAck(&data[0], s.req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-auto-earn", requestID, err)
 	}
 	return &data[0], nil
 }

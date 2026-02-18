@@ -67,7 +67,7 @@ func (s *AccountSetAutoRepayService) Do(ctx context.Context) (*AccountSetAutoRep
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-auto-repay", requestID, errEmptyAccountSetAutoRepay)
 	}
 	if err := validateAccountSetAutoRepayAck(&data[0], s.r); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-auto-repay", requestID, err)
 	}
 	return &AccountSetAutoRepayAck{AutoRepay: *data[0].AutoRepay}, nil
 }

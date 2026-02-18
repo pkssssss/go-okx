@@ -60,7 +60,7 @@ func (s *AccountSetGreeksService) Do(ctx context.Context) (*AccountSetGreeksAck,
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-greeks", requestID, errEmptyAccountSetGreeks)
 	}
 	if err := validateAccountSetGreeksAck(&data[0], s.req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-greeks", requestID, err)
 	}
 	return &data[0], nil
 }

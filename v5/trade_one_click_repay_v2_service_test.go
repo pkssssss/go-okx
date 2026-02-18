@@ -76,6 +76,7 @@ func TestOneClickRepayV2Service_Do(t *testing.T) {
 
 	t.Run("invalid_ack_response", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-trade-one-click-repay-v2-invalid")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
 		}))
@@ -96,8 +97,13 @@ func TestOneClickRepayV2Service_Do(t *testing.T) {
 			DebtCcy("USDC").
 			RepayCcyList([]string{"USDC", "BTC"}).
 			Do(context.Background())
-		if !errors.Is(err, errInvalidOneClickRepayV2Response) {
-			t.Fatalf("expected errInvalidOneClickRepayV2Response, got %T: %v", err, err)
+		assertInvalidDataAPIError(t, err, errInvalidOneClickRepayV2Response)
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-trade-one-click-repay-v2-invalid"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
 

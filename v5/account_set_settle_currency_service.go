@@ -60,7 +60,7 @@ func (s *AccountSetSettleCurrencyService) Do(ctx context.Context) (*AccountSetSe
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-settle-currency", requestID, errEmptyAccountSetSettleCurrency)
 	}
 	if err := validateAccountSetSettleCurrencyAck(&data[0], s.req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-settle-currency", requestID, err)
 	}
 	return &data[0], nil
 }

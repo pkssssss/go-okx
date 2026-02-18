@@ -101,9 +101,7 @@ func TestAccountSetPositionModeService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetPositionMode {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetPositionMode)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetPositionMode)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

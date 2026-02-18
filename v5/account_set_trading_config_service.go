@@ -75,7 +75,7 @@ func (s *AccountSetTradingConfigService) Do(ctx context.Context) (*AccountSetTra
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-trading-config", requestID, errEmptyAccountSetTradingConfig)
 	}
 	if err := validateAccountSetTradingConfigAck(&data[0], s.req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-trading-config", requestID, err)
 	}
 	return &data[0], nil
 }

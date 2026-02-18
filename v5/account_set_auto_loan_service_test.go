@@ -125,9 +125,7 @@ func TestAccountSetAutoLoanService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetAutoLoan {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetAutoLoan)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetAutoLoan)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

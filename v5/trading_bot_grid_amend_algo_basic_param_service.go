@@ -87,7 +87,7 @@ func (s *TradingBotGridAmendAlgoBasicParamService) Do(ctx context.Context) (*Tra
 			return nil, err
 		}
 		if err := validateTradingBotGridAmendAlgoBasicParamResult(&v); err != nil {
-			return nil, err
+			return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/amend-algo-basic-param", requestID, err)
 		}
 		return &v, nil
 	case '[':
@@ -99,7 +99,7 @@ func (s *TradingBotGridAmendAlgoBasicParamService) Do(ctx context.Context) (*Tra
 			return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/amend-algo-basic-param", requestID, errEmptyTradingBotGridAmendAlgoBasicParamResponse)
 		}
 		if err := validateTradingBotGridAmendAlgoBasicParamResult(&vs[0]); err != nil {
-			return nil, err
+			return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/amend-algo-basic-param", requestID, err)
 		}
 		return &vs[0], nil
 	default:

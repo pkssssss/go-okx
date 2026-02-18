@@ -163,9 +163,7 @@ func TestAccountSetLeverageService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetLeverage {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetLeverage)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetLeverage)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

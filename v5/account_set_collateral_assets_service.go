@@ -88,7 +88,7 @@ func (s *AccountSetCollateralAssetsService) Do(ctx context.Context) (*AccountSet
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-collateral-assets", requestID, errEmptyAccountSetCollateralAssets)
 	}
 	if err := validateAccountSetCollateralAssetsAck(&data[0], s.r); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-collateral-assets", requestID, err)
 	}
 	return &data[0], nil
 }

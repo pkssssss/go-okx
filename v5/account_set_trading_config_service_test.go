@@ -133,9 +133,7 @@ func TestAccountSetTradingConfigService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetTradingConfig {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetTradingConfig)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetTradingConfig)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

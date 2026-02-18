@@ -94,7 +94,7 @@ func (s *AccountLevelSwitchPresetService) Do(ctx context.Context) (*AccountLevel
 			return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/account-level-switch-preset", requestID, errEmptyAccountLevelSwitchPreset)
 		}
 		if err := validateAccountLevelSwitchPresetAck(&data[0]); err != nil {
-			return nil, err
+			return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/account-level-switch-preset", requestID, err)
 		}
 		return &data[0], nil
 	case '{':
@@ -103,7 +103,7 @@ func (s *AccountLevelSwitchPresetService) Do(ctx context.Context) (*AccountLevel
 			return nil, err
 		}
 		if err := validateAccountLevelSwitchPresetAck(&data); err != nil {
-			return nil, err
+			return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/account-level-switch-preset", requestID, err)
 		}
 		return &data, nil
 	default:

@@ -104,7 +104,7 @@ func (s *EasyConvertService) Do(ctx context.Context) ([]EasyConvertAck, error) {
 	}
 	for i := range data {
 		if err := validateEasyConvertAck(&data[i], req); err != nil {
-			return nil, err
+			return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/trade/easy-convert", requestID, err)
 		}
 	}
 	return data, nil

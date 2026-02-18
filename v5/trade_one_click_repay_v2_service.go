@@ -99,7 +99,7 @@ func (s *OneClickRepayV2Service) Do(ctx context.Context) (*OneClickRepayV2Ack, e
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/one-click-repay-v2", requestID, errEmptyOneClickRepayV2Response)
 	}
 	if err := validateOneClickRepayV2Ack(&data[0], req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/trade/one-click-repay-v2", requestID, err)
 	}
 	return &data[0], nil
 }

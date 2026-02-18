@@ -112,7 +112,7 @@ func (s *AccountSetLeverageService) Do(ctx context.Context) (*AccountSetLeverage
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-leverage", requestID, errEmptyAccountSetLeverage)
 	}
 	if err := validateAccountSetLeverageAck(&data[0], s.req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-leverage", requestID, err)
 	}
 	return &data[0], nil
 }

@@ -122,9 +122,7 @@ func TestAccountSetIsolatedModeService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetIsolatedMode {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetIsolatedMode)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetIsolatedMode)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

@@ -14,5 +14,6 @@ func newEmptyDataAPIError(method, requestPath, requestID string, emptyErr error)
 		RequestID:   requestID,
 		Code:        "0",
 		Message:     message,
+		Err:         emptyErr,
 	}
 }

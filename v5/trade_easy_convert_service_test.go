@@ -77,6 +77,7 @@ func TestEasyConvertService_Do(t *testing.T) {
 
 	t.Run("invalid_ack_response", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-trade-easy-convert-invalid")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
 		}))
@@ -97,8 +98,13 @@ func TestEasyConvertService_Do(t *testing.T) {
 			FromCcy([]string{"ADA", "USDC"}).
 			ToCcy("OKB").
 			Do(context.Background())
-		if !errors.Is(err, errInvalidEasyConvertResponse) {
-			t.Fatalf("expected errInvalidEasyConvertResponse, got %T: %v", err, err)
+		assertInvalidDataAPIError(t, err, errInvalidEasyConvertResponse)
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-trade-easy-convert-invalid"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
 

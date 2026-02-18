@@ -122,9 +122,7 @@ func TestAccountSetRiskOffsetAmtService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetRiskOffsetAmt {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetRiskOffsetAmt)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetRiskOffsetAmt)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

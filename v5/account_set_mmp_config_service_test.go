@@ -127,9 +127,7 @@ func TestAccountSetMMPConfigService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetMMPConfig {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetMMPConfig)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetMMPConfig)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

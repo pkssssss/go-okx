@@ -60,7 +60,7 @@ func (s *AccountSetAccountLevelService) Do(ctx context.Context) (*AccountSetAcco
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-account-level", requestID, errEmptyAccountSetAccountLevel)
 	}
 	if err := validateAccountSetAccountLevelAck(&data[0], s.r); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-account-level", requestID, err)
 	}
 	return &data[0], nil
 }

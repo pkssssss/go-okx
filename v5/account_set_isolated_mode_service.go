@@ -67,7 +67,7 @@ func (s *AccountSetIsolatedModeService) Do(ctx context.Context) (*AccountSetIsol
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-isolated-mode", requestID, errEmptyAccountSetIsolatedMode)
 	}
 	if err := validateAccountSetIsolatedModeAck(&data[0], s.req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-isolated-mode", requestID, err)
 	}
 	return &data[0], nil
 }

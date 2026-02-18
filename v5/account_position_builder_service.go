@@ -148,11 +148,11 @@ func validateAccountPositionBuilderSimAsset(simAsset []AccountPositionBuilderSim
 
 // Do 仓位创建器（POST /api/v5/account/position-builder）。
 func (s *AccountPositionBuilderService) Do(ctx context.Context) (*AccountPositionBuilderResult, error) {
-	if err := validateAccountPositionBuilderSimPos(s.req.SimPos); err != nil {
-		return nil, err
+	if simPosErr := validateAccountPositionBuilderSimPos(s.req.SimPos); simPosErr != nil {
+		return nil, simPosErr
 	}
-	if err := validateAccountPositionBuilderSimAsset(s.req.SimAsset); err != nil {
-		return nil, err
+	if simAssetErr := validateAccountPositionBuilderSimAsset(s.req.SimAsset); simAssetErr != nil {
+		return nil, simAssetErr
 	}
 
 	var data []AccountPositionBuilderResult

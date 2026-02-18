@@ -62,7 +62,7 @@ func (s *AccountSetAutoLoanService) Do(ctx context.Context) (*AccountSetAutoLoan
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-auto-loan", requestID, errEmptyAccountSetAutoLoan)
 	}
 	if err := validateAccountSetAutoLoanAck(&data[0], s.r); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-auto-loan", requestID, err)
 	}
 	return &AccountSetAutoLoanAck{AutoLoan: *data[0].AutoLoan}, nil
 }

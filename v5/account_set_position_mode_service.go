@@ -60,7 +60,7 @@ func (s *AccountSetPositionModeService) Do(ctx context.Context) (*AccountSetPosi
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/set-position-mode", requestID, errEmptyAccountSetPositionMode)
 	}
 	if err := validateAccountSetPositionModeAck(&data[0], req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/set-position-mode", requestID, err)
 	}
 	return &data[0], nil
 }

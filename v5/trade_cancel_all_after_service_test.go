@@ -73,6 +73,7 @@ func TestCancelAllAfterService_Do(t *testing.T) {
 			if handleTradeAccountRateLimitMock(w, r) {
 				return
 			}
+			w.Header().Set("X-Request-Id", "rid-trade-cancel-all-after-invalid")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
 		}))
@@ -90,8 +91,13 @@ func TestCancelAllAfterService_Do(t *testing.T) {
 		)
 
 		_, err := c.NewCancelAllAfterService().TimeOut("60").Tag("t1").Do(context.Background())
-		if !errors.Is(err, errInvalidCancelAllAfterResponse) {
-			t.Fatalf("expected errInvalidCancelAllAfterResponse, got %T: %v", err, err)
+		assertInvalidDataAPIError(t, err, errInvalidCancelAllAfterResponse)
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-trade-cancel-all-after-invalid"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
 

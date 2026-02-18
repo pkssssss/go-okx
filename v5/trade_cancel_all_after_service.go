@@ -86,7 +86,7 @@ func (s *CancelAllAfterService) Do(ctx context.Context) (*TradeCancelAllAfterAck
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/cancel-all-after", requestID, errEmptyCancelAllAfterResponse)
 	}
 	if err := validateCancelAllAfterAck(&data[0], req); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/trade/cancel-all-after", requestID, err)
 	}
 	return &data[0], nil
 }

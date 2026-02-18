@@ -2,6 +2,7 @@ package okx
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -107,6 +108,7 @@ func TestAccountSetAutoRepayService_Do(t *testing.T) {
 
 	t.Run("invalid_ack_response", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-account-set-auto-repay-invalid")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
 		}))
@@ -127,8 +129,13 @@ func TestAccountSetAutoRepayService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetAutoRepay {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetAutoRepay)
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetAutoRepay)
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-account-set-auto-repay-invalid"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
 

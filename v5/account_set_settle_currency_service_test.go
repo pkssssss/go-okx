@@ -122,9 +122,7 @@ func TestAccountSetSettleCurrencyService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetSettleCurrency {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetSettleCurrency)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetSettleCurrency)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

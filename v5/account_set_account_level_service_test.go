@@ -99,9 +99,7 @@ func TestAccountSetAccountLevelService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidAccountSetAccountLevel {
-			t.Fatalf("error = %v, want %v", err, errInvalidAccountSetAccountLevel)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidAccountSetAccountLevel)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

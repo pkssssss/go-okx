@@ -175,9 +175,7 @@ func TestTradingBotGridAmendAlgoBasicParamService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidTradingBotGridAmendAlgoBasicParamResponse {
-			t.Fatalf("error = %v, want %v", err, errInvalidTradingBotGridAmendAlgoBasicParamResponse)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidTradingBotGridAmendAlgoBasicParamResponse)
 	})
 
 	t.Run("invalid_raw_status_error_response", func(t *testing.T) {
@@ -207,9 +205,7 @@ func TestTradingBotGridAmendAlgoBasicParamService_Do(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if err != errInvalidTradingBotGridAmendAlgoBasicParamResponse {
-			t.Fatalf("error = %v, want %v", err, errInvalidTradingBotGridAmendAlgoBasicParamResponse)
-		}
+		assertInvalidDataAPIError(t, err, errInvalidTradingBotGridAmendAlgoBasicParamResponse)
 	})
 
 	t.Run("missing_credentials", func(t *testing.T) {

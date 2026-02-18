@@ -94,7 +94,7 @@ func (s *AccountSetMMPConfigService) Do(ctx context.Context) (*AccountSetMMPConf
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/account/mmp-config", requestID, errEmptyAccountSetMMPConfig)
 	}
 	if err := validateAccountSetMMPConfigAck(&data[0], s.r); err != nil {
-		return nil, err
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/account/mmp-config", requestID, err)
 	}
 	return &data[0], nil
 }

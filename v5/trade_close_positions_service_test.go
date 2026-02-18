@@ -70,6 +70,7 @@ func TestClosePositionsService_Do(t *testing.T) {
 
 	t.Run("invalid_ack_response", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-trade-close-positions-invalid")
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{}]}`))
 		}))
@@ -87,8 +88,13 @@ func TestClosePositionsService_Do(t *testing.T) {
 		)
 
 		_, err := c.NewClosePositionsService().InstId("BTC-USDT-SWAP").MgnMode("cross").Do(context.Background())
-		if !errors.Is(err, errInvalidClosePositionsResponse) {
-			t.Fatalf("expected errInvalidClosePositionsResponse, got %T: %v", err, err)
+		assertInvalidDataAPIError(t, err, errInvalidClosePositionsResponse)
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-trade-close-positions-invalid"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
 		}
 	})
 
