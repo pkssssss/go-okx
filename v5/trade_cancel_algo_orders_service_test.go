@@ -208,6 +208,50 @@ func TestCancelAlgoOrdersService_Do(t *testing.T) {
 		}
 	})
 
+	t.Run("short_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("x-request-id", "rid-algo-short")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoClOrdId":"","algoId":"1","clOrdId":"","sCode":"0","sMsg":"","tag":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewCancelAlgoOrdersService().Orders([]CancelAlgoOrder{
+			{InstId: "BTC-USDT", AlgoId: "1"},
+			{InstId: "BTC-USDT", AlgoId: "2"},
+		}).Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var batchErr *TradeAlgoBatchError
+		if !errors.As(err, &batchErr) {
+			t.Fatalf("error = %T, want *TradeAlgoBatchError", err)
+		}
+		if got, want := batchErr.RequestID, "rid-algo-short"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := batchErr.Expected, 2; got != want {
+			t.Fatalf("Expected = %d, want %d", got, want)
+		}
+		if got, want := len(acks), 1; got != want {
+			t.Fatalf("acks len = %d, want %d", got, want)
+		}
+	})
+
 	t.Run("missing_credentials", func(t *testing.T) {
 		c := NewClient(WithNowFunc(func() time.Time { return fixedNow }))
 		_, err := c.NewCancelAlgoOrdersService().Orders([]CancelAlgoOrder{{InstId: "BTC-USDT", AlgoId: "1"}}).Do(context.Background())

@@ -68,7 +68,7 @@ func (s *CancelAlgoOrdersService) Do(ctx context.Context) ([]TradeAlgoOrderAck, 
 	if err != nil {
 		return nil, err
 	}
-	if err := tradeCheckAlgoAcks(http.MethodPost, "/api/v5/trade/cancel-algos", requestID, data); err != nil {
+	if err := tradeCheckAlgoAcks(http.MethodPost, "/api/v5/trade/cancel-algos", requestID, len(req), data); err != nil {
 		return data, err
 	}
 	return data, nil
