@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -41,6 +42,7 @@ func (s *TradingBotSignalCancelSubOrderService) SignalOrdId(signalOrdId string) 
 var (
 	errTradingBotSignalCancelSubOrderMissingRequired = errors.New("okx: tradingBot signal cancel-sub-order requires algoId, instId and signalOrdId")
 	errEmptyTradingBotSignalCancelSubOrderResponse   = errors.New("okx: empty tradingBot signal cancel-sub-order response")
+	errInvalidTradingBotSignalCancelSubOrderResponse = errors.New("okx: invalid tradingBot signal cancel-sub-order response")
 )
 
 // Do 撤单（POST /api/v5/tradingBot/signal/cancel-sub-order）。
@@ -56,6 +58,14 @@ func (s *TradingBotSignalCancelSubOrderService) Do(ctx context.Context) (*Tradin
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/cancel-sub-order", requestID, errEmptyTradingBotSignalCancelSubOrderResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/signal/cancel-sub-order",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalCancelSubOrderResponse, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

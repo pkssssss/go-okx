@@ -1129,6 +1129,36 @@ func TestTradingBotServices_SingleWriteMultiAckFailClose(t *testing.T) {
 				return err
 			},
 		},
+		{
+			name:      "signal_cancel_sub_order_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/cancel-sub-order",
+			requestID: "rid-bot-signal-cancel-multi",
+			response:  `{"code":"0","msg":"","data":[{"signalOrdId":"o1","sCode":"0","sMsg":""},{"signalOrdId":"o2","sCode":"0","sMsg":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalCancelSubOrderService().
+					AlgoId("1").
+					InstId("BTC-USDT-SWAP").
+					SignalOrdId("O1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_cancel_sub_order_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/cancel-sub-order",
+			requestID: "rid-bot-signal-cancel-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"signalOrdId":"o1","sCode":"0","sMsg":""},{"signalOrdId":"o2","sCode":"70001","sMsg":"Order does not exist."}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalCancelSubOrderService().
+					AlgoId("1").
+					InstId("BTC-USDT-SWAP").
+					SignalOrdId("O1").
+					Do(context.Background())
+				return err
+			},
+		},
 	}
 
 	for _, tc := range cases {
