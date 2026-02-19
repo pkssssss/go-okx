@@ -115,7 +115,7 @@ func TestRFQCancelBatchRFQsService_Do(t *testing.T) {
 		}
 	})
 
-	t.Run("short_ack_length_mismatch_fail_close", func(t *testing.T) {
+	t.Run("primary_ids_take_precedence_when_both_provided", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("x-request-id", "rid-rfq-short")
 			w.Header().Set("Content-Type", "application/json")
@@ -138,6 +138,39 @@ func TestRFQCancelBatchRFQsService_Do(t *testing.T) {
 			RfqIds([]string{"2201"}).
 			ClRfqIds([]string{"r1"}).
 			Do(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got, want := len(acks), 1; got != want {
+			t.Fatalf("acks len = %d, want %d", got, want)
+		}
+		if got, want := acks[0].RfqId, "2201"; got != want {
+			t.Fatalf("acks[0].RfqId = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("short_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-rfq-short-mismatch")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"rfqId":"2201","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewRFQCancelBatchRFQsService().
+			RfqIds([]string{"2201", "2202"}).
+			Do(context.Background())
 		if err == nil {
 			t.Fatalf("expected error")
 		}
@@ -145,7 +178,7 @@ func TestRFQCancelBatchRFQsService_Do(t *testing.T) {
 		if !errors.As(err, &batchErr) {
 			t.Fatalf("error = %T, want *RFQCancelBatchRFQsError", err)
 		}
-		if got, want := batchErr.RequestID, "rid-rfq-short"; got != want {
+		if got, want := batchErr.RequestID, "rid-rfq-short-mismatch"; got != want {
 			t.Fatalf("RequestID = %q, want %q", got, want)
 		}
 		if got, want := batchErr.Expected, 2; got != want {

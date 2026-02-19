@@ -115,7 +115,7 @@ func TestRFQCancelBatchQuotesService_Do(t *testing.T) {
 		}
 	})
 
-	t.Run("short_ack_length_mismatch_fail_close", func(t *testing.T) {
+	t.Run("primary_ids_take_precedence_when_both_provided", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("x-request-id", "rid-quote-short")
 			w.Header().Set("Content-Type", "application/json")
@@ -138,6 +138,39 @@ func TestRFQCancelBatchQuotesService_Do(t *testing.T) {
 			QuoteIds([]string{"1150"}).
 			ClQuoteIds([]string{"q1"}).
 			Do(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got, want := len(acks), 1; got != want {
+			t.Fatalf("acks len = %d, want %d", got, want)
+		}
+		if got, want := acks[0].QuoteId, "1150"; got != want {
+			t.Fatalf("acks[0].QuoteId = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("short_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-quote-short-mismatch")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"quoteId":"1150","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		acks, err := c.NewRFQCancelBatchQuotesService().
+			QuoteIds([]string{"1150", "1151"}).
+			Do(context.Background())
 		if err == nil {
 			t.Fatalf("expected error")
 		}
@@ -145,7 +178,7 @@ func TestRFQCancelBatchQuotesService_Do(t *testing.T) {
 		if !errors.As(err, &batchErr) {
 			t.Fatalf("error = %T, want *RFQCancelBatchQuotesError", err)
 		}
-		if got, want := batchErr.RequestID, "rid-quote-short"; got != want {
+		if got, want := batchErr.RequestID, "rid-quote-short-mismatch"; got != want {
 			t.Fatalf("RequestID = %q, want %q", got, want)
 		}
 		if got, want := batchErr.Expected, 2; got != want {

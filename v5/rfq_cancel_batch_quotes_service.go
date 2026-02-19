@@ -60,7 +60,10 @@ func (s *RFQCancelBatchQuotesService) Do(ctx context.Context) ([]RFQCancelQuoteA
 	if err != nil {
 		return nil, err
 	}
-	expectedCount := len(req.QuoteIds) + len(req.ClQuoteIds)
+	expectedCount := len(req.ClQuoteIds)
+	if len(req.QuoteIds) > 0 {
+		expectedCount = len(req.QuoteIds)
+	}
 	if err := rfqCheckCancelBatchQuotes(http.MethodPost, "/api/v5/rfq/cancel-batch-quotes", requestID, expectedCount, data); err != nil {
 		return data, err
 	}
