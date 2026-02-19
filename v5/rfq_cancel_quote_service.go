@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -55,6 +56,7 @@ func (s *RFQCancelQuoteService) RfqId(rfqId string) *RFQCancelQuoteService {
 var (
 	errRFQCancelQuoteMissingId = errors.New("okx: rfq cancel quote requires quoteId or clQuoteId")
 	errEmptyRFQCancelQuote     = errors.New("okx: empty rfq cancel quote response")
+	errInvalidRFQCancelQuote   = errors.New("okx: invalid rfq cancel quote response")
 )
 
 // Do 取消报价单（POST /api/v5/rfq/cancel-quote）。
@@ -76,6 +78,14 @@ func (s *RFQCancelQuoteService) Do(ctx context.Context) (*RFQCancelQuoteAck, err
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/rfq/cancel-quote", requestID, errEmptyRFQCancelQuote)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/rfq/cancel-quote",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidRFQCancelQuote, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

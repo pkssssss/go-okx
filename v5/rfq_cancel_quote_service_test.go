@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -175,6 +176,85 @@ func TestRFQCancelQuoteService_Do(t *testing.T) {
 			t.Fatalf("apiErr.Message = %q, want %q", got, want)
 		}
 	})
+
+	t.Run("multi_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Request-Id", "rid-rfq-cancel-quote-multi")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"quoteId":"007","clQuoteId":"Bond007","sCode":"0","sMsg":""},{"quoteId":"008","clQuoteId":"Bond008","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewRFQCancelQuoteService().QuoteId("007").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-rfq-cancel-quote-multi"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("apiErr.Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("apiErr.Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+		}
+	})
+
+	t.Run("multi_ack_first_success_second_fail_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Request-Id", "rid-rfq-cancel-quote-multi-fail")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"quoteId":"007","clQuoteId":"Bond007","sCode":"0","sMsg":""},{"quoteId":"008","clQuoteId":"Bond008","sCode":"70001","sMsg":"Quote does not exist."}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewRFQCancelQuoteService().QuoteId("007").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("err = %T, want *APIError: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-rfq-cancel-quote-multi-fail"; got != want {
+			t.Fatalf("apiErr.RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("apiErr.Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("apiErr.Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+		}
+	})
+
 	t.Run("missing_id", func(t *testing.T) {
 		c := NewClient()
 		_, err := c.NewRFQCancelQuoteService().Do(context.Background())
