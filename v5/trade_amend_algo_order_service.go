@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -127,6 +128,7 @@ var (
 	errAmendAlgoOrderMissingId        = errors.New("okx: amend algos requires algoId or algoClOrdId")
 	errAmendAlgoOrderMissingAnyChange = errors.New("okx: amend algos requires at least one change")
 	errEmptyAmendAlgoOrderResponse    = errors.New("okx: empty amend algos response")
+	errInvalidAmendAlgoOrderResponse  = errors.New("okx: invalid amend algos response")
 )
 
 func (s *AmendAlgoOrderService) hasAnyChange() bool {
@@ -165,6 +167,14 @@ func (s *AmendAlgoOrderService) Do(ctx context.Context) (*TradeAlgoOrderAck, err
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/amend-algos", requestID, errEmptyAmendAlgoOrderResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/trade/amend-algos",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidAmendAlgoOrderResponse, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

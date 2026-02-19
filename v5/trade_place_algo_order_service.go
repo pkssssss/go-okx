@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -247,6 +248,7 @@ var (
 	errPlaceAlgoOrderMissingSzOrCloseFraction   = errors.New("okx: place algo order requires sz or closeFraction")
 	errPlaceAlgoOrderSzAndCloseFractionConflict = errors.New("okx: place algo order requires at most one of sz/closeFraction")
 	errEmptyPlaceAlgoOrderResponse              = errors.New("okx: empty place algo order response")
+	errInvalidPlaceAlgoOrderResponse            = errors.New("okx: invalid place algo order response")
 )
 
 // Do 策略委托下单（POST /api/v5/trade/order-algo）。
@@ -277,6 +279,14 @@ func (s *PlaceAlgoOrderService) Do(ctx context.Context) (*TradeAlgoOrderAck, err
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/order-algo", requestID, errEmptyPlaceAlgoOrderResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/trade/order-algo",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidPlaceAlgoOrderResponse, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

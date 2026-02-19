@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -221,6 +222,104 @@ func TestPlaceAlgoOrderService_Do(t *testing.T) {
 		}
 		if got, want := apiErr.RequestID, "rid-place-algo-invalid"; got != want {
 			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("multi_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("x-request-id", "rid-place-algo-multi")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoId":"1","clOrdId":"","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","clOrdId":"","algoClOrdId":"","sCode":"0","sMsg":"","tag":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewPlaceAlgoOrderService().
+			InstId("BTC-USDT").
+			TdMode("cross").
+			Side("buy").
+			OrdType("conditional").
+			Sz("2").
+			TpTriggerPx("15").
+			TpOrdPx("18").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-place-algo-multi"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+		}
+	})
+
+	t.Run("multi_ack_first_success_second_fail_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("x-request-id", "rid-place-algo-multi-fail")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"algoId":"1","clOrdId":"","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","clOrdId":"","algoClOrdId":"","sCode":"70001","sMsg":"Order does not exist.","tag":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewPlaceAlgoOrderService().
+			InstId("BTC-USDT").
+			TdMode("cross").
+			Side("buy").
+			OrdType("conditional").
+			Sz("2").
+			TpTriggerPx("15").
+			TpOrdPx("18").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-place-algo-multi-fail"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
 		}
 	})
 
