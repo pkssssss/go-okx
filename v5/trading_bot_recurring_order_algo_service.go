@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -106,6 +107,7 @@ var (
 	errTradingBotRecurringOrderAlgoMissingRequired = errors.New("okx: tradingBot recurring order-algo requires stgyName, recurringList, period, recurringTime, timeZone, amt, investmentCcy and tdMode")
 	errTradingBotRecurringOrderAlgoInvalidList     = errors.New("okx: tradingBot recurring order-algo invalid recurringList")
 	errEmptyTradingBotRecurringOrderAlgoResponse   = errors.New("okx: empty tradingBot recurring order-algo response")
+	errInvalidTradingBotRecurringOrderAlgoResponse = errors.New("okx: invalid tradingBot recurring order-algo response")
 )
 
 // Do 定投策略委托下单（POST /api/v5/tradingBot/recurring/order-algo）。
@@ -126,6 +128,14 @@ func (s *TradingBotRecurringOrderAlgoService) Do(ctx context.Context) (*TradingB
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/recurring/order-algo", requestID, errEmptyTradingBotRecurringOrderAlgoResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/recurring/order-algo",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotRecurringOrderAlgoResponse, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

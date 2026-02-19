@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -83,6 +84,7 @@ var (
 	errTradingBotSignalOrderAlgoMissingInstIds  = errors.New("okx: tradingBot signal order-algo requires instIds when includeAll is false")
 	errTradingBotSignalOrderAlgoMissingTpSlType = errors.New("okx: tradingBot signal order-algo exitSettingParam requires tpSlType")
 	errEmptyTradingBotSignalOrderAlgoResponse   = errors.New("okx: empty tradingBot signal order-algo response")
+	errInvalidTradingBotSignalOrderAlgoResponse = errors.New("okx: invalid tradingBot signal order-algo response")
 )
 
 // Do 创建信号策略（POST /api/v5/tradingBot/signal/order-algo）。
@@ -109,6 +111,14 @@ func (s *TradingBotSignalOrderAlgoService) Do(ctx context.Context) (*TradingBotO
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/order-algo", requestID, errEmptyTradingBotSignalOrderAlgoResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/signal/order-algo",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalOrderAlgoResponse, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

@@ -816,6 +816,143 @@ func TestTradingBotServices_InvalidAckResponse(t *testing.T) {
 	}
 }
 
+func TestTradingBotServices_SingleOrderAlgoMultiAckFailClose(t *testing.T) {
+	fixedNow := time.Date(2020, 6, 30, 12, 34, 56, 789_000_000, time.UTC)
+
+	mkClient := func(srv *httptest.Server) *Client {
+		return NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+	}
+
+	type tc struct {
+		name      string
+		path      string
+		requestID string
+		response  string
+		invokeDo  func(c *Client) error
+	}
+
+	cases := []tc{
+		{
+			name:      "signal_order_algo_multi_ack_length_mismatch_fail_close",
+			path:      "/api/v5/tradingBot/signal/order-algo",
+			requestID: "rid-bot-signal-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"0","sMsg":"","tag":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalOrderAlgoService().
+					SignalChanId("1").
+					IncludeAll(true).
+					Lever("1").
+					InvestAmt("1").
+					SubOrdType("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_order_algo_multi_ack_first_success_second_fail_fail_close",
+			path:      "/api/v5/tradingBot/signal/order-algo",
+			requestID: "rid-bot-signal-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"70001","sMsg":"Order does not exist.","tag":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalOrderAlgoService().
+					SignalChanId("1").
+					IncludeAll(true).
+					Lever("1").
+					InvestAmt("1").
+					SubOrdType("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "recurring_order_algo_multi_ack_length_mismatch_fail_close",
+			path:      "/api/v5/tradingBot/recurring/order-algo",
+			requestID: "rid-bot-recurring-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"0","sMsg":"","tag":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotRecurringOrderAlgoService().
+					StgyName("stgy").
+					RecurringList([]TradingBotRecurringListItem{{Ccy: "BTC", Ratio: "1"}}).
+					Period("daily").
+					RecurringTime("00:00").
+					TimeZone("UTC").
+					Amt("1").
+					InvestmentCcy("USDT").
+					TdMode("cash").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "recurring_order_algo_multi_ack_first_success_second_fail_fail_close",
+			path:      "/api/v5/tradingBot/recurring/order-algo",
+			requestID: "rid-bot-recurring-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"70001","sMsg":"Order does not exist.","tag":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotRecurringOrderAlgoService().
+					StgyName("stgy").
+					RecurringList([]TradingBotRecurringListItem{{Ccy: "BTC", Ratio: "1"}}).
+					Period("daily").
+					RecurringTime("00:00").
+					TimeZone("UTC").
+					Amt("1").
+					InvestmentCcy("USDT").
+					TdMode("cash").
+					Do(context.Background())
+				return err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got, want := r.Method, http.MethodPost; got != want {
+					t.Fatalf("method = %q, want %q", got, want)
+				}
+				if got, want := r.URL.Path, tc.path; got != want {
+					t.Fatalf("path = %q, want %q", got, want)
+				}
+				w.Header().Set("X-Request-Id", tc.requestID)
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tc.response))
+			}))
+			t.Cleanup(srv.Close)
+
+			c := mkClient(srv)
+			err := tc.invokeDo(c)
+			if err == nil {
+				t.Fatalf("expected error")
+			}
+			apiErr, ok := err.(*APIError)
+			if !ok {
+				t.Fatalf("error = %T, want *APIError", err)
+			}
+			if got, want := apiErr.RequestPath, tc.path; got != want {
+				t.Fatalf("RequestPath = %q, want %q", got, want)
+			}
+			if got, want := apiErr.RequestID, tc.requestID; got != want {
+				t.Fatalf("RequestID = %q, want %q", got, want)
+			}
+			if got, want := apiErr.Code, "0"; got != want {
+				t.Fatalf("Code = %q, want %q", got, want)
+			}
+			if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+				t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+			}
+		})
+	}
+}
+
 func TestTradingBotGridAmendAlgoBasicParamService_Do_DataCompat(t *testing.T) {
 	fixedNow := time.Date(2020, 6, 30, 12, 34, 56, 789_000_000, time.UTC)
 
