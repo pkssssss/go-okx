@@ -715,6 +715,98 @@ func TestCancelOrderService_Do_EmptyDataResponse(t *testing.T) {
 	}
 }
 
+func TestCancelOrderService_Do_MultiAckLengthMismatchFailClose(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
+		w.Header().Set("x-request-id", "rid-cancel-multi")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"1","ts":"0","sCode":"0","sMsg":""},{"clOrdId":"","ordId":"2","ts":"0","sCode":"0","sMsg":""}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewCancelOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-cancel-multi"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := apiErr.Code, "0"; got != want {
+		t.Fatalf("Code = %q, want %q", got, want)
+	}
+	if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+		t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+	}
+}
+
+func TestCancelOrderService_Do_MultiAckFirstSuccessSecondFailFailClose(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
+		w.Header().Set("x-request-id", "rid-cancel-multi-fail")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"1","ts":"0","sCode":"0","sMsg":""},{"clOrdId":"","ordId":"2","ts":"0","sCode":"70001","sMsg":"Order does not exist."}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewCancelOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-cancel-multi-fail"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := apiErr.Code, "0"; got != want {
+		t.Fatalf("Code = %q, want %q", got, want)
+	}
+	if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+		t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+	}
+}
+
 func TestBatchCancelOrdersService_Do(t *testing.T) {
 	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
 

@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -35,6 +36,7 @@ var (
 	errSprdCancelOrderMissingId     = errors.New("okx: sprd cancel order requires ordId or clOrdId")
 	errSprdCancelOrderTooManyId     = errors.New("okx: sprd cancel order requires exactly one of ordId or clOrdId")
 	errEmptySprdCancelOrderResponse = errors.New("okx: empty sprd cancel order response")
+	errInvalidSprdCancelOrderResp   = errors.New("okx: invalid sprd cancel order response")
 )
 
 type sprdCancelOrderRequest struct {
@@ -63,6 +65,14 @@ func (s *SprdCancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error)
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/sprd/cancel-order", requestID, errEmptySprdCancelOrderResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/sprd/cancel-order",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidSprdCancelOrderResp, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

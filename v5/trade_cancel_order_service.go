@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -40,6 +41,7 @@ var (
 	errCancelOrderMissingId     = errors.New("okx: cancel order requires ordId or clOrdId")
 	errCancelOrderTooManyId     = errors.New("okx: cancel order requires exactly one of ordId or clOrdId")
 	errEmptyCancelOrderResponse = errors.New("okx: empty cancel order response")
+	errInvalidCancelOrderResp   = errors.New("okx: invalid cancel order response")
 )
 
 type cancelOrderRequest struct {
@@ -80,6 +82,14 @@ func (s *CancelOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 			Code:        "0",
 			Message:     errEmptyCancelOrderResponse.Error(),
 		}
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/trade/cancel-order",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidCancelOrderResp, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{
