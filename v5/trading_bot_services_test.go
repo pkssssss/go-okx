@@ -953,6 +953,224 @@ func TestTradingBotServices_SingleOrderAlgoMultiAckFailClose(t *testing.T) {
 	}
 }
 
+func TestTradingBotServices_SingleWriteMultiAckFailClose(t *testing.T) {
+	fixedNow := time.Date(2020, 6, 30, 12, 34, 56, 789_000_000, time.UTC)
+
+	mkClient := func(srv *httptest.Server) *Client {
+		return NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+	}
+
+	type tc struct {
+		name      string
+		method    string
+		path      string
+		requestID string
+		response  string
+		invokeDo  func(c *Client) error
+	}
+
+	cases := []tc{
+		{
+			name:      "grid_order_algo_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/order-algo",
+			requestID: "rid-bot-grid-order-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"0","sMsg":"","tag":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridOrderAlgoService().
+					InstId("BTC-USDT").
+					AlgoOrdType("grid").
+					MaxPx("1").
+					MinPx("0").
+					GridNum("10").
+					QuoteSz("100").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_order_algo_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/order-algo",
+			requestID: "rid-bot-grid-order-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"70001","sMsg":"Order does not exist.","tag":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridOrderAlgoService().
+					InstId("BTC-USDT").
+					AlgoOrdType("grid").
+					MaxPx("1").
+					MinPx("0").
+					GridNum("10").
+					QuoteSz("100").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_margin_balance_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/margin-balance",
+			requestID: "rid-bot-grid-margin-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","sCode":"0","sMsg":""},{"algoId":"2","sCode":"0","sMsg":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_margin_balance_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/margin-balance",
+			requestID: "rid-bot-grid-margin-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","sCode":"0","sMsg":""},{"algoId":"2","sCode":"70001","sMsg":"Order does not exist."}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "recurring_amend_order_algo_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/recurring/amend-order-algo",
+			requestID: "rid-bot-recurring-amend-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"0","sMsg":"","tag":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotRecurringAmendOrderAlgoService().
+					AlgoId("1").
+					StgyName("stgy").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "recurring_amend_order_algo_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/recurring/amend-order-algo",
+			requestID: "rid-bot-recurring-amend-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"","sCode":"0","sMsg":"","tag":""},{"algoId":"2","algoClOrdId":"","sCode":"70001","sMsg":"Order does not exist.","tag":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotRecurringAmendOrderAlgoService().
+					AlgoId("1").
+					StgyName("stgy").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_amend_order_algo_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/amend-order-algo",
+			requestID: "rid-bot-grid-amend-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","sCode":"0","sMsg":""},{"algoId":"2","sCode":"0","sMsg":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridAmendOrderAlgoService().
+					AlgoId("1").
+					InstId("BTC-USDT").
+					SlTriggerPx("0.9").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_amend_order_algo_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/amend-order-algo",
+			requestID: "rid-bot-grid-amend-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","sCode":"0","sMsg":""},{"algoId":"2","sCode":"70001","sMsg":"Order does not exist."}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridAmendOrderAlgoService().
+					AlgoId("1").
+					InstId("BTC-USDT").
+					SlTriggerPx("0.9").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_order_instant_trigger_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/order-instant-trigger",
+			requestID: "rid-bot-grid-instant-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","sCode":"0","sMsg":""},{"algoId":"2","sCode":"0","sMsg":""}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridOrderInstantTriggerService().
+					AlgoId("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_order_instant_trigger_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/order-instant-trigger",
+			requestID: "rid-bot-grid-instant-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","sCode":"0","sMsg":""},{"algoId":"2","sCode":"70001","sMsg":"Order does not exist."}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridOrderInstantTriggerService().
+					AlgoId("1").
+					Do(context.Background())
+				return err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got, want := r.Method, tc.method; got != want {
+					t.Fatalf("method = %q, want %q", got, want)
+				}
+				if got, want := r.URL.Path, tc.path; got != want {
+					t.Fatalf("path = %q, want %q", got, want)
+				}
+				w.Header().Set("X-Request-Id", tc.requestID)
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tc.response))
+			}))
+			t.Cleanup(srv.Close)
+
+			c := mkClient(srv)
+			err := tc.invokeDo(c)
+			if err == nil {
+				t.Fatalf("expected error")
+			}
+			apiErr, ok := err.(*APIError)
+			if !ok {
+				t.Fatalf("error = %T, want *APIError", err)
+			}
+			if got, want := apiErr.RequestPath, tc.path; got != want {
+				t.Fatalf("RequestPath = %q, want %q", got, want)
+			}
+			if got, want := apiErr.RequestID, tc.requestID; got != want {
+				t.Fatalf("RequestID = %q, want %q", got, want)
+			}
+			if got, want := apiErr.Code, "0"; got != want {
+				t.Fatalf("Code = %q, want %q", got, want)
+			}
+			if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+				t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+			}
+		})
+	}
+}
+
 func TestTradingBotGridAmendAlgoBasicParamService_Do_DataCompat(t *testing.T) {
 	fixedNow := time.Date(2020, 6, 30, 12, 34, 56, 789_000_000, time.UTC)
 

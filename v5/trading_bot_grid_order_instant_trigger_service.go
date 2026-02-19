@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -35,6 +36,7 @@ func (s *TradingBotGridOrderInstantTriggerService) TopUpAmt(topUpAmt string) *Tr
 var (
 	errTradingBotGridOrderInstantTriggerMissingAlgoId = errors.New("okx: tradingBot grid order-instant-trigger requires algoId")
 	errEmptyTradingBotGridOrderInstantTriggerResponse = errors.New("okx: empty tradingBot grid order-instant-trigger response")
+	errInvalidTradingBotGridOrderInstantTrigger       = errors.New("okx: invalid tradingBot grid order-instant-trigger response")
 )
 
 // Do 网格策略立即触发（POST /api/v5/tradingBot/grid/order-instant-trigger）。
@@ -50,6 +52,14 @@ func (s *TradingBotGridOrderInstantTriggerService) Do(ctx context.Context) (*Tra
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/order-instant-trigger", requestID, errEmptyTradingBotGridOrderInstantTriggerResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/grid/order-instant-trigger",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridOrderInstantTrigger, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

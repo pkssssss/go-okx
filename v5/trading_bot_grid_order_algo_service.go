@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -162,6 +163,7 @@ var (
 	errTradingBotGridOrderAlgoMissingContractSize = errors.New("okx: tradingBot grid order-algo contract requires sz, direction and lever")
 	errTradingBotGridOrderAlgoInvalidTriggerParam = errors.New("okx: tradingBot grid order-algo invalid triggerParams")
 	errEmptyTradingBotGridOrderAlgoResponse       = errors.New("okx: empty tradingBot grid order-algo response")
+	errInvalidTradingBotGridOrderAlgoResponse     = errors.New("okx: invalid tradingBot grid order-algo response")
 )
 
 // Do 网格策略委托下单（POST /api/v5/tradingBot/grid/order-algo）。
@@ -196,6 +198,14 @@ func (s *TradingBotGridOrderAlgoService) Do(ctx context.Context) (*TradingBotOrd
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/order-algo", requestID, errEmptyTradingBotGridOrderAlgoResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/grid/order-algo",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridOrderAlgoResponse, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

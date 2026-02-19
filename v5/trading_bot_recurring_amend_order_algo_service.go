@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -35,6 +36,7 @@ func (s *TradingBotRecurringAmendOrderAlgoService) StgyName(stgyName string) *Tr
 var (
 	errTradingBotRecurringAmendOrderAlgoMissingRequired = errors.New("okx: tradingBot recurring amend-order-algo requires algoId and stgyName")
 	errEmptyTradingBotRecurringAmendOrderAlgoResponse   = errors.New("okx: empty tradingBot recurring amend-order-algo response")
+	errInvalidTradingBotRecurringAmendOrderAlgoResponse = errors.New("okx: invalid tradingBot recurring amend-order-algo response")
 )
 
 // Do 修改定投策略订单（POST /api/v5/tradingBot/recurring/amend-order-algo）。
@@ -50,6 +52,14 @@ func (s *TradingBotRecurringAmendOrderAlgoService) Do(ctx context.Context) (*Tra
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/recurring/amend-order-algo", requestID, errEmptyTradingBotRecurringAmendOrderAlgoResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/recurring/amend-order-algo",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotRecurringAmendOrderAlgoResponse, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

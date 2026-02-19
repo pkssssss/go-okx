@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -81,6 +82,7 @@ var (
 	errTradingBotGridAmendOrderAlgoMissingUpdate   = errors.New("okx: tradingBot grid amend-order-algo requires at least one update field")
 	errTradingBotGridAmendOrderAlgoInvalidTrigger  = errors.New("okx: tradingBot grid amend-order-algo invalid triggerParams")
 	errEmptyTradingBotGridAmendOrderAlgoResponse   = errors.New("okx: empty tradingBot grid amend-order-algo response")
+	errInvalidTradingBotGridAmendOrderAlgoResponse = errors.New("okx: invalid tradingBot grid amend-order-algo response")
 )
 
 // Do 修改网格策略订单（POST /api/v5/tradingBot/grid/amend-order-algo）。
@@ -109,6 +111,14 @@ func (s *TradingBotGridAmendOrderAlgoService) Do(ctx context.Context) (*TradingB
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/amend-order-algo", requestID, errEmptyTradingBotGridAmendOrderAlgoResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/grid/amend-order-algo",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridAmendOrderAlgoResponse, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{
