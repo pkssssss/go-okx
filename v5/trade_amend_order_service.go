@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -94,6 +95,7 @@ var (
 	errAmendOrderMissingChange = errors.New("okx: amend order requires newSz or newPx/newPxUsd/newPxVol")
 	errAmendOrderTooManyPx     = errors.New("okx: amend order requires at most one of newPx/newPxUsd/newPxVol")
 	errEmptyAmendOrderResponse = errors.New("okx: empty amend order response")
+	errInvalidAmendOrderResp   = errors.New("okx: invalid amend order response")
 )
 
 type amendOrderRequest struct {
@@ -160,6 +162,14 @@ func (s *AmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 			Code:        "0",
 			Message:     errEmptyAmendOrderResponse.Error(),
 		}
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/trade/amend-order",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidAmendOrderResp, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

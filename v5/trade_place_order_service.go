@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -141,6 +142,7 @@ var (
 	errPlaceOrderMissingSz      = errors.New("okx: place order requires sz")
 	errPlaceOrderTooManyPx      = errors.New("okx: place order requires at most one of px/pxUsd/pxVol")
 	errEmptyPlaceOrderResponse  = errors.New("okx: empty place order response")
+	errInvalidPlaceOrderResp    = errors.New("okx: invalid place order response")
 )
 
 type placeOrderRequest struct {
@@ -228,6 +230,14 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) {
 			Code:        "0",
 			Message:     errEmptyPlaceOrderResponse.Error(),
 		}
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/trade/order",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidPlaceOrderResp, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

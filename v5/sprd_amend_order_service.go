@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -53,6 +54,7 @@ var (
 	errSprdAmendOrderTooManyId     = errors.New("okx: sprd amend order requires exactly one of ordId or clOrdId")
 	errSprdAmendOrderMissingChange = errors.New("okx: sprd amend order requires newSz or newPx")
 	errEmptySprdAmendOrderResponse = errors.New("okx: empty sprd amend order response")
+	errInvalidSprdAmendOrderResp   = errors.New("okx: invalid sprd amend order response")
 )
 
 type sprdAmendOrderRequest struct {
@@ -90,6 +92,14 @@ func (s *SprdAmendOrderService) Do(ctx context.Context) (*TradeOrderAck, error) 
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/sprd/amend-order", requestID, errEmptySprdAmendOrderResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/sprd/amend-order",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidSprdAmendOrderResp, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{

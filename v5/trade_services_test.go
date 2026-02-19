@@ -337,6 +337,100 @@ func TestPlaceOrderService_Do(t *testing.T) {
 			t.Fatalf("Message = %q, want %q", got, want)
 		}
 	})
+
+	t.Run("multi_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("x-request-id", "rid-place-multi")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"1","tag":"","ts":"0","sCode":"0","sMsg":""},{"clOrdId":"","ordId":"2","tag":"","ts":"0","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewPlaceOrderService().
+			InstId("BTC-USDT").
+			TdMode("isolated").
+			Side("buy").
+			OrdType("market").
+			Sz("1").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("expected *APIError, got %T: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-place-multi"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+		}
+	})
+
+	t.Run("multi_ack_first_success_second_fail_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("x-request-id", "rid-place-multi-fail")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"1","tag":"","ts":"0","sCode":"0","sMsg":""},{"clOrdId":"","ordId":"2","tag":"","ts":"0","sCode":"70001","sMsg":"Order does not exist."}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewPlaceOrderService().
+			InstId("BTC-USDT").
+			TdMode("isolated").
+			Side("buy").
+			OrdType("market").
+			Sz("1").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("expected *APIError, got %T: %v", err, err)
+		}
+		if got, want := apiErr.RequestID, "rid-place-multi-fail"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+		}
+	})
 }
 
 func TestBatchPlaceOrdersService_Do(t *testing.T) {
@@ -1221,6 +1315,100 @@ func TestAmendOrderService_Do_EmptyDataResponse(t *testing.T) {
 	}
 	if got, want := apiErr.Message, errEmptyAmendOrderResponse.Error(); got != want {
 		t.Fatalf("Message = %q, want %q", got, want)
+	}
+}
+
+func TestAmendOrderService_Do_MultiAckLengthMismatchFailClose(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
+		w.Header().Set("x-request-id", "rid-amend-multi")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"1","reqId":"","ts":"0","sCode":"0","sMsg":""},{"clOrdId":"","ordId":"2","reqId":"","ts":"0","sCode":"0","sMsg":""}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewAmendOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		NewSz("2").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-amend-multi"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := apiErr.Code, "0"; got != want {
+		t.Fatalf("Code = %q, want %q", got, want)
+	}
+	if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+		t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+	}
+}
+
+func TestAmendOrderService_Do_MultiAckFirstSuccessSecondFailFailClose(t *testing.T) {
+	fixedNow := time.Date(2020, 3, 28, 12, 21, 41, 274_000_000, time.UTC)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleTradeAccountRateLimitMock(w, r) {
+			return
+		}
+		w.Header().Set("x-request-id", "rid-amend-multi-fail")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"","ordId":"1","reqId":"","ts":"0","sCode":"0","sMsg":""},{"clOrdId":"","ordId":"2","reqId":"","ts":"0","sCode":"70001","sMsg":"Order does not exist."}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+		WithNowFunc(func() time.Time { return fixedNow }),
+	)
+
+	_, err := c.NewAmendOrderService().
+		InstId("BTC-USDT").
+		OrdId("1").
+		NewSz("2").
+		Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("error = %T, want *APIError", err)
+	}
+	if got, want := apiErr.RequestID, "rid-amend-multi-fail"; got != want {
+		t.Fatalf("RequestID = %q, want %q", got, want)
+	}
+	if got, want := apiErr.Code, "0"; got != want {
+		t.Fatalf("Code = %q, want %q", got, want)
+	}
+	if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+		t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
 	}
 }
 

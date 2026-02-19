@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -225,6 +226,92 @@ func TestSprdPlaceOrderService_Do(t *testing.T) {
 		}
 		if got, want := apiErr.Message, errEmptySprdPlaceOrderResponse.Error(); got != want {
 			t.Fatalf("Message = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("multi_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-sprd-place-multi")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"b1","ordId":"1","tag":"","sCode":"0","sMsg":""},{"clOrdId":"b2","ordId":"2","tag":"","sCode":"0","sMsg":""}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewSprdPlaceOrderService().
+			SprdId("BTC-USDT_BTC-USDT-SWAP").
+			Side("buy").
+			OrdType("market").
+			Sz("2").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-sprd-place-multi"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+		}
+	})
+
+	t.Run("multi_ack_first_success_second_fail_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-sprd-place-multi-fail")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"clOrdId":"b1","ordId":"1","tag":"","sCode":"0","sMsg":""},{"clOrdId":"b2","ordId":"2","tag":"","sCode":"70001","sMsg":"Order does not exist."}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewSprdPlaceOrderService().
+			SprdId("BTC-USDT_BTC-USDT-SWAP").
+			Side("buy").
+			OrdType("market").
+			Sz("2").
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-sprd-place-multi-fail"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
 		}
 	})
 }

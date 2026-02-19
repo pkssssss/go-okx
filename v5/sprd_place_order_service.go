@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -72,6 +73,7 @@ var (
 	errSprdPlaceOrderMissingOrdType = errors.New("okx: sprd place order requires ordType")
 	errSprdPlaceOrderMissingSz      = errors.New("okx: sprd place order requires sz")
 	errEmptySprdPlaceOrderResponse  = errors.New("okx: empty sprd place order response")
+	errInvalidSprdPlaceOrderResp    = errors.New("okx: invalid sprd place order response")
 )
 
 type sprdPlaceOrderRequest struct {
@@ -116,6 +118,14 @@ func (s *SprdPlaceOrderService) Do(ctx context.Context) (*TradeOrderAck, error) 
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/sprd/order", requestID, errEmptySprdPlaceOrderResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/sprd/order",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidSprdPlaceOrderResp, len(data)),
+		)
 	}
 	if data[0].SCode != "0" {
 		return nil, &APIError{
