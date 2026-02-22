@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -84,6 +85,14 @@ func (s *CancelAllAfterService) Do(ctx context.Context) (*TradeCancelAllAfterAck
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/cancel-all-after", requestID, errEmptyCancelAllAfterResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/trade/cancel-all-after",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidCancelAllAfterResponse, len(data)),
+		)
 	}
 	if err := validateCancelAllAfterAck(&data[0], req); err != nil {
 		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/trade/cancel-all-after", requestID, err)

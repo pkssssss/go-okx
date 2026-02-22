@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -112,6 +113,94 @@ func TestOneClickRepayV2Service_Do(t *testing.T) {
 		_, err := c.NewOneClickRepayV2Service().DebtCcy("USDC").Do(context.Background())
 		if !errors.Is(err, errOneClickRepayV2MissingRequired) {
 			t.Fatalf("expected errOneClickRepayV2MissingRequired, got %T: %v", err, err)
+		}
+	})
+
+	t.Run("multi_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-trade-one-click-repay-v2-multi")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"debtCcy":"USDC","repayCcyList":["USDC","BTC"],"ts":"1695190491421"},{"debtCcy":"USDC","repayCcyList":["USDC","BTC"],"ts":"1695190491422"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewOneClickRepayV2Service().
+			DebtCcy("USDC").
+			RepayCcyList([]string{"USDC", "BTC"}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/trade/one-click-repay-v2"; got != want {
+			t.Fatalf("RequestPath = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestID, "rid-trade-one-click-repay-v2-multi"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+		}
+	})
+
+	t.Run("multi_ack_first_success_second_fail_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Request-Id", "rid-trade-one-click-repay-v2-multi-fail")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"debtCcy":"USDC","repayCcyList":["USDC","BTC"],"ts":"1695190491421"},{"debtCcy":"USDC","repayCcyList":["USDC"],"ts":"1695190491422"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewOneClickRepayV2Service().
+			DebtCcy("USDC").
+			RepayCcyList([]string{"USDC", "BTC"}).
+			Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/trade/one-click-repay-v2"; got != want {
+			t.Fatalf("RequestPath = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestID, "rid-trade-one-click-repay-v2-multi-fail"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
 		}
 	})
 }

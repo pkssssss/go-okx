@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -97,6 +98,14 @@ func (s *OneClickRepayV2Service) Do(ctx context.Context) (*OneClickRepayV2Ack, e
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/one-click-repay-v2", requestID, errEmptyOneClickRepayV2Response)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/trade/one-click-repay-v2",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidOneClickRepayV2Response, len(data)),
+		)
 	}
 	if err := validateOneClickRepayV2Ack(&data[0], req); err != nil {
 		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/trade/one-click-repay-v2", requestID, err)

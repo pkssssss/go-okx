@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -114,6 +115,86 @@ func TestCancelAllAfterService_Do(t *testing.T) {
 		_, err := c.NewCancelAllAfterService().TimeOut("9").Do(context.Background())
 		if !errors.Is(err, errCancelAllAfterInvalidTimeOut) {
 			t.Fatalf("expected errCancelAllAfterInvalidTimeOut, got %T: %v", err, err)
+		}
+	})
+
+	t.Run("multi_ack_length_mismatch_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("X-Request-Id", "rid-trade-cancel-all-after-multi")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"triggerTime":"1695190491421","tag":"t1","ts":"1695190491421"},{"triggerTime":"1695190491422","tag":"t1","ts":"1695190491422"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewCancelAllAfterService().TimeOut("60").Tag("t1").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/trade/cancel-all-after"; got != want {
+			t.Fatalf("RequestPath = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestID, "rid-trade-cancel-all-after-multi"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
+		}
+	})
+
+	t.Run("multi_ack_first_success_second_fail_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if handleTradeAccountRateLimitMock(w, r) {
+				return
+			}
+			w.Header().Set("X-Request-Id", "rid-trade-cancel-all-after-multi-fail")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"triggerTime":"1695190491421","tag":"t1","ts":"1695190491421"},{"triggerTime":"0","tag":"t1","ts":"0"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{APIKey: "mykey", SecretKey: "mysecret", Passphrase: "mypass"}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewCancelAllAfterService().TimeOut("60").Tag("t1").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestPath, "/api/v5/trade/cancel-all-after"; got != want {
+			t.Fatalf("RequestPath = %q, want %q", got, want)
+		}
+		if got, want := apiErr.RequestID, "rid-trade-cancel-all-after-multi-fail"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 ack, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 ack, got 2")
 		}
 	})
 }

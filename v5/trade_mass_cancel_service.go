@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -48,6 +49,7 @@ var (
 	errMassCancelMissingRequired   = errors.New("okx: mass cancel requires instType/instFamily")
 	errMassCancelInvalidLockWindow = errors.New("okx: mass cancel requires lockInterval in [0, 10000]")
 	errEmptyMassCancelResponse     = errors.New("okx: empty mass cancel response")
+	errInvalidMassCancelResponse   = errors.New("okx: invalid mass cancel response")
 )
 
 type massCancelRequest struct {
@@ -81,6 +83,14 @@ func (s *MassCancelService) Do(ctx context.Context) (*TradeMassCancelAck, error)
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/trade/mass-cancel", requestID, errEmptyMassCancelResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/trade/mass-cancel",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidMassCancelResponse, len(data)),
+		)
 	}
 	if !data[0].Result {
 		return nil, &APIError{
