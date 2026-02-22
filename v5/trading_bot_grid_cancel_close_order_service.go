@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -35,6 +36,7 @@ func (s *TradingBotGridCancelCloseOrderService) OrdId(ordId string) *TradingBotG
 var (
 	errTradingBotGridCancelCloseOrderMissingRequired = errors.New("okx: tradingBot grid cancel-close-order requires algoId and ordId")
 	errEmptyTradingBotGridCancelCloseOrderResponse   = errors.New("okx: empty tradingBot grid cancel-close-order response")
+	errInvalidTradingBotGridCancelCloseOrderResponse = errors.New("okx: invalid tradingBot grid cancel-close-order response")
 )
 
 // Do 撤销合约网格平仓单（POST /api/v5/tradingBot/grid/cancel-close-order）。
@@ -50,6 +52,14 @@ func (s *TradingBotGridCancelCloseOrderService) Do(ctx context.Context) (*Tradin
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/cancel-close-order", requestID, errEmptyTradingBotGridCancelCloseOrderResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/grid/cancel-close-order",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridCancelCloseOrderResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }

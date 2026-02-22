@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -48,6 +49,7 @@ func (s *TradingBotSignalMarginBalanceService) AllowReinvest(allowReinvest bool)
 var (
 	errTradingBotSignalMarginBalanceMissingRequired = errors.New("okx: tradingBot signal margin-balance requires algoId, type and amt")
 	errEmptyTradingBotSignalMarginBalanceResponse   = errors.New("okx: empty tradingBot signal margin-balance response")
+	errInvalidTradingBotSignalMarginBalanceResponse = errors.New("okx: invalid tradingBot signal margin-balance response")
 )
 
 // Do 调整保证金（POST /api/v5/tradingBot/signal/margin-balance）。
@@ -63,6 +65,14 @@ func (s *TradingBotSignalMarginBalanceService) Do(ctx context.Context) (*Trading
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/margin-balance", requestID, errEmptyTradingBotSignalMarginBalanceResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/signal/margin-balance",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalMarginBalanceResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }

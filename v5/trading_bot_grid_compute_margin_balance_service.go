@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -41,6 +42,7 @@ func (s *TradingBotGridComputeMarginBalanceService) Amt(amt string) *TradingBotG
 var (
 	errTradingBotGridComputeMarginBalanceMissingRequired = errors.New("okx: tradingBot grid compute-margin-balance requires algoId and type")
 	errEmptyTradingBotGridComputeMarginBalanceResponse   = errors.New("okx: empty tradingBot grid compute-margin-balance response")
+	errInvalidTradingBotGridComputeMarginBalanceResponse = errors.New("okx: invalid tradingBot grid compute-margin-balance response")
 )
 
 // Do 调整保证金计算（POST /api/v5/tradingBot/grid/compute-margin-balance）。
@@ -56,6 +58,14 @@ func (s *TradingBotGridComputeMarginBalanceService) Do(ctx context.Context) (*Tr
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/compute-margin-balance", requestID, errEmptyTradingBotGridComputeMarginBalanceResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/grid/compute-margin-balance",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridComputeMarginBalanceResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }

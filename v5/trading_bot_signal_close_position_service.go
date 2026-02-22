@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -35,6 +36,7 @@ func (s *TradingBotSignalClosePositionService) InstId(instId string) *TradingBot
 var (
 	errTradingBotSignalClosePositionMissingRequired = errors.New("okx: tradingBot signal close-position requires algoId and instId")
 	errEmptyTradingBotSignalClosePositionResponse   = errors.New("okx: empty tradingBot signal close-position response")
+	errInvalidTradingBotSignalClosePositionResponse = errors.New("okx: invalid tradingBot signal close-position response")
 )
 
 // Do 市价仓位全平（POST /api/v5/tradingBot/signal/close-position）。
@@ -50,6 +52,14 @@ func (s *TradingBotSignalClosePositionService) Do(ctx context.Context) (*Trading
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/close-position", requestID, errEmptyTradingBotSignalClosePositionResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/signal/close-position",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalClosePositionResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }

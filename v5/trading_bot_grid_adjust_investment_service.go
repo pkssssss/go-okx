@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -41,6 +42,7 @@ func (s *TradingBotGridAdjustInvestmentService) AllowReinvestProfit(allowReinves
 var (
 	errTradingBotGridAdjustInvestmentMissingRequired = errors.New("okx: tradingBot grid adjust-investment requires algoId and amt")
 	errEmptyTradingBotGridAdjustInvestmentResponse   = errors.New("okx: empty tradingBot grid adjust-investment response")
+	errInvalidTradingBotGridAdjustInvestmentResponse = errors.New("okx: invalid tradingBot grid adjust-investment response")
 )
 
 // Do 网格加仓（POST /api/v5/tradingBot/grid/adjust-investment）。
@@ -56,6 +58,14 @@ func (s *TradingBotGridAdjustInvestmentService) Do(ctx context.Context) (*Tradin
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/adjust-investment", requestID, errEmptyTradingBotGridAdjustInvestmentResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/grid/adjust-investment",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridAdjustInvestmentResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }

@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -42,6 +43,7 @@ var (
 	errTradingBotSignalSetInstrumentsMissingRequired = errors.New("okx: tradingBot signal set-instruments requires algoId and includeAll")
 	errTradingBotSignalSetInstrumentsMissingInstIds  = errors.New("okx: tradingBot signal set-instruments requires instIds when includeAll is false")
 	errEmptyTradingBotSignalSetInstrumentsResponse   = errors.New("okx: empty tradingBot signal set-instruments response")
+	errInvalidTradingBotSignalSetInstrumentsResponse = errors.New("okx: invalid tradingBot signal set-instruments response")
 )
 
 // Do 设置币对（POST /api/v5/tradingBot/signal/set-instruments）。
@@ -60,6 +62,14 @@ func (s *TradingBotSignalSetInstrumentsService) Do(ctx context.Context) (*Tradin
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/set-instruments", requestID, errEmptyTradingBotSignalSetInstrumentsResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/signal/set-instruments",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalSetInstrumentsResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }

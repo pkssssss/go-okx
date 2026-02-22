@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -35,6 +36,7 @@ func (s *TradingBotSignalAmendTPSLService) ExitSettingParam(p TradingBotSignalEx
 var (
 	errTradingBotSignalAmendTPSLMissingRequired = errors.New("okx: tradingBot signal amendTPSL requires algoId and exitSettingParam.tpSlType")
 	errEmptyTradingBotSignalAmendTPSLResponse   = errors.New("okx: empty tradingBot signal amendTPSL response")
+	errInvalidTradingBotSignalAmendTPSLResponse = errors.New("okx: invalid tradingBot signal amendTPSL response")
 )
 
 // Do 修改止盈止损（POST /api/v5/tradingBot/signal/amendTPSL）。
@@ -50,6 +52,14 @@ func (s *TradingBotSignalAmendTPSLService) Do(ctx context.Context) (*TradingBotA
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/amendTPSL", requestID, errEmptyTradingBotSignalAmendTPSLResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/signal/amendTPSL",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalAmendTPSLResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }

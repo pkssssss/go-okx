@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -27,8 +28,9 @@ func (s *TradingBotGridWithdrawIncomeService) AlgoId(algoId string) *TradingBotG
 }
 
 var (
-	errTradingBotGridWithdrawIncomeMissingAlgoId = errors.New("okx: tradingBot grid withdraw-income requires algoId")
-	errEmptyTradingBotGridWithdrawIncomeResponse = errors.New("okx: empty tradingBot grid withdraw-income response")
+	errTradingBotGridWithdrawIncomeMissingAlgoId   = errors.New("okx: tradingBot grid withdraw-income requires algoId")
+	errEmptyTradingBotGridWithdrawIncomeResponse   = errors.New("okx: empty tradingBot grid withdraw-income response")
+	errInvalidTradingBotGridWithdrawIncomeResponse = errors.New("okx: invalid tradingBot grid withdraw-income response")
 )
 
 // Do 现货网格提取利润（POST /api/v5/tradingBot/grid/withdraw-income）。
@@ -44,6 +46,14 @@ func (s *TradingBotGridWithdrawIncomeService) Do(ctx context.Context) (*TradingB
 	}
 	if len(data) == 0 {
 		return nil, newEmptyDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/withdraw-income", requestID, errEmptyTradingBotGridWithdrawIncomeResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodPost,
+			"/api/v5/tradingBot/grid/withdraw-income",
+			requestID,
+			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridWithdrawIncomeResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }

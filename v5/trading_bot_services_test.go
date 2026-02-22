@@ -1159,6 +1159,286 @@ func TestTradingBotServices_SingleWriteMultiAckFailClose(t *testing.T) {
 				return err
 			},
 		},
+		{
+			name:      "grid_withdraw_income_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/withdraw-income",
+			requestID: "rid-bot-grid-withdraw-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"a1","profit":"1"},{"algoId":"2","algoClOrdId":"a2","profit":"2"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridWithdrawIncomeService().
+					AlgoId("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_withdraw_income_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/withdraw-income",
+			requestID: "rid-bot-grid-withdraw-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"a1","profit":"1"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridWithdrawIncomeService().
+					AlgoId("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_close_position_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/close-position",
+			requestID: "rid-bot-signal-close-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{"algoId":"2"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalClosePositionService().
+					AlgoId("1").
+					InstId("BTC-USDT-SWAP").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_close_position_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/close-position",
+			requestID: "rid-bot-signal-close-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalClosePositionService().
+					AlgoId("1").
+					InstId("BTC-USDT-SWAP").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_create_signal_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/create-signal",
+			requestID: "rid-bot-signal-create-multi",
+			response:  `{"code":"0","msg":"","data":[{"signalChanId":"1","signalChanToken":"t1"},{"signalChanId":"2","signalChanToken":"t2"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalCreateSignalService().
+					SignalChanName("sig").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_create_signal_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/create-signal",
+			requestID: "rid-bot-signal-create-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"signalChanId":"1","signalChanToken":"t1"},{"signalChanId":"2"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalCreateSignalService().
+					SignalChanName("sig").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_cancel_close_order_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/cancel-close-order",
+			requestID: "rid-bot-grid-cancel-close-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"c1","ordId":"o1","tag":"t"},{"algoId":"2","algoClOrdId":"c2","ordId":"o2","tag":"t"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridCancelCloseOrderService().
+					AlgoId("1").
+					OrdId("2").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_cancel_close_order_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/cancel-close-order",
+			requestID: "rid-bot-grid-cancel-close-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"c1","ordId":"o1","tag":"t"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridCancelCloseOrderService().
+					AlgoId("1").
+					OrdId("2").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_compute_margin_balance_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/compute-margin-balance",
+			requestID: "rid-bot-grid-compute-margin-multi",
+			response:  `{"code":"0","msg":"","data":[{"maxAmt":"1","lever":"2"},{"maxAmt":"2","lever":"3"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridComputeMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_compute_margin_balance_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/compute-margin-balance",
+			requestID: "rid-bot-grid-compute-margin-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"maxAmt":"1","lever":"2"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridComputeMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_adjust_investment_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/adjust-investment",
+			requestID: "rid-bot-grid-adjust-investment-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{"algoId":"2"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridAdjustInvestmentService().
+					AlgoId("1").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_adjust_investment_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/adjust-investment",
+			requestID: "rid-bot-grid-adjust-investment-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridAdjustInvestmentService().
+					AlgoId("1").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_set_instruments_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/set-instruments",
+			requestID: "rid-bot-signal-set-inst-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{"algoId":"2"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalSetInstrumentsService().
+					AlgoId("1").
+					IncludeAll(true).
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_set_instruments_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/set-instruments",
+			requestID: "rid-bot-signal-set-inst-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalSetInstrumentsService().
+					AlgoId("1").
+					IncludeAll(true).
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_amend_tpsl_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/amendTPSL",
+			requestID: "rid-bot-signal-amend-tpsl-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{"algoId":"2"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalAmendTPSLService().
+					AlgoId("1").
+					ExitSettingParam(TradingBotSignalExitSettingParam{TpSlType: "ratio"}).
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_amend_tpsl_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/amendTPSL",
+			requestID: "rid-bot-signal-amend-tpsl-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalAmendTPSLService().
+					AlgoId("1").
+					ExitSettingParam(TradingBotSignalExitSettingParam{TpSlType: "ratio"}).
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_margin_balance_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/margin-balance",
+			requestID: "rid-bot-signal-margin-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{"algoId":"2"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "signal_margin_balance_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/signal/margin-balance",
+			requestID: "rid-bot-signal-margin-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_close_position_multi_ack_length_mismatch_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/close-position",
+			requestID: "rid-bot-grid-close-position-multi",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"c1","ordId":"o1","tag":"t"},{"algoId":"2","algoClOrdId":"c2","ordId":"o2","tag":"t"}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridClosePositionService().
+					AlgoId("1").
+					MktClose(true).
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:      "grid_close_position_multi_ack_first_success_second_fail_fail_close",
+			method:    http.MethodPost,
+			path:      "/api/v5/tradingBot/grid/close-position",
+			requestID: "rid-bot-grid-close-position-multi-fail",
+			response:  `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"c1","ordId":"o1","tag":"t"},{}]}`,
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridClosePositionService().
+					AlgoId("1").
+					MktClose(true).
+					Do(context.Background())
+				return err
+			},
+		},
 	}
 
 	for _, tc := range cases {
