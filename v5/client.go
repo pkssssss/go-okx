@@ -87,6 +87,13 @@ type Client struct {
 
 	errHandler ClientErrorHandler
 
+	statsRequestTotal atomic.Uint64
+	statsSuccessTotal atomic.Uint64
+	statsFailureTotal atomic.Uint64
+	statsRetryTotal   atomic.Uint64
+	statsErrorCodeMu  sync.Mutex
+	statsErrorCodes   map[string]uint64
+
 	tradeAccountRateLimitMu          sync.Mutex
 	tradeAccountRateLimitPrimed      atomic.Bool
 	tradeAccountRateLimitLastAttempt atomic.Int64
@@ -226,6 +233,12 @@ func (c *Client) do(ctx context.Context, method, endpoint string, query url.Valu
 }
 
 func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, query url.Values, body any, signed bool, extraHeader http.Header, out any) error {
+	c.recordClientRequest()
+	fail := func(err error) error {
+		c.recordClientFailure(err)
+		return err
+	}
+
 	requestPath := rest.BuildRequestPath(endpoint, query)
 
 	var bodyBytes []byte
@@ -233,7 +246,7 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return err
+			return fail(err)
 		}
 		bodyBytes = b
 		bodyString = string(b)
@@ -253,7 +266,7 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 				if attemptCancel != nil {
 					attemptCancel()
 				}
-				return errMissingCredentials
+				return fail(errMissingCredentials)
 			}
 		}
 
@@ -262,13 +275,13 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 				if attemptCancel != nil {
 					attemptCancel()
 				}
-				return &RequestStateError{
+				return fail(&RequestStateError{
 					Stage:       RequestStagePreflight,
 					Dispatched:  false,
 					Method:      method,
 					RequestPath: requestPath,
 					Err:         err,
-				}
+				})
 			}
 		}
 
@@ -277,13 +290,13 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 			if attemptCancel != nil {
 				attemptCancel()
 			}
-			return &RequestStateError{
+			return fail(&RequestStateError{
 				Stage:       RequestStageGate,
 				Dispatched:  false,
 				Method:      method,
 				RequestPath: requestPath,
 				Err:         err,
-			}
+			})
 		}
 
 		header := make(http.Header)
@@ -324,34 +337,43 @@ func (c *Client) doWithHeaders(ctx context.Context, method, endpoint string, que
 		}
 		if err != nil {
 			if attempt < maxRetries && isRetryableTransportError(err) {
+				c.recordClientRetry()
 				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
-					return err
+					return fail(err)
 				}
 				continue
 			}
-			return &RequestStateError{
+			return fail(&RequestStateError{
 				Stage:       RequestStageHTTP,
 				Dispatched:  true,
 				Method:      method,
 				RequestPath: requestPath,
 				Err:         err,
-			}
+			})
 		}
 
 		if err := decodeEnvelope(status, resp, respHeader, method, requestPath, out); err != nil {
 			if attempt < maxRetries && isRetryableAPIError(err, retryCfg) {
+				c.recordClientRetry()
 				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
-					return err
+					return fail(err)
 				}
 				continue
 			}
-			return err
+			return fail(err)
 		}
+		c.recordClientSuccess()
 		return nil
 	}
 }
 
 func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint string, query url.Values, body any, signed bool, extraHeader http.Header, out any) (requestID string, err error) {
+	c.recordClientRequest()
+	fail := func(err error) (string, error) {
+		c.recordClientFailure(err)
+		return requestID, err
+	}
+
 	requestPath := rest.BuildRequestPath(endpoint, query)
 
 	var bodyBytes []byte
@@ -359,7 +381,7 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return "", err
+			return fail(err)
 		}
 		bodyBytes = b
 		bodyString = string(b)
@@ -379,7 +401,7 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 				if attemptCancel != nil {
 					attemptCancel()
 				}
-				return "", errMissingCredentials
+				return fail(errMissingCredentials)
 			}
 		}
 
@@ -388,13 +410,13 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 				if attemptCancel != nil {
 					attemptCancel()
 				}
-				return requestID, &RequestStateError{
+				return fail(&RequestStateError{
 					Stage:       RequestStagePreflight,
 					Dispatched:  false,
 					Method:      method,
 					RequestPath: requestPath,
 					Err:         err,
-				}
+				})
 			}
 		}
 
@@ -403,13 +425,13 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 			if attemptCancel != nil {
 				attemptCancel()
 			}
-			return requestID, &RequestStateError{
+			return fail(&RequestStateError{
 				Stage:       RequestStageGate,
 				Dispatched:  false,
 				Method:      method,
 				RequestPath: requestPath,
 				Err:         err,
-			}
+			})
 		}
 
 		header := make(http.Header)
@@ -453,29 +475,32 @@ func (c *Client) doWithHeadersAndRequestID(ctx context.Context, method, endpoint
 		}
 		if err != nil {
 			if attempt < maxRetries && isRetryableTransportError(err) {
+				c.recordClientRetry()
 				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
-					return requestID, err
+					return fail(err)
 				}
 				continue
 			}
-			return requestID, &RequestStateError{
+			return fail(&RequestStateError{
 				Stage:       RequestStageHTTP,
 				Dispatched:  true,
 				Method:      method,
 				RequestPath: requestPath,
 				Err:         err,
-			}
+			})
 		}
 
 		if err := decodeEnvelope(status, resp, respHeader, method, requestPath, out); err != nil {
 			if attempt < maxRetries && isRetryableAPIError(err, retryCfg) {
+				c.recordClientRetry()
 				if err := sleepRetry(ctx, retryCfg, attempt+1); err != nil {
-					return requestID, err
+					return fail(err)
 				}
 				continue
 			}
-			return requestID, err
+			return fail(err)
 		}
+		c.recordClientSuccess()
 		return requestID, nil
 	}
 }

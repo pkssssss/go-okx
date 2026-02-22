@@ -136,6 +136,21 @@ if errors.As(err, &apiErr) {
 - `okx.IsRateLimitError(err)`
 - `okx.IsTimeSkewError(err)`
 
+### 7.1 REST 运行统计（ClientStats）
+
+`Client` 提供并发安全的 REST 统计快照：
+
+- `RequestTotal`：请求总数（按一次 `Do(ctx)` 记 1 次）
+- `SuccessTotal`：成功数
+- `FailureTotal`：失败数
+- `RetryTotal`：重试触发次数（仅幂等 GET）
+- `ErrorCodeCounts`：失败请求错误码分布（OKX code / HTTP_XXX / REQUEST_XXX）
+
+```go
+stats := c.ClientStats()
+fmt.Println(stats.RequestTotal, stats.SuccessTotal, stats.RetryTotal)
+```
+
 ## 8. 如何快速定位“某个接口怎么用”
 
 优先使用覆盖矩阵：[`coverage.md`](coverage.md)（每一行都链接到 Service/Test/Example）。
