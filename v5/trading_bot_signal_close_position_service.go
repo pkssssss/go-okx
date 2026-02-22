@@ -61,5 +61,8 @@ func (s *TradingBotSignalClosePositionService) Do(ctx context.Context) (*Trading
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalClosePositionResponse, len(data)),
 		)
 	}
+	if !validTradingBotAlgoIDAck(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/close-position", requestID, errInvalidTradingBotSignalClosePositionResponse)
+	}
 	return &data[0], nil
 }

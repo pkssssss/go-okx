@@ -61,5 +61,8 @@ func (s *TradingBotGridCancelCloseOrderService) Do(ctx context.Context) (*Tradin
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridCancelCloseOrderResponse, len(data)),
 		)
 	}
+	if !validTradingBotGridCloseOrderAck(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/cancel-close-order", requestID, errInvalidTradingBotGridCancelCloseOrderResponse)
+	}
 	return &data[0], nil
 }

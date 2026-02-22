@@ -238,10 +238,11 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 			},
 		},
 		{
-			name:   "grid_compute_margin_balance",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/grid/compute-margin-balance",
-			signed: true,
+			name:     "grid_compute_margin_balance",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/grid/compute-margin-balance",
+			response: `{"code":"0","msg":"","data":[{"maxAmt":"1","lever":"2"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotGridComputeMarginBalanceService().AlgoId("1").Type("add").Amt("1").Do(context.Background())
 				return err
@@ -258,40 +259,44 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 			},
 		},
 		{
-			name:   "grid_close_position",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/grid/close-position",
-			signed: true,
+			name:     "grid_close_position",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/grid/close-position",
+			response: `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"a1","ordId":"o1","tag":"t"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotGridClosePositionService().AlgoId("1").MktClose(true).Do(context.Background())
 				return err
 			},
 		},
 		{
-			name:   "grid_cancel_close_order",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/grid/cancel-close-order",
-			signed: true,
+			name:     "grid_cancel_close_order",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/grid/cancel-close-order",
+			response: `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"a1","ordId":"o1","tag":"t"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotGridCancelCloseOrderService().AlgoId("1").OrdId("2").Do(context.Background())
 				return err
 			},
 		},
 		{
-			name:   "grid_withdraw_income",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/grid/withdraw-income",
-			signed: true,
+			name:     "grid_withdraw_income",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/grid/withdraw-income",
+			response: `{"code":"0","msg":"","data":[{"algoId":"1","algoClOrdId":"a1","profit":"1"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotGridWithdrawIncomeService().AlgoId("1").Do(context.Background())
 				return err
 			},
 		},
 		{
-			name:   "grid_adjust_investment",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/grid/adjust-investment",
-			signed: true,
+			name:     "grid_adjust_investment",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/grid/adjust-investment",
+			response: `{"code":"0","msg":"","data":[{"algoId":"1"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotGridAdjustInvestmentService().AlgoId("1").Amt("1").Do(context.Background())
 				return err
@@ -387,10 +392,11 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 
 		// TradingBot Signal - private
 		{
-			name:   "signal_create_signal",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/signal/create-signal",
-			signed: true,
+			name:     "signal_create_signal",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/signal/create-signal",
+			response: `{"code":"0","msg":"","data":[{"signalChanId":"1","signalChanToken":"t1"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotSignalCreateSignalService().SignalChanName("sig").Do(context.Background())
 				return err
@@ -437,21 +443,23 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 			},
 		},
 		{
-			name:   "signal_margin_balance",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/signal/margin-balance",
-			signed: true,
+			name:     "signal_margin_balance",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/signal/margin-balance",
+			response: `{"code":"0","msg":"","data":[{"algoId":"1"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotSignalMarginBalanceService().AlgoId("1").Type("add").Amt("1").Do(context.Background())
 				return err
 			},
 		},
 		{
-			name:   "signal_set_instruments",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/signal/set-instruments",
-			body:   `{"algoId":"1","instIds":["BTC-USDT-SWAP"],"includeAll":false}`,
-			signed: true,
+			name:     "signal_set_instruments",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/signal/set-instruments",
+			body:     `{"algoId":"1","instIds":["BTC-USDT-SWAP"],"includeAll":false}`,
+			response: `{"code":"0","msg":"","data":[{"algoId":"1"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotSignalSetInstrumentsService().
 					AlgoId("1").
@@ -462,10 +470,11 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 			},
 		},
 		{
-			name:   "signal_amend_tpsl",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/signal/amendTPSL",
-			signed: true,
+			name:     "signal_amend_tpsl",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/signal/amendTPSL",
+			response: `{"code":"0","msg":"","data":[{"algoId":"1"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotSignalAmendTPSLService().
 					AlgoId("1").
@@ -552,10 +561,11 @@ func TestTradingBotServices_RequestShape(t *testing.T) {
 			},
 		},
 		{
-			name:   "signal_close_position",
-			method: http.MethodPost,
-			path:   "/api/v5/tradingBot/signal/close-position",
-			signed: true,
+			name:     "signal_close_position",
+			method:   http.MethodPost,
+			path:     "/api/v5/tradingBot/signal/close-position",
+			response: `{"code":"0","msg":"","data":[{"algoId":"1"}]}`,
+			signed:   true,
 			invokeDo: func(c *Client) error {
 				_, err := c.NewTradingBotSignalClosePositionService().AlgoId("1").InstId("BTC-USDT-SWAP").Do(context.Background())
 				return err
@@ -776,6 +786,126 @@ func TestTradingBotServices_InvalidAckResponse(t *testing.T) {
 					AlgoId("1").
 					InstId("BTC-USDT-SWAP").
 					SignalOrdId("O1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "grid_compute_margin_balance",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/compute-margin-balance",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridComputeMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "grid_close_position",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/close-position",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridClosePositionService().
+					AlgoId("1").
+					MktClose(true).
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "grid_cancel_close_order",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/cancel-close-order",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridCancelCloseOrderService().
+					AlgoId("1").
+					OrdId("2").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "grid_withdraw_income",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/withdraw-income",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridWithdrawIncomeService().
+					AlgoId("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "grid_adjust_investment",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/grid/adjust-investment",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotGridAdjustInvestmentService().
+					AlgoId("1").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "signal_create_signal",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/signal/create-signal",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalCreateSignalService().
+					SignalChanName("sig").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "signal_margin_balance",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/signal/margin-balance",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalMarginBalanceService().
+					AlgoId("1").
+					Type("add").
+					Amt("1").
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "signal_set_instruments",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/signal/set-instruments",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalSetInstrumentsService().
+					AlgoId("1").
+					IncludeAll(true).
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "signal_amend_tpsl",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/signal/amendTPSL",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalAmendTPSLService().
+					AlgoId("1").
+					ExitSettingParam(TradingBotSignalExitSettingParam{TpSlType: "ratio"}).
+					Do(context.Background())
+				return err
+			},
+		},
+		{
+			name:   "signal_close_position",
+			method: http.MethodPost,
+			path:   "/api/v5/tradingBot/signal/close-position",
+			invokeDo: func(c *Client) error {
+				_, err := c.NewTradingBotSignalClosePositionService().
+					AlgoId("1").
+					InstId("BTC-USDT-SWAP").
 					Do(context.Background())
 				return err
 			},

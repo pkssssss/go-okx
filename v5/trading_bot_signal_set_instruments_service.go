@@ -71,5 +71,8 @@ func (s *TradingBotSignalSetInstrumentsService) Do(ctx context.Context) (*Tradin
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalSetInstrumentsResponse, len(data)),
 		)
 	}
+	if !validTradingBotAlgoIDAck(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/set-instruments", requestID, errInvalidTradingBotSignalSetInstrumentsResponse)
+	}
 	return &data[0], nil
 }

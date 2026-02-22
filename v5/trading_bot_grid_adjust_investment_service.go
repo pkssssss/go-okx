@@ -67,5 +67,8 @@ func (s *TradingBotGridAdjustInvestmentService) Do(ctx context.Context) (*Tradin
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridAdjustInvestmentResponse, len(data)),
 		)
 	}
+	if !validTradingBotAlgoIDAck(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/adjust-investment", requestID, errInvalidTradingBotGridAdjustInvestmentResponse)
+	}
 	return &data[0], nil
 }

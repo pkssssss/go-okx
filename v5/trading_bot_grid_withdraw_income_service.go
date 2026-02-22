@@ -55,5 +55,8 @@ func (s *TradingBotGridWithdrawIncomeService) Do(ctx context.Context) (*TradingB
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridWithdrawIncomeResponse, len(data)),
 		)
 	}
+	if !validTradingBotGridWithdrawIncomeAck(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/withdraw-income", requestID, errInvalidTradingBotGridWithdrawIncomeResponse)
+	}
 	return &data[0], nil
 }

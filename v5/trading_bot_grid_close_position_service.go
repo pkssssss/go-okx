@@ -77,5 +77,8 @@ func (s *TradingBotGridClosePositionService) Do(ctx context.Context) (*TradingBo
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridClosePositionResponse, len(data)),
 		)
 	}
+	if !validTradingBotGridCloseOrderAck(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/close-position", requestID, errInvalidTradingBotGridClosePositionResponse)
+	}
 	return &data[0], nil
 }

@@ -67,5 +67,8 @@ func (s *TradingBotGridComputeMarginBalanceService) Do(ctx context.Context) (*Tr
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotGridComputeMarginBalanceResponse, len(data)),
 		)
 	}
+	if !validTradingBotGridComputeMarginBalanceResult(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/grid/compute-margin-balance", requestID, errInvalidTradingBotGridComputeMarginBalanceResponse)
+	}
 	return &data[0], nil
 }

@@ -61,5 +61,8 @@ func (s *TradingBotSignalCreateSignalService) Do(ctx context.Context) (*TradingB
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalCreateSignalResponse, len(data)),
 		)
 	}
+	if !validTradingBotSignalCreateAck(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/create-signal", requestID, errInvalidTradingBotSignalCreateSignalResponse)
+	}
 	return &data[0], nil
 }

@@ -74,5 +74,8 @@ func (s *TradingBotSignalMarginBalanceService) Do(ctx context.Context) (*Trading
 			fmt.Errorf("%w: expected 1 ack, got %d", errInvalidTradingBotSignalMarginBalanceResponse, len(data)),
 		)
 	}
+	if !validTradingBotAlgoIDAck(&data[0]) {
+		return nil, newInvalidDataAPIError(http.MethodPost, "/api/v5/tradingBot/signal/margin-balance", requestID, errInvalidTradingBotSignalMarginBalanceResponse)
+	}
 	return &data[0], nil
 }
