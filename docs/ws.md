@@ -118,13 +118,15 @@ SDK 默认启用异步分发（typed/raw 都是：buffer=1024），把 handler �
 - 校验 prevSeqId 连续性；
 - 校验 checksum（可选但建议开启）。
 
+当前 `WSOrderBookStore` 会对以下增量频道执行 `prevSeqId` 连续性校验：`books`、`books-elp`、`books-l2-tbt`、`books50-l2-tbt`、`sprd-books-l2-tbt`。
+
 SDK 提供 `WSOrderBookStore` 来做这件事。
 
 > 并发说明：`WSOrderBookStore` 并发安全；`Apply/ApplyMessage/Reset` 与 `Snapshot/Ready` 可并发调用（内部带锁与快照深拷贝）。为减少锁竞争，建议由单一 goroutine 串行 `Apply`，其他 goroutine 只读 `Snapshot`。
 
 ### 5.2 典型模式
 
-1) 订阅 `books/books5/bbo-tbt/books-l2-tbt/...`（以及对应的 `sprd-*` 频道）  
+1) 订阅 `books/books-elp/books5/bbo-tbt/books-l2-tbt/...`（以及对应的 `sprd-*` 频道）  
 2) `OnOrderBook` 收到 `WSData[WSOrderBook]`，直接 `store.Apply(&dm)`  
 3) 通过 `store.Snapshot()` 读取最新快照
 

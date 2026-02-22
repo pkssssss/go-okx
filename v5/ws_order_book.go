@@ -434,7 +434,7 @@ func isOrderBookFullRefreshChannel(channel string) bool {
 
 func isOrderBookSequencedChannel(channel string) bool {
 	switch channel {
-	case WSChannelBooks, WSChannelBooksL2Tbt, WSChannelBooks50L2Tbt, WSChannelSprdBooksL2Tbt:
+	case WSChannelBooks, WSChannelBooksELP, WSChannelBooksL2Tbt, WSChannelBooks50L2Tbt, WSChannelSprdBooksL2Tbt:
 		return true
 	default:
 		return false

@@ -147,6 +147,110 @@ func TestWSOrderBookStore_SequenceMismatch_Resets(t *testing.T) {
 	}
 }
 
+func TestWSOrderBookStore_BooksELP_SequenceMismatch_Resets(t *testing.T) {
+	store := NewWSOrderBookStore(WSChannelBooksELP, "BTC-USDT")
+
+	bids := []OrderBookLevel{{Px: "100", Sz: "1", LiqOrd: "0", NumOrders: "1"}}
+	asks := []OrderBookLevel{{Px: "101", Sz: "1", LiqOrd: "0", NumOrders: "1"}}
+	checksum := wsOrderBookChecksum(bids, asks)
+
+	snapshot := &WSData[WSOrderBook]{
+		Arg:    WSArg{Channel: WSChannelBooksELP, InstId: "BTC-USDT"},
+		Action: "snapshot",
+		Data: []WSOrderBook{{
+			Asks:      append([]OrderBookLevel(nil), asks...),
+			Bids:      append([]OrderBookLevel(nil), bids...),
+			TS:        1,
+			Checksum:  checksum,
+			PrevSeqId: -1,
+			SeqId:     10,
+		}},
+	}
+	if err := store.Apply(snapshot); err != nil {
+		t.Fatalf("Apply(snapshot) error = %v", err)
+	}
+
+	update := &WSData[WSOrderBook]{
+		Arg:    WSArg{Channel: WSChannelBooksELP, InstId: "BTC-USDT"},
+		Action: "update",
+		Data: []WSOrderBook{{
+			Asks:      append([]OrderBookLevel(nil), asks...),
+			Bids:      append([]OrderBookLevel(nil), bids...),
+			TS:        2,
+			Checksum:  checksum,
+			PrevSeqId: 9,
+			SeqId:     11,
+		}},
+	}
+
+	err := store.Apply(update)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	var seqErr *WSOrderBookSequenceError
+	if !errors.As(err, &seqErr) {
+		t.Fatalf("error = %T, want *WSOrderBookSequenceError", err)
+	}
+	if seqErr.Channel != WSChannelBooksELP {
+		t.Fatalf("seqErr.Channel = %s, want %s", seqErr.Channel, WSChannelBooksELP)
+	}
+	if store.Ready() {
+		t.Fatalf("expected store reset after sequence mismatch")
+	}
+	got := store.Snapshot()
+	if got.SeqId != 0 || got.TS != 0 || len(got.Bids) != 0 || len(got.Asks) != 0 {
+		t.Fatalf("snapshot = %#v, want reset state", got)
+	}
+}
+
+func TestWSOrderBookStore_BooksELP_SequenceContinuous_Pass(t *testing.T) {
+	store := NewWSOrderBookStore(WSChannelBooksELP, "BTC-USDT")
+
+	bids := []OrderBookLevel{{Px: "100", Sz: "1", LiqOrd: "0", NumOrders: "1"}}
+	asks := []OrderBookLevel{{Px: "101", Sz: "1", LiqOrd: "0", NumOrders: "1"}}
+	checksum := wsOrderBookChecksum(bids, asks)
+
+	snapshot := &WSData[WSOrderBook]{
+		Arg:    WSArg{Channel: WSChannelBooksELP, InstId: "BTC-USDT"},
+		Action: "snapshot",
+		Data: []WSOrderBook{{
+			Asks:      append([]OrderBookLevel(nil), asks...),
+			Bids:      append([]OrderBookLevel(nil), bids...),
+			TS:        1,
+			Checksum:  checksum,
+			PrevSeqId: -1,
+			SeqId:     10,
+		}},
+	}
+	if err := store.Apply(snapshot); err != nil {
+		t.Fatalf("Apply(snapshot) error = %v", err)
+	}
+
+	update := &WSData[WSOrderBook]{
+		Arg:    WSArg{Channel: WSChannelBooksELP, InstId: "BTC-USDT"},
+		Action: "update",
+		Data: []WSOrderBook{{
+			Asks:      append([]OrderBookLevel(nil), asks...),
+			Bids:      append([]OrderBookLevel(nil), bids...),
+			TS:        2,
+			Checksum:  checksum,
+			PrevSeqId: 10,
+			SeqId:     11,
+		}},
+	}
+	if err := store.Apply(update); err != nil {
+		t.Fatalf("Apply(update) error = %v", err)
+	}
+
+	if !store.Ready() {
+		t.Fatalf("expected ready")
+	}
+	got := store.Snapshot()
+	if got.SeqId != 11 || got.TS != 2 || got.Checksum != checksum {
+		t.Fatalf("snapshot = %#v, want seqId=11 ts=2 checksum=%d", got, checksum)
+	}
+}
+
 func TestWSOrderBookStore_ChecksumMismatch_Resets(t *testing.T) {
 	store := NewWSOrderBookStore(WSChannelBooks, "BTC-USDT")
 
