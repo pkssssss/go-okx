@@ -941,7 +941,7 @@ func TestBatchCancelOrdersService_Do(t *testing.T) {
 	)
 
 	acks, err := c.NewBatchCancelOrdersService().Orders([]BatchCancelOrder{
-		{InstId: "BTC-USDT", OrdId: "590908157585625111", ClOrdId: "ignored"},
+		{InstId: "BTC-USDT", OrdId: "590908157585625111"},
 		{InstId: "BTC-USDT", OrdId: "590908544950571222"},
 	}).Do(context.Background())
 	if err != nil {
@@ -949,6 +949,45 @@ func TestBatchCancelOrdersService_Do(t *testing.T) {
 	}
 	if len(acks) != 2 || acks[0].OrdId != "1" {
 		t.Fatalf("acks = %#v, want 2 items", acks)
+	}
+}
+
+func TestBatchCancelOrdersService_Do_RejectsBothOrdIdAndClOrdId(t *testing.T) {
+	requested := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case requested <- r.URL.Path:
+		default:
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+	)
+
+	_, err := c.NewBatchCancelOrdersService().Orders([]BatchCancelOrder{
+		{InstId: "BTC-USDT", OrdId: "1", ClOrdId: "c1"},
+	}).Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if got, want := err.Error(), "okx: batch cancel orders[0] requires exactly one of ordId or clOrdId"; got != want {
+		t.Fatalf("error = %q, want %q", got, want)
+	}
+
+	select {
+	case path := <-requested:
+		t.Fatalf("unexpected request path = %s", path)
+	default:
 	}
 }
 
@@ -1451,7 +1490,7 @@ func TestBatchAmendOrdersService_Do(t *testing.T) {
 	)
 
 	acks, err := c.NewBatchAmendOrdersService().Orders([]BatchAmendOrder{
-		{InstId: "BTC-USDT", OrdId: "590909308792049444", ClOrdId: "ignored", NewSz: "2"},
+		{InstId: "BTC-USDT", OrdId: "590909308792049444", NewSz: "2"},
 		{InstId: "BTC-USDT", OrdId: "590909308792049555", NewSz: "2"},
 	}).Do(context.Background())
 	if err != nil {
@@ -1459,6 +1498,45 @@ func TestBatchAmendOrdersService_Do(t *testing.T) {
 	}
 	if len(acks) != 2 || acks[0].OrdId != "590909308792049444" {
 		t.Fatalf("acks = %#v, want 2 items", acks)
+	}
+}
+
+func TestBatchAmendOrdersService_Do_RejectsBothOrdIdAndClOrdId(t *testing.T) {
+	requested := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case requested <- r.URL.Path:
+		default:
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient(
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithCredentials(Credentials{
+			APIKey:     "mykey",
+			SecretKey:  "mysecret",
+			Passphrase: "mypass",
+		}),
+	)
+
+	_, err := c.NewBatchAmendOrdersService().Orders([]BatchAmendOrder{
+		{InstId: "BTC-USDT", OrdId: "1", ClOrdId: "c1", NewSz: "2"},
+	}).Do(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if got, want := err.Error(), "okx: batch amend orders[0] requires exactly one of ordId or clOrdId"; got != want {
+		t.Fatalf("error = %q, want %q", got, want)
+	}
+
+	select {
+	case path := <-requested:
+		t.Fatalf("unexpected request path = %s", path)
+	default:
 	}
 }
 

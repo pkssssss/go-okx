@@ -50,11 +50,8 @@ func (s *BatchCancelOrdersService) Do(ctx context.Context) ([]TradeOrderAck, err
 		if o.InstId == "" {
 			return nil, fmt.Errorf("okx: batch cancel orders[%d] missing instId", i)
 		}
-		if o.OrdId == "" && o.ClOrdId == "" {
-			return nil, fmt.Errorf("okx: batch cancel orders[%d] missing ordId or clOrdId", i)
-		}
-		if o.OrdId != "" {
-			o.ClOrdId = ""
+		if (o.OrdId == "" && o.ClOrdId == "") || (o.OrdId != "" && o.ClOrdId != "") {
+			return nil, fmt.Errorf("okx: batch cancel orders[%d] requires exactly one of ordId or clOrdId", i)
 		}
 		req = append(req, o)
 	}

@@ -64,8 +64,8 @@ func (s *BatchAmendOrdersService) Do(ctx context.Context) ([]TradeOrderAck, erro
 		if o.InstId == "" {
 			return nil, fmt.Errorf("okx: batch amend orders[%d] missing instId", i)
 		}
-		if o.OrdId == "" && o.ClOrdId == "" {
-			return nil, fmt.Errorf("okx: batch amend orders[%d] missing ordId or clOrdId", i)
+		if (o.OrdId == "" && o.ClOrdId == "") || (o.OrdId != "" && o.ClOrdId != "") {
+			return nil, fmt.Errorf("okx: batch amend orders[%d] requires exactly one of ordId or clOrdId", i)
 		}
 
 		if countNonEmptyStrings(o.NewPx, o.NewPxUsd, o.NewPxVol) > 1 {
@@ -73,9 +73,6 @@ func (s *BatchAmendOrdersService) Do(ctx context.Context) ([]TradeOrderAck, erro
 		}
 		if o.NewSz == "" && o.NewPx == "" && o.NewPxUsd == "" && o.NewPxVol == "" {
 			return nil, fmt.Errorf("okx: batch amend orders[%d] missing newSz or newPx/newPxUsd/newPxVol", i)
-		}
-		if o.OrdId != "" {
-			o.ClOrdId = ""
 		}
 		req = append(req, o)
 	}
