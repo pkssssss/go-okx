@@ -530,6 +530,10 @@ func (w *WSClient) Start(ctx context.Context, handler WSMessageHandler, errHandl
 	if !w.started.CompareAndSwap(false, true) {
 		return errors.New("okx: ws client already started")
 	}
+	if err := w.validateLoginCredentials(); err != nil {
+		w.started.Store(false)
+		return err
+	}
 
 	if ctx == nil {
 		ctx = context.Background()
@@ -831,6 +835,11 @@ func (w *WSClient) run(ctx context.Context) {
 			w.closeConn()
 			return
 		}
+		if err := w.validateLoginCredentials(); err != nil {
+			w.onError(err)
+			w.closeConn()
+			return
+		}
 
 		w.dialAttempts.Add(1)
 		conn, err := w.dial(ctx)
@@ -908,8 +917,8 @@ func (w *WSClient) dial(ctx context.Context) (*websocket.Conn, error) {
 }
 
 func (w *WSClient) login(ctx context.Context, conn *websocket.Conn) error {
-	if w.c.creds == nil || w.c.creds.APIKey == "" || w.c.creds.SecretKey == "" || w.c.creds.Passphrase == "" {
-		return errMissingCredentials
+	if err := w.validateLoginCredentials(); err != nil {
+		return err
 	}
 
 	tm := w.c.now().Add(-w.c.TimeOffset())
@@ -962,6 +971,16 @@ func (w *WSClient) login(ctx context.Context, conn *websocket.Conn) error {
 			return fmt.Errorf("okx: ws error code=%s msg=%s", ev.Code, ev.Msg)
 		}
 	}
+}
+
+func (w *WSClient) validateLoginCredentials() error {
+	if w == nil || !w.needLogin {
+		return nil
+	}
+	if w.c == nil || w.c.creds == nil || w.c.creds.APIKey == "" || w.c.creds.SecretKey == "" || w.c.creds.Passphrase == "" {
+		return errMissingCredentials
+	}
+	return nil
 }
 
 func (w *WSClient) readLoop(ctx context.Context, conn *websocket.Conn, resubscribeWaiter *wsOpWaiter) error {

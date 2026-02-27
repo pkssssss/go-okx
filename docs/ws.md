@@ -19,6 +19,7 @@
 - `Start(ctx, rawHandler, errHandler)`：启动后台 goroutine 读写 WS。
 - `Close()`：主动关闭（会中断 `ReadMessage`，让 `Done()` 尽快返回）。
 - `Done()`：等待 WS 退出。
+- 对 `NewWSPrivate()` / `NewWSBusinessPrivate()`：若缺少 `APIKey/SecretKey/Passphrase`，`Start()` 会立即返回 `okx: missing credentials`，且不会发起拨号/重连循环（Fail-Fast）。
 
 ### 2.2 SubscribeAndWait / UnsubscribeAndWait
 
