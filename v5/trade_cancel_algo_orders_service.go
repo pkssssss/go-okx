@@ -52,15 +52,10 @@ func (s *CancelAlgoOrdersService) Do(ctx context.Context) ([]TradeAlgoOrderAck, 
 		if o.InstId == "" {
 			return nil, fmt.Errorf("okx: cancel algos[%d] missing instId", i)
 		}
-		if o.AlgoId == "" && o.AlgoClOrdId == "" {
-			return nil, fmt.Errorf("okx: cancel algos[%d] requires algoId or algoClOrdId", i)
+		if (o.AlgoId == "" && o.AlgoClOrdId == "") || (o.AlgoId != "" && o.AlgoClOrdId != "") {
+			return nil, fmt.Errorf("okx: cancel algos[%d] requires exactly one of algoId or algoClOrdId", i)
 		}
-
-		normalized := o
-		if normalized.AlgoId != "" {
-			normalized.AlgoClOrdId = ""
-		}
-		req = append(req, normalized)
+		req = append(req, o)
 	}
 
 	var data []TradeAlgoOrderAck

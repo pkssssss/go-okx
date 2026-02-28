@@ -126,6 +126,7 @@ func (s *AmendAlgoOrderService) AttachAlgoOrds(attach []TradeAlgoOrderAttachAmen
 var (
 	errAmendAlgoOrderMissingInstId    = errors.New("okx: amend algos requires instId")
 	errAmendAlgoOrderMissingId        = errors.New("okx: amend algos requires algoId or algoClOrdId")
+	errAmendAlgoOrderTooManyId        = errors.New("okx: amend algos requires exactly one of algoId or algoClOrdId")
 	errAmendAlgoOrderMissingAnyChange = errors.New("okx: amend algos requires at least one change")
 	errEmptyAmendAlgoOrderResponse    = errors.New("okx: empty amend algos response")
 	errInvalidAmendAlgoOrderResponse  = errors.New("okx: invalid amend algos response")
@@ -151,17 +152,15 @@ func (s *AmendAlgoOrderService) Do(ctx context.Context) (*TradeAlgoOrderAck, err
 	if s.req.AlgoId == "" && s.req.AlgoClOrdId == "" {
 		return nil, errAmendAlgoOrderMissingId
 	}
+	if s.req.AlgoId != "" && s.req.AlgoClOrdId != "" {
+		return nil, errAmendAlgoOrderTooManyId
+	}
 	if !s.hasAnyChange() {
 		return nil, errAmendAlgoOrderMissingAnyChange
 	}
 
-	req := s.req
-	if req.AlgoId != "" {
-		req.AlgoClOrdId = ""
-	}
-
 	var data []TradeAlgoOrderAck
-	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/amend-algos", nil, req, true, nil, &data)
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodPost, "/api/v5/trade/amend-algos", nil, s.req, true, nil, &data)
 	if err != nil {
 		return nil, err
 	}

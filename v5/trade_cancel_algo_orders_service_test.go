@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -33,6 +34,40 @@ func TestCancelAlgoOrdersService_Do(t *testing.T) {
 		_, err := c.NewCancelAlgoOrdersService().Orders(orders).Do(context.Background())
 		if err != errCancelAlgoOrdersTooManyOrders {
 			t.Fatalf("error = %v, want %v", err, errCancelAlgoOrdersTooManyOrders)
+		}
+	})
+
+	t.Run("rejects_both_algo_id_and_algo_cl_ord_id", func(t *testing.T) {
+		var requestCount atomic.Int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestCount.Add(1)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewCancelAlgoOrdersService().Orders([]CancelAlgoOrder{
+			{InstId: "BTC-USDT", AlgoId: "1", AlgoClOrdId: "a1"},
+		}).Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if got, want := err.Error(), "okx: cancel algos[0] requires exactly one of algoId or algoClOrdId"; got != want {
+			t.Fatalf("error = %q, want %q", got, want)
+		}
+		if got, want := requestCount.Load(), int32(0); got != want {
+			t.Fatalf("requestCount = %d, want %d", got, want)
 		}
 	})
 
@@ -81,7 +116,7 @@ func TestCancelAlgoOrdersService_Do(t *testing.T) {
 		)
 
 		got, err := c.NewCancelAlgoOrdersService().Orders([]CancelAlgoOrder{
-			{InstId: "BTC-USDT", AlgoId: "590919993110396111", AlgoClOrdId: "ignored"},
+			{InstId: "BTC-USDT", AlgoId: "590919993110396111"},
 		}).Do(context.Background())
 		if err != nil {
 			t.Fatalf("Do() error = %v", err)
