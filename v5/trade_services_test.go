@@ -1999,6 +1999,44 @@ func TestGetOrderService_Do(t *testing.T) {
 			t.Fatalf("ClOrdId = %q, want %q", got.ClOrdId, "c1")
 		}
 	})
+
+	t.Run("multi_data_fail_close", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-request-id", "rid-get-order-multi")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":"0","msg":"","data":[{"instType":"SPOT","instId":"BTC-USDT","ordId":"1"},{"instType":"SPOT","instId":"BTC-USDT","ordId":"2"}]}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		c := NewClient(
+			WithBaseURL(srv.URL),
+			WithHTTPClient(srv.Client()),
+			WithCredentials(Credentials{
+				APIKey:     "mykey",
+				SecretKey:  "mysecret",
+				Passphrase: "mypass",
+			}),
+			WithNowFunc(func() time.Time { return fixedNow }),
+		)
+
+		_, err := c.NewGetOrderService().InstId("BTC-USDT").OrdId("1").Do(context.Background())
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("error = %T, want *APIError", err)
+		}
+		if got, want := apiErr.RequestID, "rid-get-order-multi"; got != want {
+			t.Fatalf("RequestID = %q, want %q", got, want)
+		}
+		if got, want := apiErr.Code, "0"; got != want {
+			t.Fatalf("Code = %q, want %q", got, want)
+		}
+		if !strings.Contains(apiErr.Message, "expected 1 item, got 2") {
+			t.Fatalf("Message = %q, want contains %q", apiErr.Message, "expected 1 item, got 2")
+		}
+	})
 }
 
 func TestTradeFillsService_Do(t *testing.T) {

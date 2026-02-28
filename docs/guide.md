@@ -135,6 +135,7 @@ if errors.As(err, &apiErr) {
 - `okx.IsAuthError(err)`
 - `okx.IsRateLimitError(err)`
 - `okx.IsTimeSkewError(err)`
+- 单查接口（如 `GetOrder` / `GetAlgoOrder`）对空数据或多条数据会 `fail-close`，返回 `*okx.APIError`（含 method/path/requestID）。
 
 ### 7.1 REST 运行统计（ClientStats）
 

@@ -3,6 +3,7 @@ package okx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -31,8 +32,9 @@ func (s *GetAlgoOrderService) AlgoClOrdId(algoClOrdId string) *GetAlgoOrderServi
 }
 
 var (
-	errGetAlgoOrderMissingId     = errors.New("okx: get algo order requires algoId or algoClOrdId")
-	errEmptyGetAlgoOrderResponse = errors.New("okx: empty get algo order response")
+	errGetAlgoOrderMissingId       = errors.New("okx: get algo order requires algoId or algoClOrdId")
+	errEmptyGetAlgoOrderResponse   = errors.New("okx: empty get algo order response")
+	errInvalidGetAlgoOrderResponse = errors.New("okx: invalid get algo order response")
 )
 
 // Do 获取策略委托单信息（GET /api/v5/trade/order-algo）。
@@ -49,11 +51,20 @@ func (s *GetAlgoOrderService) Do(ctx context.Context) (*TradeAlgoOrder, error) {
 	}
 
 	var data []TradeAlgoOrder
-	if err := s.c.do(ctx, http.MethodGet, "/api/v5/trade/order-algo", q, nil, true, &data); err != nil {
+	requestID, err := s.c.doWithHeadersAndRequestID(ctx, http.MethodGet, "/api/v5/trade/order-algo", q, nil, true, nil, &data)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errEmptyGetAlgoOrderResponse
+		return nil, newEmptyDataAPIError(http.MethodGet, "/api/v5/trade/order-algo", requestID, errEmptyGetAlgoOrderResponse)
+	}
+	if len(data) != 1 {
+		return nil, newInvalidDataAPIError(
+			http.MethodGet,
+			"/api/v5/trade/order-algo",
+			requestID,
+			fmt.Errorf("%w: expected 1 item, got %d", errInvalidGetAlgoOrderResponse, len(data)),
+		)
 	}
 	return &data[0], nil
 }
